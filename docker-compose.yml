@@ -10,7 +10,8 @@ services:
       - "1521:1521"
     volumes:
       - oracle_data:/opt/oracle/oradata
-      - ./Database/init-oracle.sql:/container-entrypoint-initdb.d/init-oracle.sql
+      - ./Database/init-oracle.sql:/container-entrypoint-initdb.d/01-init-oracle.sql
+      - ./Database/add-students.sql:/container-entrypoint-initdb.d/02-add-students.sql
     healthcheck:
       test:
         [

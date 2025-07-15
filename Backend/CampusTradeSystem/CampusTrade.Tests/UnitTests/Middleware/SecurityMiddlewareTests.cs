@@ -1,16 +1,16 @@
-using Xunit;
-using Moq;
-using FluentAssertions;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Caching.Memory;
-using CampusTrade.API.Middleware;
-using CampusTrade.Tests.Helpers;
+using System.Linq;
+using System.Net;
 using System.Text;
 using System.Text.Json;
-using System.Net;
-using System.Linq;
+using CampusTrade.API.Middleware;
+using CampusTrade.Tests.Helpers;
+using FluentAssertions;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Moq;
+using Xunit;
 
 namespace CampusTrade.Tests.UnitTests.Middleware;
 
@@ -47,7 +47,7 @@ public class SecurityMiddlewareTests : IDisposable
         // Arrange
         var context = CreateHttpContext("192.168.1.100", "/api/test");
         MockHelper.SetupMockCacheContains(_mockCache, "blocked_ip:192.168.1.100", true);
-        
+
         // 确保速率限制不会先触发
         var rateKey = "rate_limit:192.168.1.100";
         object rateValue = 0;
@@ -137,7 +137,7 @@ public class SecurityMiddlewareTests : IDisposable
         // Arrange
         var context = CreateHttpContext("192.168.1.1", "/api/test");
         MockHelper.SetupMockCacheContains(_mockCache, "blocked_ip:192.168.1.1", false);
-        
+
         // 设置速率限制已达到上限
         var rateKey = "rate_limit:192.168.1.1";
         object rateLimitValue = 100; // 超过配置的60
@@ -157,7 +157,7 @@ public class SecurityMiddlewareTests : IDisposable
         // Arrange
         var context = CreateHttpContext("192.168.1.1", "/api/test");
         MockHelper.SetupMockCacheContains(_mockCache, "blocked_ip:192.168.1.1", false);
-        
+
         var rateKey = "rate_limit:192.168.1.1";
         object rateLimitValue = 5; // 正常范围内
         _mockCache.Setup(x => x.TryGetValue(rateKey, out rateLimitValue)).Returns(true);
@@ -181,7 +181,7 @@ public class SecurityMiddlewareTests : IDisposable
         var context = CreateHttpContext("192.168.1.1", "/api/auth/login");
         MockHelper.SetupMockCacheContains(_mockCache, "blocked_ip:192.168.1.1", false);
         MockHelper.SetupMockCacheContains(_mockCache, "rate_limit:192.168.1.1", false);
-        
+
         // 设置登录速率限制已达到上限
         var loginRateKey = "login_attempts:192.168.1.1";
         object loginRateLimitValue = 15; // 超过配置的10
@@ -202,7 +202,7 @@ public class SecurityMiddlewareTests : IDisposable
         var context = CreateHttpContext("192.168.1.1", "/api/auth/login");
         MockHelper.SetupMockCacheContains(_mockCache, "blocked_ip:192.168.1.1", false);
         MockHelper.SetupMockCacheContains(_mockCache, "rate_limit:192.168.1.1", false);
-        
+
         var loginRateKey = "login_attempts:192.168.1.1";
         object loginRateLimitValue = 3; // 正常范围内
         _mockCache.Setup(x => x.TryGetValue(loginRateKey, out loginRateLimitValue)).Returns(true);
@@ -226,7 +226,7 @@ public class SecurityMiddlewareTests : IDisposable
         var context = CreateHttpContext("192.168.1.1", "/api/upload");
         MockHelper.SetupMockCacheContains(_mockCache, "blocked_ip:192.168.1.1", false);
         MockHelper.SetupMockCacheContains(_mockCache, "rate_limit:192.168.1.1", false);
-        
+
         // 设置过大的请求内容
         context.Request.ContentLength = 15 * 1024 * 1024; // 15MB，超过10MB限制
 
@@ -245,7 +245,7 @@ public class SecurityMiddlewareTests : IDisposable
         var context = CreateHttpContext("192.168.1.1", "/api/upload");
         MockHelper.SetupMockCacheContains(_mockCache, "blocked_ip:192.168.1.1", false);
         MockHelper.SetupMockCacheContains(_mockCache, "rate_limit:192.168.1.1", false);
-        
+
         context.Request.ContentLength = 5 * 1024 * 1024; // 5MB，正常范围
 
         // Act
@@ -304,7 +304,7 @@ public class SecurityMiddlewareTests : IDisposable
         // Arrange
         var context = CreateHttpContext("127.0.0.1", "/api/test");
         context.Request.Headers["X-Forwarded-For"] = "203.0.113.1, 198.51.100.1";
-        
+
         MockHelper.SetupMockCacheContains(_mockCache, "blocked_ip:203.0.113.1", true); // 第一个IP被阻止
 
         // Act
@@ -321,7 +321,7 @@ public class SecurityMiddlewareTests : IDisposable
         // Arrange
         var context = CreateHttpContext("127.0.0.1", "/api/test");
         context.Request.Headers["X-Real-IP"] = "203.0.113.2";
-        
+
         MockHelper.SetupMockCacheContains(_mockCache, "blocked_ip:203.0.113.2", true); // Real IP被阻止
 
         // Act
@@ -359,17 +359,17 @@ public class SecurityMiddlewareTests : IDisposable
     private HttpContext CreateHttpContext(string ipAddress, string path, string userAgent = "Test Browser")
     {
         var context = new DefaultHttpContext();
-        
+
         // 设置IP地址
         context.Connection.RemoteIpAddress = IPAddress.Parse(ipAddress);
-        
+
         // 设置请求路径
         context.Request.Path = path;
         context.Request.Method = "GET";
-        
+
         // 设置UserAgent
         context.Request.Headers["User-Agent"] = userAgent;
-        
+
         // 设置响应流
         context.Response.Body = new MemoryStream();
 
@@ -379,25 +379,25 @@ public class SecurityMiddlewareTests : IDisposable
     private Mock<IConfiguration> CreateMockConfiguration()
     {
         var mockConfig = new Mock<IConfiguration>();
-        
+
         // 设置安全配置的IConfigurationSection
         var maxRequestsSection = new Mock<IConfigurationSection>();
         maxRequestsSection.Setup(x => x.Value).Returns("60");
         mockConfig.Setup(x => x.GetSection("Security:MaxRequestsPerMinute")).Returns(maxRequestsSection.Object);
-        
+
         var maxLoginAttemptsSection = new Mock<IConfigurationSection>();
         maxLoginAttemptsSection.Setup(x => x.Value).Returns("10");
         mockConfig.Setup(x => x.GetSection("Security:MaxLoginAttemptsPerHour")).Returns(maxLoginAttemptsSection.Object);
-        
+
         var blockDurationSection = new Mock<IConfigurationSection>();
         blockDurationSection.Setup(x => x.Value).Returns("30");
         mockConfig.Setup(x => x.GetSection("Security:BlockDurationMinutes")).Returns(blockDurationSection.Object);
-        
+
         // 设置可疑UserAgent列表
         var suspiciousUserAgents = new List<string> { "bot", "crawler", "spider", "scraper", "scan", "sqlmap", "nikto" };
         var mockSuspiciousSection = new Mock<IConfigurationSection>();
         // 手动设置子项而不是使用扩展方法
-        var suspiciousChildren = suspiciousUserAgents.Select((item, index) => 
+        var suspiciousChildren = suspiciousUserAgents.Select((item, index) =>
         {
             var childSection = new Mock<IConfigurationSection>();
             childSection.Setup(x => x.Value).Returns(item);
@@ -406,12 +406,12 @@ public class SecurityMiddlewareTests : IDisposable
         }).ToArray();
         mockSuspiciousSection.Setup(x => x.GetChildren()).Returns(suspiciousChildren);
         mockConfig.Setup(x => x.GetSection("Security:SuspiciousUserAgents")).Returns(mockSuspiciousSection.Object);
-        
+
         // 设置被阻止IP列表
         var blockedIPs = new List<string> { "192.168.1.100" };
         var mockBlockedSection = new Mock<IConfigurationSection>();
         // 手动设置子项而不是使用扩展方法
-        var blockedChildren = blockedIPs.Select((item, index) => 
+        var blockedChildren = blockedIPs.Select((item, index) =>
         {
             var childSection = new Mock<IConfigurationSection>();
             childSection.Setup(x => x.Value).Returns(item);
@@ -430,4 +430,4 @@ public class SecurityMiddlewareTests : IDisposable
     {
         // 清理资源
     }
-} 
+}

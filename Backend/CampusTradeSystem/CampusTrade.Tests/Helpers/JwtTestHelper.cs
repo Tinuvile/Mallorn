@@ -1,9 +1,9 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Microsoft.IdentityModel.Tokens;
-using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Models.DTOs.Auth;
+using CampusTrade.API.Models.Entities;
+using Microsoft.IdentityModel.Tokens;
 
 namespace CampusTrade.Tests.Helpers;
 
@@ -15,7 +15,7 @@ public static class JwtTestHelper
     private const string TestSecretKey = "YourSecretKeyForCampusTradingPlatformProduction2025!MustBe32CharactersLong";
     private const string TestIssuer = "CampusTrade.API";
     private const string TestAudience = "CampusTrade.Client";
-    
+
     private static readonly byte[] Key = Encoding.UTF8.GetBytes(TestSecretKey);
     private static readonly SymmetricSecurityKey SecurityKey = new(Key);
     private static readonly SigningCredentials SigningCredentials = new(SecurityKey, SecurityAlgorithms.HmacSha256);
@@ -164,7 +164,7 @@ public static class JwtTestHelper
     {
         var accessToken = GenerateTestJwtToken(user);
         var refreshToken = GenerateRefreshToken();
-        
+
         return new TokenResponse
         {
             AccessToken = accessToken,
@@ -228,4 +228,4 @@ public class TokenValidationResult
     {
         return new TokenValidationResult { IsValid = false, Error = error };
     }
-} 
+}

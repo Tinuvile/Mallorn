@@ -96,4 +96,4 @@ public static class SecurityHelper
 
         return sensitive[..showLength] + new string('*', Math.Max(0, sensitive.Length - showLength));
     }
-} 
+}

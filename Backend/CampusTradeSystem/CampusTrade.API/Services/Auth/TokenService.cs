@@ -1,14 +1,14 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.IdentityModel.Tokens;
 using CampusTrade.API.Data;
-using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Models.DTOs.Auth;
+using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Options;
 using CampusTrade.API.Utils.Security;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 
 namespace CampusTrade.API.Services.Auth;
 
@@ -118,7 +118,7 @@ public class TokenService : ITokenService
         {
             // 简化设备数量限制：只保留最新的活跃Token
             var activeTokens = await _context.RefreshTokens
-                .Where(rt => rt.UserId == user.UserId && !rt.IsRevoked && rt.ExpiryDate > DateTime.UtcNow)
+                .Where(rt => rt.UserId == user.UserId && rt.IsRevoked == 0 && rt.ExpiryDate > DateTime.UtcNow)
                 .OrderByDescending(rt => rt.LastUsedAt ?? rt.CreatedAt)
                 .Skip(_jwtOptions.MaxActiveDevices - 1)
                 .ToListAsync();
@@ -155,8 +155,8 @@ public class TokenService : ITokenService
                 StudentId = user.StudentId,
                 CreditScore = user.CreditScore,
                 DeviceId = refreshToken.DeviceId,
-                EmailVerified = user.EmailVerified,
-                TwoFactorEnabled = user.TwoFactorEnabled,
+                EmailVerified = user.EmailVerified == 1,
+                TwoFactorEnabled = user.TwoFactorEnabled == 1,
                 UserStatus = user.IsActive == 1 ? "Active" : "Inactive"
             };
 
@@ -244,7 +244,7 @@ public class TokenService : ITokenService
             if (!token.IsValid())
             {
                 _logger.LogWarning("刷新令牌无效，用户ID: {UserId}, 原因: {Reason}",
-                    token.UserId, token.IsRevoked ? "已撤销" : "已过期");
+                    token.UserId, token.IsRevoked == 1 ? "已撤销" : "已过期");
                 return null;
             }
 
@@ -326,7 +326,7 @@ public class TokenService : ITokenService
                 return false;
             }
 
-            if (token.IsRevoked)
+            if (token.IsRevoked == 1)
             {
                 _logger.LogDebug("刷新令牌已经撤销: {Token}", SecurityHelper.ObfuscateSensitive(refreshToken));
                 return true;
@@ -360,7 +360,7 @@ public class TokenService : ITokenService
         try
         {
             var tokens = await _context.RefreshTokens
-                .Where(rt => rt.UserId == userId && !rt.IsRevoked)
+                .Where(rt => rt.UserId == userId && rt.IsRevoked == 0)
                 .ToListAsync();
 
             foreach (var token in tokens)
@@ -390,7 +390,7 @@ public class TokenService : ITokenService
         try
         {
             return await _context.RefreshTokens
-                .Where(rt => rt.UserId == userId && !rt.IsRevoked && rt.ExpiryDate > DateTime.UtcNow)
+                .Where(rt => rt.UserId == userId && rt.IsRevoked == 0 && rt.ExpiryDate > DateTime.UtcNow)
                 .OrderByDescending(rt => rt.LastUsedAt ?? rt.CreatedAt)
                 .ToListAsync();
         }
@@ -474,4 +474,4 @@ public class TokenService : ITokenService
     }
 
 
-} 
+}

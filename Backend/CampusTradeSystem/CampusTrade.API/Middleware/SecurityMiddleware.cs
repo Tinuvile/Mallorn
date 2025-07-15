@@ -1,7 +1,7 @@
-using Microsoft.Extensions.Caching.Memory;
-using CampusTrade.API.Models.DTOs.Common;
 using System.Net;
 using System.Text.Json;
+using CampusTrade.API.Models.DTOs.Common;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace CampusTrade.API.Middleware;
 
@@ -25,7 +25,7 @@ public class SecurityMiddleware
     private readonly List<string> _blockedIPs;
 
     public SecurityMiddleware(
-        RequestDelegate next, 
+        RequestDelegate next,
         ILogger<SecurityMiddleware> logger,
         IMemoryCache cache,
         IConfiguration configuration)
@@ -169,7 +169,7 @@ public class SecurityMiddleware
             return true; // 空UserAgent可疑
         }
 
-        return _suspiciousUserAgents.Any(suspicious => 
+        return _suspiciousUserAgents.Any(suspicious =>
             userAgent.ToLower().Contains(suspicious.ToLower()));
     }
 
@@ -186,7 +186,7 @@ public class SecurityMiddleware
             // 动态阻止IP一段时间
             var blockKey = $"blocked_ip:{ipAddress}";
             _cache.Set(blockKey, true, _blockDuration);
-            
+
             await LogSecurityEvent("RATE_LIMIT_EXCEEDED", ipAddress, "", path);
             return true;
         }
@@ -231,8 +231,8 @@ public class SecurityMiddleware
         var maliciousPatterns = new[]
         {
             "../", "..\\", ".env", "wp-admin", "admin.php", "phpmyadmin",
-            "sql", "union", "select", "insert", "delete", "drop", "script",
-            "eval(", "javascript:", "vbscript:", "<script"
+            " sql ", " union ", " select ", " insert ", " delete ", " drop ",
+            "eval(", "javascript:", "vbscript:", "<script", "--", "/*", "*/"
         };
 
         var lowerPath = path.ToLower();
@@ -284,4 +284,4 @@ public static class SecurityMiddlewareExtensions
     {
         return builder.UseMiddleware<SecurityMiddleware>();
     }
-} 
+}

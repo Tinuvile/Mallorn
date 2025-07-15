@@ -2,8 +2,12 @@ name: Code Formatting
 
 on:
   push:
-    branches: [main, develop]
+    branches: [master, develop]
   # 移除 pull_request 触发，避免与 pr-code-check.yml 冲突
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   format-dotnet:
@@ -50,6 +54,7 @@ jobs:
   format-frontend:
     runs-on: ubuntu-latest
     name: Format Frontend Code
+    needs: format-dotnet
 
     steps:
       - name: Checkout Code
@@ -57,6 +62,10 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
+
+      - name: Pull latest changes
+        run: |
+          git pull origin ${{ github.ref_name }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

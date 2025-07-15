@@ -169,246 +169,246 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
-import { ElMessage } from 'element-plus'
-import {
-  UserFilled,
-  LocationFilled,
-  MessageBox,
-  Lock,
-  Message,
-  Phone,
-  Location,
-} from '@element-plus/icons-vue'
+  import { ref, reactive } from 'vue'
+  import { ElMessage } from 'element-plus'
+  import {
+    UserFilled,
+    LocationFilled,
+    MessageBox,
+    Lock,
+    Message,
+    Phone,
+    Location,
+  } from '@element-plus/icons-vue'
 
-// 统计数据
-const userCount = ref(5678)
-const productCount = ref(1234)
-const transactionCount = ref(987)
-const satisfaction = ref(96)
+  // 统计数据
+  const userCount = ref(5678)
+  const productCount = ref(1234)
+  const transactionCount = ref(987)
+  const satisfaction = ref(96)
 
-// 团队成员
-const teamMembers = ref([
-  {
-    id: 1,
-    name: '张三',
-    role: '产品经理',
-    description: '负责产品规划和用户体验设计',
-    avatar: '',
-  },
-  {
-    id: 2,
-    name: '李四',
-    role: '前端开发',
-    description: '负责前端界面开发和交互实现',
-    avatar: '',
-  },
-  {
-    id: 3,
-    name: '王五',
-    role: '后端开发',
-    description: '负责服务器端开发和数据库设计',
-    avatar: '',
-  },
-])
+  // 团队成员
+  const teamMembers = ref([
+    {
+      id: 1,
+      name: '张三',
+      role: '产品经理',
+      description: '负责产品规划和用户体验设计',
+      avatar: '',
+    },
+    {
+      id: 2,
+      name: '李四',
+      role: '前端开发',
+      description: '负责前端界面开发和交互实现',
+      avatar: '',
+    },
+    {
+      id: 3,
+      name: '王五',
+      role: '后端开发',
+      description: '负责服务器端开发和数据库设计',
+      avatar: '',
+    },
+  ])
 
-// 反馈表单
-const feedbackForm = reactive({
-  name: '',
-  email: '',
-  message: '',
-})
+  // 反馈表单
+  const feedbackForm = reactive({
+    name: '',
+    email: '',
+    message: '',
+  })
 
-// 提交反馈
-const submitFeedback = () => {
-  if (!feedbackForm.name || !feedbackForm.email || !feedbackForm.message) {
-    ElMessage.warning('请填写完整信息')
-    return
+  // 提交反馈
+  const submitFeedback = () => {
+    if (!feedbackForm.name || !feedbackForm.email || !feedbackForm.message) {
+      ElMessage.warning('请填写完整信息')
+      return
+    }
+
+    // 这里可以调用 API 提交反馈
+    ElMessage.success('感谢您的反馈，我们会认真处理！')
+
+    // 重置表单
+    feedbackForm.name = ''
+    feedbackForm.email = ''
+    feedbackForm.message = ''
   }
-
-  // 这里可以调用 API 提交反馈
-  ElMessage.success('感谢您的反馈，我们会认真处理！')
-
-  // 重置表单
-  feedbackForm.name = ''
-  feedbackForm.email = ''
-  feedbackForm.message = ''
-}
 </script>
 
 <style scoped>
-.about {
-  width: 100%;
-  padding: 20px;
-  box-sizing: border-box;
-}
-
-.hero-section {
-  margin-bottom: 40px;
-}
-
-.hero-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-}
-
-.hero-card :deep(.el-card__body) {
-  padding: 60px 40px;
-}
-
-.hero-content {
-  text-align: center;
-}
-
-.hero-content h1 {
-  font-size: 36px;
-  margin-bottom: 20px;
-}
-
-.hero-content p {
-  font-size: 18px;
-  opacity: 0.9;
-}
-
-.content-section {
-  margin-bottom: 60px;
-}
-
-.about-text h2,
-.features-list h2 {
-  color: #333;
-  margin-bottom: 20px;
-  font-size: 24px;
-}
-
-.about-text p {
-  color: #666;
-  line-height: 1.8;
-  margin-bottom: 16px;
-}
-
-.feature-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-}
-
-.feature-icon {
-  margin-top: 4px;
-}
-
-.feature-text h3 {
-  margin: 0 0 8px 0;
-  color: #333;
-  font-size: 16px;
-}
-
-.feature-text p {
-  margin: 0;
-  color: #666;
-  line-height: 1.6;
-}
-
-.stats-section {
-  margin-bottom: 60px;
-  text-align: center;
-}
-
-.stats-section h2 {
-  color: #333;
-  margin-bottom: 30px;
-  font-size: 28px;
-}
-
-.stat-card {
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-.team-section {
-  margin-bottom: 60px;
-  text-align: center;
-}
-
-.team-section h2 {
-  color: #333;
-  margin-bottom: 30px;
-  font-size: 28px;
-}
-
-.team-card {
-  text-align: center;
-  margin-bottom: 20px;
-  padding: 20px;
-}
-
-.team-avatar {
-  margin-bottom: 16px;
-}
-
-.team-card h3 {
-  margin: 0 0 8px 0;
-  color: #333;
-}
-
-.role {
-  color: #409eff;
-  font-weight: bold;
-  margin: 0 0 12px 0;
-}
-
-.description {
-  color: #666;
-  line-height: 1.6;
-  margin: 0;
-}
-
-.contact-section {
-  margin-bottom: 40px;
-}
-
-.contact-card h2 {
-  text-align: center;
-  color: #333;
-  margin-bottom: 30px;
-  font-size: 24px;
-}
-
-.contact-info {
-  padding: 20px 0;
-}
-
-.contact-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-  font-size: 16px;
-  color: #666;
-}
-
-.feedback-form h3 {
-  color: #333;
-  margin-bottom: 20px;
-}
-
-@media (max-width: 768px) {
-  .hero-content h1 {
-    font-size: 28px;
+  .about {
+    width: 100%;
+    padding: 20px;
+    box-sizing: border-box;
   }
 
-  .hero-content p {
-    font-size: 16px;
-  }
-
-  .content-section {
+  .hero-section {
     margin-bottom: 40px;
   }
 
-  .about-text,
-  .features-list {
-    margin-bottom: 30px;
+  .hero-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
   }
-}
+
+  .hero-card :deep(.el-card__body) {
+    padding: 60px 40px;
+  }
+
+  .hero-content {
+    text-align: center;
+  }
+
+  .hero-content h1 {
+    font-size: 36px;
+    margin-bottom: 20px;
+  }
+
+  .hero-content p {
+    font-size: 18px;
+    opacity: 0.9;
+  }
+
+  .content-section {
+    margin-bottom: 60px;
+  }
+
+  .about-text h2,
+  .features-list h2 {
+    color: #333;
+    margin-bottom: 20px;
+    font-size: 24px;
+  }
+
+  .about-text p {
+    color: #666;
+    line-height: 1.8;
+    margin-bottom: 16px;
+  }
+
+  .feature-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .feature-icon {
+    margin-top: 4px;
+  }
+
+  .feature-text h3 {
+    margin: 0 0 8px 0;
+    color: #333;
+    font-size: 16px;
+  }
+
+  .feature-text p {
+    margin: 0;
+    color: #666;
+    line-height: 1.6;
+  }
+
+  .stats-section {
+    margin-bottom: 60px;
+    text-align: center;
+  }
+
+  .stats-section h2 {
+    color: #333;
+    margin-bottom: 30px;
+    font-size: 28px;
+  }
+
+  .stat-card {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  .team-section {
+    margin-bottom: 60px;
+    text-align: center;
+  }
+
+  .team-section h2 {
+    color: #333;
+    margin-bottom: 30px;
+    font-size: 28px;
+  }
+
+  .team-card {
+    text-align: center;
+    margin-bottom: 20px;
+    padding: 20px;
+  }
+
+  .team-avatar {
+    margin-bottom: 16px;
+  }
+
+  .team-card h3 {
+    margin: 0 0 8px 0;
+    color: #333;
+  }
+
+  .role {
+    color: #409eff;
+    font-weight: bold;
+    margin: 0 0 12px 0;
+  }
+
+  .description {
+    color: #666;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  .contact-section {
+    margin-bottom: 40px;
+  }
+
+  .contact-card h2 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 30px;
+    font-size: 24px;
+  }
+
+  .contact-info {
+    padding: 20px 0;
+  }
+
+  .contact-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    font-size: 16px;
+    color: #666;
+  }
+
+  .feedback-form h3 {
+    color: #333;
+    margin-bottom: 20px;
+  }
+
+  @media (max-width: 768px) {
+    .hero-content h1 {
+      font-size: 28px;
+    }
+
+    .hero-content p {
+      font-size: 16px;
+    }
+
+    .content-section {
+      margin-bottom: 40px;
+    }
+
+    .about-text,
+    .features-list {
+      margin-bottom: 30px;
+    }
+  }
 </style>

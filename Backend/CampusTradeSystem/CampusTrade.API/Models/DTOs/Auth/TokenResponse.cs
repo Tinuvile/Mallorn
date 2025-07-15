@@ -135,4 +135,4 @@ public class TokenValidationResponse
     /// </summary>
     [JsonPropertyName("permissions")]
     public List<string> Permissions { get; set; } = new();
-} 
+}

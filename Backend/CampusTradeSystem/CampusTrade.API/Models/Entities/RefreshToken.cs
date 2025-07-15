@@ -42,7 +42,7 @@ public class RefreshToken
     /// 是否已撤销
     /// </summary>
     [Column("IS_REVOKED")]
-    public bool IsRevoked { get; set; } = false;
+    public int IsRevoked { get; set; } = 0;
 
     /// <summary>
     /// 创建时间
@@ -122,7 +122,7 @@ public class RefreshToken
     /// <returns></returns>
     public bool IsValid()
     {
-        return !IsRevoked && ExpiryDate > DateTime.UtcNow;
+        return IsRevoked == 0 && ExpiryDate > DateTime.UtcNow;
     }
 
     /// <summary>
@@ -141,7 +141,7 @@ public class RefreshToken
     /// <param name="revokedBy">撤销者ID</param>
     public void Revoke(string? reason = null, int? revokedBy = null)
     {
-        IsRevoked = true;
+        IsRevoked = 1; // 1 for revoked
         RevokedAt = DateTime.UtcNow;
         RevokeReason = reason;
         RevokedBy = revokedBy;
@@ -161,8 +161,8 @@ public class RefreshToken
     /// <returns></returns>
     public TimeSpan? GetRemainingLifetime()
     {
-        if (IsRevoked) return null;
-        
+        if (IsRevoked == 1) return null;
+
         var remaining = ExpiryDate - DateTime.UtcNow;
         return remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
     }
@@ -173,9 +173,9 @@ public class RefreshToken
     /// <returns></returns>
     public bool IsExpiringSoon()
     {
-        if (IsRevoked) return false;
-        
+        if (IsRevoked == 1) return false;
+
         var remaining = ExpiryDate - DateTime.UtcNow;
         return remaining <= TimeSpan.FromHours(24) && remaining > TimeSpan.Zero;
     }
-} 
+}

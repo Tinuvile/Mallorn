@@ -109,4 +109,4 @@ public class RevokeTokenRequest
     /// </summary>
     [JsonPropertyName("revoke_all")]
     public bool RevokeAll { get; set; } = false;
-} 
+}

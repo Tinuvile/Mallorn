@@ -1,10 +1,10 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
+using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using CampusTrade.API.Models.DTOs.Auth;
 using CampusTrade.API.Models.DTOs.Common;
 using CampusTrade.API.Services.Auth;
-using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace CampusTrade.API.Controllers;
 
@@ -45,7 +45,7 @@ public class TokenController : ControllerBase
             refreshRequest.UserAgent ??= userAgent;
 
             var tokenResponse = await _tokenService.RefreshTokenAsync(refreshRequest);
-            
+
             return Ok(ApiResponse<TokenResponse>.CreateSuccess(tokenResponse, "Token刷新成功"));
         }
         catch (UnauthorizedAccessException ex)
@@ -76,7 +76,7 @@ public class TokenController : ControllerBase
         try
         {
             var validationResult = await _tokenService.ValidateAccessTokenAsync(validateRequest.AccessToken);
-            
+
             return Ok(ApiResponse<TokenValidationResponse>.CreateSuccess(validationResult, "Token验证完成"));
         }
         catch (Exception ex)
@@ -161,7 +161,7 @@ public class TokenController : ControllerBase
             }
 
             var activeTokens = await _tokenService.GetActiveRefreshTokensAsync(userId);
-            
+
             var tokenList = activeTokens.Select(token => new
             {
                 deviceId = token.DeviceId,
@@ -197,7 +197,7 @@ public class TokenController : ControllerBase
         try
         {
             var cleanedCount = await _tokenService.CleanupExpiredTokensAsync();
-            
+
             return Ok(ApiResponse<object>.CreateSuccess(new
             {
                 cleanedTokens = cleanedCount
@@ -226,7 +226,7 @@ public class TokenController : ControllerBase
         try
         {
             var isBlacklisted = await _tokenService.IsTokenBlacklistedAsync(checkRequest.Jti);
-            
+
             return Ok(ApiResponse<object>.CreateSuccess(new
             {
                 jti = checkRequest.Jti,
@@ -265,4 +265,4 @@ public class CheckBlacklistRequest
     [Required(ErrorMessage = "JWT ID不能为空")]
     [JsonPropertyName("jti")]
     public string Jti { get; set; } = string.Empty;
-} 
+}

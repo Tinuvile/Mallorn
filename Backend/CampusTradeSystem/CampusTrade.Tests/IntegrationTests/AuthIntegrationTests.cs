@@ -1,17 +1,17 @@
-using Xunit;
+using System.Net;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
+using CampusTrade.API;
+using CampusTrade.API.Models.DTOs.Auth;
+using CampusTrade.API.Models.DTOs.Common;
+using CampusTrade.Tests.Helpers;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using System.Text;
-using System.Text.Json;
-using System.Net.Http;
-using System.Net;
-using CampusTrade.API;
-using CampusTrade.API.Models.DTOs.Auth;
-using CampusTrade.API.Models.DTOs.Common;
-using CampusTrade.Tests.Helpers;
+using Xunit;
 
 namespace CampusTrade.Tests.IntegrationTests;
 
@@ -28,16 +28,16 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
         _factory = factory.WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Testing");
-            
+
             builder.ConfigureServices(services =>
             {
                 // 使用内存数据库进行测试
                 services.Remove(services.SingleOrDefault(d => d.ServiceType == typeof(CampusTrade.API.Data.CampusTradeDbContext))!);
-                
+
                 // 添加测试专用的数据库上下文
                 var context = TestDbContextFactory.CreateInMemoryDbContext("IntegrationTest");
                 services.AddSingleton(context);
-                
+
                 // 配置测试日志
                 services.AddLogging(builder => builder.SetMinimumLevel(LogLevel.Warning));
             });
@@ -68,7 +68,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        
+
         var apiResponse = await DeserializeResponse<ApiResponse<object>>(response);
         apiResponse.Should().NotBeNull();
         apiResponse!.Success.Should().BeTrue();
@@ -93,7 +93,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        
+
         var apiResponse = await DeserializeResponse<ApiResponse>(response);
         apiResponse.Should().NotBeNull();
         apiResponse!.Success.Should().BeFalse();
@@ -120,7 +120,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        
+
         var apiResponse = await DeserializeResponse<ApiResponse<TokenResponse>>(response);
         apiResponse.Should().NotBeNull();
         apiResponse!.Success.Should().BeTrue();
@@ -147,7 +147,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        
+
         var apiResponse = await DeserializeResponse<ApiResponse<TokenResponse>>(response);
         apiResponse.Should().NotBeNull();
         apiResponse!.Success.Should().BeTrue();
@@ -171,7 +171,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        
+
         var apiResponse = await DeserializeResponse<ApiResponse>(response);
         apiResponse.Should().NotBeNull();
         apiResponse!.Success.Should().BeFalse();
@@ -208,7 +208,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
 
         // Assert
         refreshResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        
+
         var refreshApiResponse = await DeserializeResponse<ApiResponse<TokenResponse>>(refreshResponse);
         refreshApiResponse.Should().NotBeNull();
         refreshApiResponse!.Success.Should().BeTrue();
@@ -233,7 +233,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        
+
         var apiResponse = await DeserializeResponse<ApiResponse>(response);
         apiResponse.Should().NotBeNull();
         apiResponse!.Success.Should().BeFalse();
@@ -252,7 +252,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        
+
         var apiResponse = await DeserializeResponse<ApiResponse<object>>(response);
         apiResponse.Should().NotBeNull();
         apiResponse!.Success.Should().BeTrue();
@@ -267,7 +267,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        
+
         var apiResponse = await DeserializeResponse<ApiResponse>(response);
         apiResponse.Should().NotBeNull();
         apiResponse!.Success.Should().BeFalse();
@@ -286,7 +286,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        
+
         var apiResponse = await DeserializeResponse<ApiResponse<object>>(response);
         apiResponse.Should().NotBeNull();
         apiResponse!.Success.Should().BeTrue();
@@ -301,7 +301,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        
+
         var apiResponse = await DeserializeResponse<ApiResponse>(response);
         apiResponse.Should().NotBeNull();
         apiResponse!.Success.Should().BeFalse();
@@ -338,7 +338,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
 
         // Assert
         logoutResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        
+
         var logoutApiResponse = await DeserializeResponse<ApiResponse<object>>(logoutResponse);
         logoutApiResponse.Should().NotBeNull();
         logoutApiResponse!.Success.Should().BeTrue();
@@ -386,7 +386,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
 
         var loginResponse = await PostJsonAsync("/api/auth/login", loginRequest);
         loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        
+
         var loginApiResponse = await DeserializeResponse<ApiResponse<TokenResponse>>(loginResponse);
         var tokens = loginApiResponse!.Data!;
 
@@ -399,7 +399,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
 
         var refreshResponse = await PostJsonAsync("/api/token/refresh", refreshRequest);
         refreshResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        
+
         var refreshApiResponse = await DeserializeResponse<ApiResponse<TokenResponse>>(refreshResponse);
         var newTokens = refreshApiResponse!.Data!;
 
@@ -490,4 +490,4 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
     {
         _client?.Dispose();
     }
-} 
+}

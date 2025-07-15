@@ -20,7 +20,7 @@ api.interceptors.request.use(
   },
   (error: AxiosError) => {
     return Promise.reject(error)
-  },
+  }
 )
 
 // 响应拦截器
@@ -29,14 +29,18 @@ api.interceptors.response.use(
     return response.data
   },
   (error: AxiosError) => {
+    console.error('API请求错误:', error)
+
     if (error.response?.status === 401) {
       // 清除 token 并跳转到登录页
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       window.location.href = '/login'
     }
+
+    // 保留原始错误信息，让上层处理
     return Promise.reject(error)
-  },
+  }
 )
 
 // 生成设备ID
@@ -63,7 +67,7 @@ const getDeviceName = (): string => {
 }
 
 // 后端API响应格式
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean
   message: string
   data?: T
@@ -131,7 +135,7 @@ export interface UserInfo {
 export const authApi = {
   // 登录
   login: (
-    loginData: Omit<LoginData, 'device_id' | 'device_name'>,
+    loginData: Omit<LoginData, 'device_id' | 'device_name'>
   ): Promise<ApiResponse<TokenResponse>> => {
     const requestData: LoginData = {
       ...loginData,
@@ -155,10 +159,10 @@ export const authApi = {
   // 验证学生身份
   validateStudent: (
     studentId: string,
-    name: string,
+    name: string
   ): Promise<ApiResponse<{ isValid: boolean; studentId: string }>> => {
     return api.post('/api/auth/validate-student', {
-      studentId,
+      student_id: studentId,
       name,
     })
   },

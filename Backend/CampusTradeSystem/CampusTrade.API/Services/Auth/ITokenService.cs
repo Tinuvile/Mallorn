@@ -1,6 +1,6 @@
-using CampusTrade.API.Models.Entities;
-using CampusTrade.API.Models.DTOs.Auth;
 using System.Security.Claims;
+using CampusTrade.API.Models.DTOs.Auth;
+using CampusTrade.API.Models.Entities;
 
 namespace CampusTrade.API.Services.Auth;
 
@@ -104,4 +104,4 @@ public interface ITokenService
     /// <param name="expiration">过期时间</param>
     /// <returns>添加是否成功</returns>
     Task<bool> BlacklistTokenAsync(string jti, DateTime expiration);
-} 
+}

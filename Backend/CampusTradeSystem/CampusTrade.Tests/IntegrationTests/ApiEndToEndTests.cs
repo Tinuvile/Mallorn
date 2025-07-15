@@ -1,18 +1,18 @@
-using Xunit;
+using System.Diagnostics;
+using System.Net;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
+using CampusTrade.API;
+using CampusTrade.API.Models.DTOs.Auth;
+using CampusTrade.API.Models.DTOs.Common;
+using CampusTrade.Tests.Helpers;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using System.Text;
-using System.Text.Json;
-using System.Net.Http;
-using System.Net;
-using System.Diagnostics;
-using CampusTrade.API;
-using CampusTrade.API.Models.DTOs.Auth;
-using CampusTrade.API.Models.DTOs.Common;
-using CampusTrade.Tests.Helpers;
+using Xunit;
 
 namespace CampusTrade.Tests.IntegrationTests;
 
@@ -29,16 +29,16 @@ public class ApiEndToEndTests : IClassFixture<WebApplicationFactory<Program>>, I
         _factory = factory.WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Testing");
-            
+
             builder.ConfigureServices(services =>
             {
                 // 使用内存数据库进行测试
                 services.Remove(services.SingleOrDefault(d => d.ServiceType == typeof(CampusTrade.API.Data.CampusTradeDbContext))!);
-                
+
                 // 添加测试专用的数据库上下文
                 var context = TestDbContextFactory.CreateInMemoryDbContext("EndToEndTest");
                 services.AddSingleton(context);
-                
+
                 // 配置测试日志
                 services.AddLogging(builder => builder.SetMinimumLevel(LogLevel.Warning));
             });
@@ -206,7 +206,7 @@ public class ApiEndToEndTests : IClassFixture<WebApplicationFactory<Program>>, I
     {
         // 这个测试需要等待Token过期，或者使用Mock的时间提供者
         // 目前简化为验证无效Token格式
-        
+
         // Arrange
         var invalidTokenRequest = new RefreshTokenRequest
         {
@@ -244,7 +244,7 @@ public class ApiEndToEndTests : IClassFixture<WebApplicationFactory<Program>>, I
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        
+
         var apiResponse = await DeserializeResponse<ApiResponse<object>>(response);
         apiResponse.Should().NotBeNull();
         apiResponse!.Success.Should().BeTrue();
@@ -369,7 +369,7 @@ public class ApiEndToEndTests : IClassFixture<WebApplicationFactory<Program>>, I
                 }),
                 _ => _client.GetAsync("/health")
             };
-            
+
             tasks.Add(task);
         }
 
@@ -381,7 +381,7 @@ public class ApiEndToEndTests : IClassFixture<WebApplicationFactory<Program>>, I
         foreach (var response in responses)
         {
             response.StatusCode.Should().BeOneOf(
-                HttpStatusCode.OK, 
+                HttpStatusCode.OK,
                 HttpStatusCode.Unauthorized, // 某些请求可能因为权限问题返回401
                 HttpStatusCode.NotFound // 某些请求可能返回404
             );
@@ -389,7 +389,7 @@ public class ApiEndToEndTests : IClassFixture<WebApplicationFactory<Program>>, I
 
         // 所有请求应在合理时间内完成
         stopwatch.ElapsedMilliseconds.Should().BeLessThan(10000); // 10秒内完成所有请求
-        
+
         // 至少80%的请求应该成功
         var successfulRequests = responses.Count(r => r.StatusCode == HttpStatusCode.OK);
         var successRate = (double)successfulRequests / totalRequests;
@@ -404,7 +404,7 @@ public class ApiEndToEndTests : IClassFixture<WebApplicationFactory<Program>>, I
     public async Task CompleteUserJourney_ShouldWorkEndToEnd()
     {
         var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        
+
         // Step 1: 验证学生身份
         var validateResponse = await _client.GetAsync($"/api/auth/validate-student?studentId=2025003&name=王五");
         validateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -434,7 +434,7 @@ public class ApiEndToEndTests : IClassFixture<WebApplicationFactory<Program>>, I
 
         var loginResponse = await PostJsonAsync("/api/auth/login", loginRequest);
         loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        
+
         var loginApiResponse = await DeserializeResponse<ApiResponse<TokenResponse>>(loginResponse);
         var tokens = loginApiResponse!.Data!;
 
@@ -451,7 +451,7 @@ public class ApiEndToEndTests : IClassFixture<WebApplicationFactory<Program>>, I
 
         var refreshResponse = await PostJsonAsync("/api/token/refresh", refreshRequest);
         refreshResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        
+
         var refreshApiResponse = await DeserializeResponse<ApiResponse<TokenResponse>>(refreshResponse);
         var newTokens = refreshApiResponse!.Data!;
 
@@ -508,4 +508,4 @@ public class ApiEndToEndTests : IClassFixture<WebApplicationFactory<Program>>, I
     {
         _client?.Dispose();
     }
-} 
+}

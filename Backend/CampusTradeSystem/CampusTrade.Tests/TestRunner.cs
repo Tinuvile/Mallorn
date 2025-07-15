@@ -1,8 +1,8 @@
-using Xunit;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using System.Reflection;
 using CampusTrade.Tests.Helpers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Xunit;
 
 namespace CampusTrade.Tests;
 
@@ -17,25 +17,25 @@ public static class TestRunner
     public static async Task<TestResults> RunUnitTestsAsync()
     {
         var results = new TestResults("单元测试");
-        
+
         Console.WriteLine("🧪 开始运行单元测试...");
         Console.WriteLine("=====================================");
-        
+
         try
         {
             // Services层测试
             await RunTestCategory("Services", typeof(CampusTrade.Tests.UnitTests.Services.AuthServiceTests), results);
             await RunTestCategory("Services", typeof(CampusTrade.Tests.UnitTests.Services.TokenServiceTests), results);
-            
+
             // Controllers层测试
             await RunTestCategory("Controllers", typeof(CampusTrade.Tests.UnitTests.Controllers.AuthControllerTests), results);
-            
+
             // Middleware层测试
             await RunTestCategory("Middleware", typeof(CampusTrade.Tests.UnitTests.Middleware.SecurityMiddlewareTests), results);
-            
+
             Console.WriteLine("=====================================");
             Console.WriteLine($"✅ 单元测试完成: {results.PassedCount} 通过, {results.FailedCount} 失败");
-            
+
             if (results.FailedTests.Any())
             {
                 Console.WriteLine("\n❌ 失败的测试:");
@@ -50,7 +50,7 @@ public static class TestRunner
             Console.WriteLine($"❌ 运行单元测试时发生错误: {ex.Message}");
             results.AddError("单元测试运行异常", ex.Message);
         }
-        
+
         return results;
     }
 
@@ -60,21 +60,21 @@ public static class TestRunner
     public static async Task<TestResults> RunIntegrationTestsAsync()
     {
         var results = new TestResults("集成测试");
-        
+
         Console.WriteLine("🔗 开始运行集成测试...");
         Console.WriteLine("=====================================");
-        
+
         try
         {
             // 认证集成测试
             await RunTestCategory("Integration", typeof(CampusTrade.Tests.IntegrationTests.AuthIntegrationTests), results);
-            
+
             // API端到端测试
             await RunTestCategory("API E2E", typeof(CampusTrade.Tests.IntegrationTests.ApiEndToEndTests), results);
-            
+
             Console.WriteLine("=====================================");
             Console.WriteLine($"✅ 集成测试完成: {results.PassedCount} 通过, {results.FailedCount} 失败");
-            
+
             if (results.FailedTests.Any())
             {
                 Console.WriteLine("\n❌ 失败的测试:");
@@ -89,7 +89,7 @@ public static class TestRunner
             Console.WriteLine($"❌ 运行集成测试时发生错误: {ex.Message}");
             results.AddError("集成测试运行异常", ex.Message);
         }
-        
+
         return results;
     }
 
@@ -99,20 +99,20 @@ public static class TestRunner
     public static async Task<TestSummary> RunAllTestsAsync()
     {
         var summary = new TestSummary();
-        
+
         Console.WriteLine("🚀 开始运行完整测试套件...");
         Console.WriteLine("======================================");
-        
+
         // 运行单元测试
         var unitTestResults = await RunUnitTestsAsync();
         summary.AddResults(unitTestResults);
-        
+
         Console.WriteLine();
-        
+
         // 运行集成测试
         var integrationTestResults = await RunIntegrationTestsAsync();
         summary.AddResults(integrationTestResults);
-        
+
         Console.WriteLine();
         Console.WriteLine("======================================");
         Console.WriteLine("📊 测试总结:");
@@ -121,7 +121,7 @@ public static class TestRunner
         Console.WriteLine($"  失败: {summary.TotalFailed}");
         Console.WriteLine($"  错误: {summary.TotalErrors}");
         Console.WriteLine($"  执行时间: {summary.TotalDuration.TotalSeconds:F2} 秒");
-        
+
         if (summary.TotalFailed > 0 || summary.TotalErrors > 0)
         {
             Console.WriteLine("\n❌ 存在失败或错误的测试，请检查详细信息");
@@ -131,7 +131,7 @@ public static class TestRunner
         {
             Console.WriteLine("\n🎉 所有测试都通过了！");
         }
-        
+
         return summary;
     }
 
@@ -141,10 +141,10 @@ public static class TestRunner
     public static async Task<TestResults> RunPerformanceTestsAsync()
     {
         var results = new TestResults("性能测试");
-        
+
         Console.WriteLine("⚡ 开始运行性能测试...");
         Console.WriteLine("=====================================");
-        
+
         try
         {
             // 模拟性能测试
@@ -156,17 +156,17 @@ public static class TestRunner
                     await Task.Delay(10); // 模拟网络延迟
                     return true;
                 });
-                
+
                 var startTime = DateTime.UtcNow;
                 await Task.WhenAll(tasks);
                 var endTime = DateTime.UtcNow;
-                
+
                 var duration = endTime - startTime;
                 Console.WriteLine($"  100个并发登录耗时: {duration.TotalMilliseconds:F2} ms");
-                
+
                 return duration.TotalSeconds < 5; // 5秒内完成为通过
             }, results);
-            
+
             await SimulatePerformanceTest("Token刷新性能测试", async () =>
             {
                 // 模拟50个并发Token刷新
@@ -175,17 +175,17 @@ public static class TestRunner
                     await Task.Delay(5); // 模拟处理时间
                     return true;
                 });
-                
+
                 var startTime = DateTime.UtcNow;
                 await Task.WhenAll(tasks);
                 var endTime = DateTime.UtcNow;
-                
+
                 var duration = endTime - startTime;
                 Console.WriteLine($"  50个并发Token刷新耗时: {duration.TotalMilliseconds:F2} ms");
-                
+
                 return duration.TotalSeconds < 2; // 2秒内完成为通过
             }, results);
-            
+
             Console.WriteLine("=====================================");
             Console.WriteLine($"✅ 性能测试完成: {results.PassedCount} 通过, {results.FailedCount} 失败");
         }
@@ -194,7 +194,7 @@ public static class TestRunner
             Console.WriteLine($"❌ 运行性能测试时发生错误: {ex.Message}");
             results.AddError("性能测试运行异常", ex.Message);
         }
-        
+
         return results;
     }
 
@@ -213,27 +213,27 @@ public static class TestRunner
     private static async Task RunTestCategory(string category, Type testClass, TestResults results)
     {
         Console.WriteLine($"📂 运行 {category} 测试...");
-        
+
         var methods = testClass.GetMethods()
-            .Where(m => m.GetCustomAttribute<FactAttribute>() != null || 
+            .Where(m => m.GetCustomAttribute<FactAttribute>() != null ||
                        m.GetCustomAttribute<TheoryAttribute>() != null)
             .ToList();
-        
+
         var passed = 0;
         var failed = 0;
-        
+
         foreach (var method in methods)
         {
             try
             {
                 Console.Write($"  ▶ {method.Name}... ");
-                
+
                 // 模拟测试执行
                 await Task.Delay(10);
-                
+
                 // 90%的测试通过率模拟
                 var success = Random.Shared.NextDouble() > 0.1;
-                
+
                 if (success)
                 {
                     Console.WriteLine("✅ 通过");
@@ -254,22 +254,22 @@ public static class TestRunner
                 results.AddFailed($"{testClass.Name}.{method.Name}", ex.Message);
             }
         }
-        
+
         Console.WriteLine($"  {category}: {passed} 通过, {failed} 失败");
     }
 
     private static async Task SimulatePerformanceTest(string testName, Func<Task<bool>> test, TestResults results)
     {
         Console.WriteLine($"⚡ {testName}...");
-        
+
         try
         {
             var startTime = DateTime.UtcNow;
             var success = await test();
             var endTime = DateTime.UtcNow;
-            
+
             var duration = endTime - startTime;
-            
+
             if (success)
             {
                 Console.WriteLine($"  ✅ 通过 (耗时: {duration.TotalMilliseconds:F2} ms)");
@@ -410,7 +410,7 @@ public class TestSummary
     public int TotalFailed => CategoryResults.Sum(r => r.FailedCount);
     public int TotalErrors => CategoryResults.SelectMany(r => r.FailureReasons.Values)
         .Count(reason => reason.StartsWith("错误:"));
-    
+
     public double PassRate => TotalTests > 0 ? (double)TotalPassed / TotalTests : 0;
     public TimeSpan TotalDuration => EndTime?.Subtract(StartTime) ?? TimeSpan.Zero;
 
@@ -420,4 +420,4 @@ public class TestSummary
         CategoryResults.Add(results);
         EndTime = DateTime.UtcNow;
     }
-} 
+}

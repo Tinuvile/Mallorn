@@ -1,8 +1,8 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Microsoft.IdentityModel.Tokens;
 using CampusTrade.API.Options;
+using Microsoft.IdentityModel.Tokens;
 
 namespace CampusTrade.API.Utils.Security;
 
@@ -20,7 +20,7 @@ public static class TokenHelper
     {
         var claims = GetClaimsFromToken(token);
         var userIdClaim = claims?.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier)?.Value;
-        
+
         return int.TryParse(userIdClaim, out var userId) ? userId : null;
     }
 
@@ -55,12 +55,12 @@ public static class TokenHelper
     {
         var claims = GetClaimsFromToken(token);
         var expClaim = claims?.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Exp)?.Value;
-        
+
         if (long.TryParse(expClaim, out var exp))
         {
             return DateTimeOffset.FromUnixTimeSeconds(exp).DateTime;
         }
-        
+
         return null;
     }
 
@@ -111,13 +111,13 @@ public static class TokenHelper
             ValidateLifetime = jwtOptions.ValidateLifetime,
             ValidateIssuerSigningKey = jwtOptions.ValidateIssuerSigningKey,
             RequireExpirationTime = jwtOptions.RequireExpirationTime,
-            
+
             ValidIssuer = jwtOptions.Issuer,
             ValidAudience = jwtOptions.Audience,
             IssuerSigningKey = CreateSecurityKey(jwtOptions.SecretKey),
-            
+
             ClockSkew = jwtOptions.ClockSkew,
-            
+
             // 设置名称和角色声明类型
             NameClaimType = ClaimTypes.Name,
             RoleClaimType = ClaimTypes.Role
@@ -136,9 +136,9 @@ public static class TokenHelper
         {
             var tokenHandler = new JwtSecurityTokenHandler();
             var validationParameters = CreateTokenValidationParameters(jwtOptions);
-            
+
             var principal = tokenHandler.ValidateToken(token, validationParameters, out var validatedToken);
-            
+
             return (true, principal, null);
         }
         catch (SecurityTokenExpiredException)
@@ -170,9 +170,9 @@ public static class TokenHelper
         var username = principal.FindFirst(ClaimTypes.Name)?.Value ?? string.Empty;
         var email = principal.FindFirst(ClaimTypes.Email)?.Value ?? string.Empty;
         var studentId = principal.FindFirst("student_id")?.Value ?? string.Empty;
-        
+
         int.TryParse(userIdStr, out var userId);
-        
+
         return (userId, username, email, studentId);
     }
 
@@ -205,4 +205,4 @@ public static class TokenHelper
 
         return claims;
     }
-} 
+}

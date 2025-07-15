@@ -1,12 +1,12 @@
-using Xunit;
-using Moq;
-using FluentAssertions;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration;
-using CampusTrade.API.Services.Auth;
-using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Models.DTOs.Auth;
+using CampusTrade.API.Models.Entities;
+using CampusTrade.API.Services.Auth;
 using CampusTrade.Tests.Helpers;
+using FluentAssertions;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Moq;
+using Xunit;
 
 namespace CampusTrade.Tests.UnitTests.Services;
 
@@ -24,7 +24,7 @@ public class AuthServiceTests : IDisposable
         _mockConfiguration = MockHelper.CreateMockConfiguration();
         _mockTokenService = new Mock<ITokenService>();
         _mockLogger = MockHelper.CreateMockLogger<AuthService>();
-        
+
         var context = TestDbContextFactory.CreateInMemoryDbContext();
         _authService = new AuthService(context, _mockConfiguration.Object, _mockTokenService.Object, _mockLogger.Object);
     }
@@ -424,7 +424,7 @@ public class AuthServiceTests : IDisposable
                          .ThrowsAsync(new UnauthorizedAccessException("无效的刷新令牌"));
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() => 
+        var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             _authService.RefreshTokenAsync(refreshTokenRequest));
         exception.Message.Should().Contain("无效的刷新令牌");
     }
@@ -435,4 +435,4 @@ public class AuthServiceTests : IDisposable
     {
         // 清理资源
     }
-} 
+}

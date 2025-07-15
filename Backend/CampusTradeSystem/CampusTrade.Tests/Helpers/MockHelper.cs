@@ -1,12 +1,12 @@
-using Moq;
+using System.Net;
+using System.Security.Claims;
+using CampusTrade.API.Models.Entities;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
-using System.Security.Claims;
-using System.Net;
-using CampusTrade.API.Models.Entities;
+using Moq;
 
 namespace CampusTrade.Tests.Helpers;
 
@@ -21,7 +21,7 @@ public static class MockHelper
     public static Mock<IConfiguration> CreateMockConfiguration(Dictionary<string, string>? configValues = null)
     {
         var mockConfig = new Mock<IConfiguration>();
-        
+
         var defaultValues = new Dictionary<string, string>
         {
             ["Jwt:SecretKey"] = "YourSecretKeyForCampusTradingPlatformProduction2025!MustBe32CharactersLong",
@@ -67,12 +67,34 @@ public static class MockHelper
     public static Mock<IMemoryCache> CreateMockMemoryCache()
     {
         var mockCache = new Mock<IMemoryCache>();
-        var cacheEntry = new Mock<ICacheEntry>();
-        
+        var mockCacheEntry = new Mock<ICacheEntry>();
+
+        // 设置 ICacheEntry 的基本属性
+        mockCacheEntry.SetupAllProperties();
+
+        // 设置 CreateEntry 方法返回 mock 的 ICacheEntry
         mockCache.Setup(x => x.CreateEntry(It.IsAny<object>()))
-               .Returns(cacheEntry.Object);
+                 .Returns(mockCacheEntry.Object);
 
         return mockCache;
+    }
+
+    /// <summary>
+    /// 创建带有验证功能的Mock IMemoryCache
+    /// </summary>
+    public static (Mock<IMemoryCache> mockCache, Mock<ICacheEntry> mockCacheEntry) CreateMockMemoryCacheWithEntry()
+    {
+        var mockCache = new Mock<IMemoryCache>();
+        var mockCacheEntry = new Mock<ICacheEntry>();
+
+        // 设置 ICacheEntry 的基本属性
+        mockCacheEntry.SetupAllProperties();
+
+        // 设置 CreateEntry 方法返回 mock 的 ICacheEntry
+        mockCache.Setup(x => x.CreateEntry(It.IsAny<object>()))
+                 .Returns(mockCacheEntry.Object);
+
+        return (mockCache, mockCacheEntry);
     }
 
     /// <summary>
@@ -130,7 +152,7 @@ public static class MockHelper
         {
             ["Authorization"] = $"Bearer {token}"
         };
-        
+
         mockHttpContext.Setup(x => x.Request.Headers).Returns(mockHeaders);
         return mockHttpContext;
     }
@@ -225,14 +247,14 @@ public static class MockHelper
     public static void SetupNestedConfiguration(Mock<IConfiguration> mockConfig, string sectionName, Dictionary<string, string> values)
     {
         var mockSection = new Mock<IConfigurationSection>();
-        
+
         foreach (var kvp in values)
         {
             var childSection = CreateMockConfigurationSection(kvp.Value);
             mockSection.Setup(x => x[kvp.Key]).Returns(kvp.Value);
             mockConfig.Setup(x => x.GetSection($"{sectionName}:{kvp.Key}")).Returns(childSection.Object);
         }
-        
+
         mockConfig.Setup(x => x.GetSection(sectionName)).Returns(mockSection.Object);
     }
-} 
+}

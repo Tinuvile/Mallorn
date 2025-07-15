@@ -1,6 +1,6 @@
+using System.IdentityModel.Tokens.Jwt;
 using CampusTrade.API.Services.Auth;
 using CampusTrade.API.Utils.Security;
-using System.IdentityModel.Tokens.Jwt;
 
 namespace CampusTrade.API.Middleware;
 
@@ -22,11 +22,11 @@ public class JwtValidationMiddleware
     {
         // 获取Authorization头
         var authHeader = context.Request.Headers.Authorization.FirstOrDefault();
-        
+
         if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
         {
             var token = authHeader[7..]; // 去掉"Bearer "前缀
-            
+
             try
             {
                 // 验证Token格式
@@ -35,22 +35,22 @@ public class JwtValidationMiddleware
                 {
                     var jwtToken = tokenHandler.ReadJwtToken(token);
                     var jti = jwtToken.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Jti)?.Value;
-                    
+
                     // 检查Token是否在黑名单中
                     if (!string.IsNullOrEmpty(jti))
                     {
                         var isBlacklisted = await tokenService.IsTokenBlacklistedAsync(jti);
                         if (isBlacklisted)
                         {
-                            _logger.LogWarning("检测到已撤销的Token访问, JTI: {Jti}, IP: {IpAddress}", 
+                            _logger.LogWarning("检测到已撤销的Token访问, JTI: {Jti}, IP: {IpAddress}",
                                 jti, context.Connection.RemoteIpAddress);
-                            
+
                             context.Response.StatusCode = 401;
                             await context.Response.WriteAsync("{\"success\":false,\"message\":\"Token已被撤销\",\"error_code\":\"TOKEN_REVOKED\"}");
                             return;
                         }
                     }
-                    
+
                     // 检查Token是否即将过期（5分钟内）
                     var exp = jwtToken.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Exp)?.Value;
                     if (long.TryParse(exp, out var expUnix))
@@ -59,16 +59,16 @@ public class JwtValidationMiddleware
                         if (expiration <= DateTime.UtcNow.AddMinutes(5))
                         {
                             // 添加即将过期的头信息
-                            context.Response.Headers.Add("X-Token-Warning", "Token即将过期，请及时刷新");
+                            context.Response.Headers.Append("X-Token-Warning", "Token即将过期，请及时刷新");
                             _logger.LogDebug("Token即将过期, JTI: {Jti}, 过期时间: {Expiration}", jti, expiration);
                         }
                     }
-                    
+
                     // 记录Token使用情况（用于审计）
                     var userId = jwtToken.Claims.FirstOrDefault(x => x.Type == "sub")?.Value;
                     if (!string.IsNullOrEmpty(userId))
                     {
-                        _logger.LogDebug("用户 {UserId} 使用Token访问 {Path}, IP: {IpAddress}", 
+                        _logger.LogDebug("用户 {UserId} 使用Token访问 {Path}, IP: {IpAddress}",
                             userId, context.Request.Path, context.Connection.RemoteIpAddress);
                     }
                 }
@@ -98,4 +98,4 @@ public static class JwtValidationMiddlewareExtensions
     {
         return builder.UseMiddleware<JwtValidationMiddleware>();
     }
-} 
+}

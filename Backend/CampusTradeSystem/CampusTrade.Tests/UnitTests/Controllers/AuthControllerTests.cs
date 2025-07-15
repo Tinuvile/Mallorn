@@ -1,16 +1,16 @@
-using Xunit;
-using Moq;
-using FluentAssertions;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
+using System.Security.Claims;
 using CampusTrade.API.Controllers;
-using CampusTrade.API.Services.Auth;
 using CampusTrade.API.Models.DTOs.Auth;
 using CampusTrade.API.Models.DTOs.Common;
 using CampusTrade.API.Models.Entities;
+using CampusTrade.API.Services.Auth;
 using CampusTrade.Tests.Helpers;
-using System.Security.Claims;
+using FluentAssertions;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Moq;
+using Xunit;
 
 namespace CampusTrade.Tests.UnitTests.Controllers;
 
@@ -33,7 +33,7 @@ public class AuthControllerTests : IDisposable
         var httpContext = new DefaultHttpContext();
         httpContext.Connection.RemoteIpAddress = System.Net.IPAddress.Parse("192.168.1.1");
         httpContext.Request.Headers["User-Agent"] = "Test Browser";
-        
+
         _authController.ControllerContext = new ControllerContext
         {
             HttpContext = httpContext
@@ -64,7 +64,7 @@ public class AuthControllerTests : IDisposable
         result.Should().BeOfType<OkObjectResult>();
         var okResult = result as OkObjectResult;
         okResult!.Value.Should().BeOfType<ApiResponse<TokenResponse>>();
-        
+
         var apiResponse = okResult.Value as ApiResponse<TokenResponse>;
         apiResponse!.Success.Should().BeTrue();
         apiResponse.Data.Should().NotBeNull();
@@ -93,7 +93,7 @@ public class AuthControllerTests : IDisposable
         result.Should().BeOfType<UnauthorizedObjectResult>();
         var unauthorizedResult = result as UnauthorizedObjectResult;
         unauthorizedResult!.Value.Should().BeOfType<ApiResponse>();
-        
+
         var apiResponse = unauthorizedResult.Value as ApiResponse;
         apiResponse!.Success.Should().BeFalse();
         apiResponse.Message.Should().Contain("用户名或密码错误");
@@ -119,7 +119,7 @@ public class AuthControllerTests : IDisposable
         result.Should().BeOfType<BadRequestObjectResult>();
         var badRequestResult = result as BadRequestObjectResult;
         badRequestResult!.Value.Should().BeOfType<ApiResponse>();
-        
+
         var apiResponse = badRequestResult.Value as ApiResponse;
         apiResponse!.Success.Should().BeFalse();
         apiResponse.ErrorCode.Should().Be("VALIDATION_ERROR");
@@ -146,7 +146,7 @@ public class AuthControllerTests : IDisposable
         result.Should().BeOfType<ObjectResult>();
         var objectResult = result as ObjectResult;
         objectResult!.StatusCode.Should().Be(500);
-        
+
         var apiResponse = objectResult.Value as ApiResponse;
         apiResponse!.Success.Should().BeFalse();
         apiResponse.ErrorCode.Should().Be("INTERNAL_ERROR");
@@ -189,7 +189,7 @@ public class AuthControllerTests : IDisposable
         result.Should().BeOfType<OkObjectResult>();
         var okResult = result as OkObjectResult;
         okResult!.Value.Should().BeOfType<ApiResponse<object>>();
-        
+
         var apiResponse = okResult.Value as ApiResponse<object>;
         apiResponse!.Success.Should().BeTrue();
         apiResponse.Message.Should().Contain("注册成功");
@@ -218,7 +218,7 @@ public class AuthControllerTests : IDisposable
         result.Should().BeOfType<BadRequestObjectResult>();
         var badRequestResult = result as BadRequestObjectResult;
         badRequestResult!.Value.Should().BeOfType<ApiResponse>();
-        
+
         var apiResponse = badRequestResult.Value as ApiResponse;
         apiResponse!.Success.Should().BeFalse();
         apiResponse.Message.Should().Contain("该学号已被注册");
@@ -247,7 +247,7 @@ public class AuthControllerTests : IDisposable
         result.Should().BeOfType<BadRequestObjectResult>();
         var badRequestResult = result as BadRequestObjectResult;
         badRequestResult!.Value.Should().BeOfType<ApiResponse>();
-        
+
         var apiResponse = badRequestResult.Value as ApiResponse;
         apiResponse!.Success.Should().BeFalse();
         apiResponse.ErrorCode.Should().Be("VALIDATION_ERROR");
@@ -263,7 +263,7 @@ public class AuthControllerTests : IDisposable
         // Arrange
         var username = "zhangsan";
         var expectedUser = TestDbContextFactory.GetTestUser(1);
-        
+
         _mockAuthService.Setup(x => x.GetUserByUsernameAsync(username))
                        .ReturnsAsync(expectedUser);
 
@@ -274,7 +274,7 @@ public class AuthControllerTests : IDisposable
         result.Should().BeOfType<OkObjectResult>();
         var okResult = result as OkObjectResult;
         okResult!.Value.Should().BeOfType<ApiResponse<object>>();
-        
+
         var apiResponse = okResult.Value as ApiResponse<object>;
         apiResponse!.Success.Should().BeTrue();
         apiResponse.Data.Should().NotBeNull();
@@ -285,7 +285,7 @@ public class AuthControllerTests : IDisposable
     {
         // Arrange
         var username = "nonexistent";
-        
+
         _mockAuthService.Setup(x => x.GetUserByUsernameAsync(username))
                        .ReturnsAsync((User?)null);
 
@@ -296,7 +296,7 @@ public class AuthControllerTests : IDisposable
         result.Should().BeOfType<NotFoundObjectResult>();
         var notFoundResult = result as NotFoundObjectResult;
         notFoundResult!.Value.Should().BeOfType<ApiResponse>();
-        
+
         var apiResponse = notFoundResult.Value as ApiResponse;
         apiResponse!.Success.Should().BeFalse();
         apiResponse.Message.Should().Contain("用户不存在");
@@ -315,7 +315,7 @@ public class AuthControllerTests : IDisposable
             StudentId = "2025001",
             Name = "张三"
         };
-        
+
         _mockAuthService.Setup(x => x.ValidateStudentAsync(validationDto.StudentId, validationDto.Name))
                        .ReturnsAsync(true);
 
@@ -326,7 +326,7 @@ public class AuthControllerTests : IDisposable
         result.Should().BeOfType<OkObjectResult>();
         var okResult = result as OkObjectResult;
         okResult!.Value.Should().BeOfType<ApiResponse<object>>();
-        
+
         var apiResponse = okResult.Value as ApiResponse<object>;
         apiResponse!.Success.Should().BeTrue();
         apiResponse.Message.Should().Contain("学生身份验证成功");
@@ -341,7 +341,7 @@ public class AuthControllerTests : IDisposable
             StudentId = "9999999",
             Name = "不存在"
         };
-        
+
         _mockAuthService.Setup(x => x.ValidateStudentAsync(validationDto.StudentId, validationDto.Name))
                        .ReturnsAsync(false);
 
@@ -352,7 +352,7 @@ public class AuthControllerTests : IDisposable
         result.Should().BeOfType<OkObjectResult>();
         var okResult = result as OkObjectResult;
         okResult!.Value.Should().BeOfType<ApiResponse<object>>();
-        
+
         var apiResponse = okResult.Value as ApiResponse<object>;
         apiResponse!.Success.Should().BeTrue();
         apiResponse.Message.Should().Contain("学生身份验证失败");
@@ -370,7 +370,7 @@ public class AuthControllerTests : IDisposable
         {
             RefreshToken = "valid_refresh_token"
         };
-        
+
         _mockAuthService.Setup(x => x.LogoutAsync(logoutRequest.RefreshToken, It.IsAny<string>()))
                        .ReturnsAsync(true);
 
@@ -381,7 +381,7 @@ public class AuthControllerTests : IDisposable
         result.Should().BeOfType<OkObjectResult>();
         var okResult = result as OkObjectResult;
         okResult!.Value.Should().BeOfType<ApiResponse>();
-        
+
         var apiResponse = okResult.Value as ApiResponse;
         apiResponse!.Success.Should().BeTrue();
         apiResponse.Message.Should().Contain("退出登录成功");
@@ -395,7 +395,7 @@ public class AuthControllerTests : IDisposable
         {
             RefreshToken = "invalid_token"
         };
-        
+
         _mockAuthService.Setup(x => x.LogoutAsync(logoutRequest.RefreshToken, It.IsAny<string>()))
                        .ReturnsAsync(false);
 
@@ -406,7 +406,7 @@ public class AuthControllerTests : IDisposable
         result.Should().BeOfType<BadRequestObjectResult>();
         var badRequestResult = result as BadRequestObjectResult;
         badRequestResult!.Value.Should().BeOfType<ApiResponse>();
-        
+
         var apiResponse = badRequestResult.Value as ApiResponse;
         apiResponse!.Success.Should().BeFalse();
         apiResponse.Message.Should().Contain("退出登录失败");
@@ -425,12 +425,12 @@ public class AuthControllerTests : IDisposable
         {
             new Claim(ClaimTypes.NameIdentifier, userId.ToString())
         }, "Test"));
-        
+
         _authController.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext { User = claims }
         };
-        
+
         _mockAuthService.Setup(x => x.LogoutAllDevicesAsync(userId, It.IsAny<string>()))
                        .ReturnsAsync(true); // Return success boolean
 
@@ -441,7 +441,7 @@ public class AuthControllerTests : IDisposable
         result.Should().BeOfType<OkObjectResult>();
         var okResult = result as OkObjectResult;
         okResult!.Value.Should().BeOfType<ApiResponse<object>>();
-        
+
         var apiResponse = okResult.Value as ApiResponse<object>;
         apiResponse!.Success.Should().BeTrue();
         apiResponse.Message.Should().Contain("已退出所有设备");
@@ -463,7 +463,7 @@ public class AuthControllerTests : IDisposable
         result.Should().BeOfType<UnauthorizedObjectResult>();
         var unauthorizedResult = result as UnauthorizedObjectResult;
         unauthorizedResult!.Value.Should().BeOfType<ApiResponse>();
-        
+
         var apiResponse = unauthorizedResult.Value as ApiResponse;
         apiResponse!.Success.Should().BeFalse();
         apiResponse.Message.Should().Contain("无效的用户身份");
@@ -477,4 +477,3 @@ public class AuthControllerTests : IDisposable
     }
 }
 
- 

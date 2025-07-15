@@ -1,5 +1,5 @@
-using Microsoft.AspNetCore.Mvc;
 using CampusTrade.API.Models.DTOs.Common;
+using Microsoft.AspNetCore.Mvc;
 
 namespace CampusTrade.API.Controllers;
 
@@ -42,7 +42,7 @@ public class HomeController : ControllerBase
         {
             // 这里可以添加更多的健康检查逻辑
             // 例如：数据库连接检查、Redis连接检查等
-            
+
             return Ok(ApiResponse<object>.CreateSuccess(new
             {
                 status = "healthy",

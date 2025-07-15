@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import {
   authApi,
-  type LoginData,
   type RegisterData,
   type TokenResponse,
   type UserInfo,
@@ -75,13 +74,16 @@ export const useUserStore = defineStore('user', () => {
       }
 
       return { success: false, message: response.message || '登录失败' }
-    } catch (error: any) {
+    } catch (error: unknown) {
       let message = '登录失败，请重试'
 
-      if (error.response?.data?.message) {
-        message = error.response.data.message
-      } else if (error.response?.data?.success === false) {
-        message = error.response.data.message || '登录失败'
+      if (error && typeof error === 'object' && 'response' in error) {
+        const err = error as { response?: { data?: { message?: string; success?: boolean } } }
+        if (err.response?.data?.message) {
+          message = err.response.data.message
+        } else if (err.response?.data?.success === false) {
+          message = err.response.data.message || '登录失败'
+        }
       }
 
       return { success: false, message }
@@ -98,13 +100,33 @@ export const useUserStore = defineStore('user', () => {
       }
 
       return { success: false, message: response.message || '注册失败' }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      console.error('注册错误详情:', error)
       let message = '注册失败，请重试'
 
-      if (error.response?.data?.message) {
-        message = error.response.data.message
-      } else if (error.response?.data?.success === false) {
-        message = error.response.data.message || '注册失败'
+      // 尝试从不同的错误响应结构中提取错误消息
+      if (error && typeof error === 'object' && 'response' in error) {
+        const err = error as { response?: { data?: unknown } }
+        const errorData = err.response?.data
+        if (typeof errorData === 'string') {
+          message = errorData
+        } else if (errorData && typeof errorData === 'object') {
+          const data = errorData as Record<string, unknown>
+          if (typeof data.message === 'string') {
+            message = data.message
+          } else if (typeof data.error === 'string') {
+            message = data.error
+          } else if (typeof data.details === 'string') {
+            message = data.details
+          }
+        }
+      } else if (
+        error &&
+        typeof error === 'object' &&
+        'message' in error &&
+        typeof (error as { message: unknown }).message === 'string'
+      ) {
+        message = (error as { message: string }).message
       }
 
       return { success: false, message }
@@ -125,11 +147,14 @@ export const useUserStore = defineStore('user', () => {
       }
 
       return { success: false, message: response.message || '验证失败' }
-    } catch (error: any) {
+    } catch (error: unknown) {
       let message = '验证失败，请重试'
 
-      if (error.response?.data?.message) {
-        message = error.response.data.message
+      if (error && typeof error === 'object' && 'response' in error) {
+        const err = error as { response?: { data?: { message?: string } } }
+        if (err.response?.data?.message) {
+          message = err.response.data.message
+        }
       }
 
       return { success: false, message }
@@ -181,12 +206,15 @@ export const useUserStore = defineStore('user', () => {
       }
 
       return { success: false, message: response.message || '获取用户信息失败' }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('获取用户信息失败:', error)
       let message = '获取用户信息失败'
 
-      if (error.response?.data?.message) {
-        message = error.response.data.message
+      if (error && typeof error === 'object' && 'response' in error) {
+        const err = error as { response?: { data?: { message?: string } } }
+        if (err.response?.data?.message) {
+          message = err.response.data.message
+        }
       }
 
       return { success: false, message }

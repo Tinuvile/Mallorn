@@ -1,9 +1,9 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
 using CampusTrade.API.Options;
 using CampusTrade.API.Services.Auth;
 using CampusTrade.API.Utils.Security;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 
 namespace CampusTrade.API.Extensions;
 
@@ -140,7 +140,7 @@ public static class ServiceCollectionExtensions
         {
             options.AddPolicy("CampusTradeCors", policy =>
             {
-                var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() 
+                var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
                     ?? new[] { "http://localhost:3000", "http://localhost:5173" };
 
                 policy.WithOrigins(allowedOrigins)
@@ -165,7 +165,7 @@ public class JwtOptionsValidator : IValidateOptions<JwtOptions>
     public ValidateOptionsResult Validate(string? name, JwtOptions options)
     {
         var errors = options.GetValidationErrors().ToList();
-        
+
         if (errors.Any())
         {
             return ValidateOptionsResult.Fail(errors);
@@ -173,4 +173,4 @@ public class JwtOptionsValidator : IValidateOptions<JwtOptions>
 
         return ValidateOptionsResult.Success;
     }
-} 
+}

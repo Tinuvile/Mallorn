@@ -1,14 +1,28 @@
-using Microsoft.EntityFrameworkCore;
+using System.Text;
+using System.Text.Encodings.Web;
 using CampusTrade.API.Data;
 using CampusTrade.API.Extensions;
 using CampusTrade.API.Middleware;
+using CampusTrade.API.Options;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+
+// 设置控制台编码为UTF-8，确保中文字符正确显示
+Console.OutputEncoding = Encoding.UTF8;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddControllers();
+// 添加服务到容器中
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
+        options.JsonSerializerOptions.PropertyNamingPolicy = null;
+    });
 
-// Add API documentation
+// 添加API文档
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -24,7 +38,7 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 
-    // Add JWT authentication to Swagger
+    // 为Swagger添加JWT身份验证
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
         Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token in the text input below.",
@@ -49,7 +63,7 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 
-    // Include XML comments (optional)
+    // 使用XML注释
     var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
     if (File.Exists(xmlPath))
@@ -62,18 +76,18 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddDbContext<CampusTradeDbContext>(options =>
     options.UseOracle(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// 添加JWT认证和Token服务（使用扩展方法）
+// 添加JWT认证和Token服务
 builder.Services.AddJwtAuthentication(builder.Configuration);
 
 // 添加认证相关服务
 builder.Services.AddAuthenticationServices();
 
-// 配置 CORS（使用扩展方法）
+// 配置 CORS
 builder.Services.AddCorsPolicy(builder.Configuration);
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// 配置HTTP请求管道
 if (app.Environment.IsDevelopment())
 {
     // 在开发环境下，先配置Swagger，避免被其他中间件影响
@@ -85,15 +99,18 @@ if (app.Environment.IsDevelopment())
         c.DocumentTitle = "Campus Trade API Documentation";
         c.DefaultModelsExpandDepth(-1); // 隐藏模型
         c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None); // 默认折叠所有操作
-        
+
         // 自定义HTML模板
-        c.IndexStream = () => {
+        c.IndexStream = () =>
+        {
             var assembly = System.Reflection.Assembly.GetExecutingAssembly();
             return new MemoryStream(System.Text.Encoding.UTF8.GetBytes(@"
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset='UTF-8'>
+     <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+     <meta name='viewport' content='width=device-width, initial-scale=1.0'>
     <title>Campus Trade API Documentation</title>
     <link rel='stylesheet' type='text/css' href='./swagger-ui.css' />
     <style>
@@ -104,6 +121,14 @@ if (app.Environment.IsDevelopment())
 </head>
 <body>
     <div id='swagger-ui'></div>
+     <script>
+         // Polyfill for Object.hasOwn (ES2022) to support older browsers
+         if (!Object.hasOwn) {
+             Object.hasOwn = function(obj, prop) {
+                 return Object.prototype.hasOwnProperty.call(obj, prop);
+             };
+         }
+     </script>
     <script src='./swagger-ui-bundle.js'></script>
     <script src='./swagger-ui-standalone-preset.js'></script>
     <script>
@@ -145,6 +170,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
+// 启用路由匹配中间件
 app.UseRouting();
 
 // 启用 CORS
@@ -157,23 +183,8 @@ app.UseJwtValidation();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// 配置API路由
+// 映射控制器端点
 app.MapControllers();
-
-// 自动创建数据库
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<CampusTradeDbContext>();
-    try
-    {
-        context.Database.EnsureCreated();
-    }
-    catch (Exception ex)
-    {
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "创建数据库时发生错误");
-    }
-}
 
 app.Run();
 

@@ -1,7 +1,7 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using CampusTrade.API.Data;
 using CampusTrade.API.Models.Entities;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CampusTrade.Tests.Helpers;
 
@@ -16,7 +16,7 @@ public static class TestDbContextFactory
     public static CampusTradeDbContext CreateInMemoryDbContext(string? databaseName = null)
     {
         var dbName = databaseName ?? Guid.NewGuid().ToString();
-        
+
         var options = new DbContextOptionsBuilder<CampusTradeDbContext>()
             .UseInMemoryDatabase(databaseName: dbName)
             .Options;
@@ -163,4 +163,4 @@ public static class TestDbContextFactory
             _ => throw new ArgumentException($"No test student with ID {studentId}")
         };
     }
-} 
+}

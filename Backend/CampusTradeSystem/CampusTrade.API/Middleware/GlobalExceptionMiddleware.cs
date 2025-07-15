@@ -1,7 +1,7 @@
-using CampusTrade.API.Models.DTOs.Common;
+using System.Diagnostics;
 using System.Net;
 using System.Text.Json;
-using System.Diagnostics;
+using CampusTrade.API.Models.DTOs.Common;
 
 namespace CampusTrade.API.Middleware;
 
@@ -15,7 +15,7 @@ public class GlobalExceptionMiddleware
     private readonly IWebHostEnvironment _environment;
 
     public GlobalExceptionMiddleware(
-        RequestDelegate next, 
+        RequestDelegate next,
         ILogger<GlobalExceptionMiddleware> logger,
         IWebHostEnvironment environment)
     {
@@ -28,11 +28,11 @@ public class GlobalExceptionMiddleware
     {
         var stopwatch = Stopwatch.StartNew();
         var traceId = Activity.Current?.Id ?? context.TraceIdentifier;
-        
+
         try
         {
             await _next(context);
-            
+
             // 记录成功的请求（仅在开发环境或需要审计时）
             stopwatch.Stop();
             if (_environment.IsDevelopment() || context.Response.StatusCode >= 400)
@@ -168,23 +168,23 @@ public class GlobalExceptionMiddleware
             // 具体异常类型要放在基类之前
             ArgumentNullException => (400, "INVALID_ARGUMENT", "请求参数不能为空", LogLevel.Warning),
             ArgumentException argEx => (400, "INVALID_ARGUMENT", argEx.Message, LogLevel.Warning),
-            
+
             UnauthorizedAccessException => (401, "UNAUTHORIZED", "访问被拒绝", LogLevel.Warning),
             KeyNotFoundException => (404, "NOT_FOUND", "请求的资源未找到", LogLevel.Warning),
             InvalidOperationException invEx => (400, "INVALID_OPERATION", invEx.Message, LogLevel.Warning),
             TimeoutException => (408, "REQUEST_TIMEOUT", "请求超时", LogLevel.Warning),
             NotSupportedException => (501, "NOT_SUPPORTED", "不支持的操作", LogLevel.Warning),
             TaskCanceledException => (499, "REQUEST_CANCELLED", "请求被取消", LogLevel.Information),
-            
+
             // JWT相关异常 - 更具体的类型要放在前面
             Microsoft.IdentityModel.Tokens.SecurityTokenExpiredException => (401, "TOKEN_EXPIRED", "Token已过期", LogLevel.Warning),
             Microsoft.IdentityModel.Tokens.SecurityTokenException => (401, "INVALID_TOKEN", "Token无效", LogLevel.Warning),
-            
+
             // 数据库相关异常 - 更具体的类型要放在前面
             Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException => (409, "CONCURRENCY_ERROR", "数据并发冲突", LogLevel.Warning),
             Microsoft.EntityFrameworkCore.DbUpdateException => (500, "DATABASE_ERROR", "数据更新失败", LogLevel.Error),
             System.Data.Common.DbException => (500, "DATABASE_ERROR", "数据库操作失败", LogLevel.Error),
-            
+
             // 默认处理
             _ => (500, "INTERNAL_ERROR", "内部服务器错误", LogLevel.Error)
         };
@@ -214,4 +214,4 @@ public static class GlobalExceptionMiddlewareExtensions
     {
         return builder.UseMiddleware<GlobalExceptionMiddleware>();
     }
-} 
+}
