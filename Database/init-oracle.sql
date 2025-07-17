@@ -591,7 +591,7 @@ INSERT INTO students (student_id, name, department) VALUES ('STU003', '王五', 
 
 -- 添加更多学生信息供注册测试
 INSERT INTO students (student_id, name, department) VALUES ('2352495', '张竹和', '计算机科学与技术学院');
-INSERT INTO students (student_id, name, department) VALUES ('2353108', '钱宝强', '计算机科学与技术学院');
+INSERT INTO students (student_id, name, department) VALUES ('2353018', '钱宝强', '计算机科学与技术学院');
 INSERT INTO students (student_id, name, department) VALUES ('2351427', '缪语欣', '计算机科学与技术学院');
 INSERT INTO students (student_id, name, department) VALUES ('2354177', '陈雷诗语', '计算机科学与技术学院');
 INSERT INTO students (student_id, name, department) VALUES ('2352755', '刘奕含', '计算机科学与技术学院');

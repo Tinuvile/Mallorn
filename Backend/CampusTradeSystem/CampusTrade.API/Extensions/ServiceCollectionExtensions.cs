@@ -1,5 +1,6 @@
 using CampusTrade.API.Options;
 using CampusTrade.API.Services.Auth;
+using CampusTrade.API.Services.File;
 using CampusTrade.API.Utils.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
@@ -149,12 +150,39 @@ public static class ServiceCollectionExtensions
                       .AllowCredentials()
                       .SetPreflightMaxAge(TimeSpan.FromMinutes(30));
             });
+
+            // 添加开发环境的宽松CORS策略，支持file://协议和本地测试
+            options.AddPolicy("DevelopmentCors", policy =>
+            {
+                policy.AllowAnyOrigin()
+                      .AllowAnyMethod()
+                      .AllowAnyHeader();
+            });
         });
 
         return services;
     }
 
+    /// <summary>
+    /// 添加文件管理服务
+    /// </summary>
+    /// <param name="services">服务集合</param>
+    /// <param name="configuration">配置</param>
+    /// <returns>服务集合</returns>
+    public static IServiceCollection AddFileManagementServices(this IServiceCollection services, IConfiguration configuration)
+    {
+        // 配置文件存储选项
+        services.Configure<FileStorageOptions>(configuration.GetSection(FileStorageOptions.SectionName));
 
+        // 注册文件服务
+        services.AddScoped<IFileService, FileService>();
+        services.AddScoped<IThumbnailService, ThumbnailService>();
+
+        // 验证文件存储选项
+        services.AddSingleton<IValidateOptions<FileStorageOptions>, FileStorageOptionsValidator>();
+
+        return services;
+    }
 }
 
 /// <summary>
@@ -165,6 +193,49 @@ public class JwtOptionsValidator : IValidateOptions<JwtOptions>
     public ValidateOptionsResult Validate(string? name, JwtOptions options)
     {
         var errors = options.GetValidationErrors().ToList();
+
+        if (errors.Any())
+        {
+            return ValidateOptionsResult.Fail(errors);
+        }
+
+        return ValidateOptionsResult.Success;
+    }
+}
+
+/// <summary>
+/// 文件存储选项验证器
+/// </summary>
+public class FileStorageOptionsValidator : IValidateOptions<FileStorageOptions>
+{
+    public ValidateOptionsResult Validate(string? name, FileStorageOptions options)
+    {
+        var errors = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(options.UploadPath))
+        {
+            errors.Add("上传路径不能为空");
+        }
+
+        if (string.IsNullOrWhiteSpace(options.BaseUrl))
+        {
+            errors.Add("基础URL不能为空");
+        }
+
+        if (options.MaxFileSize <= 0)
+        {
+            errors.Add("最大文件大小必须大于0");
+        }
+
+        if (options.ThumbnailWidth <= 0 || options.ThumbnailHeight <= 0)
+        {
+            errors.Add("缩略图尺寸必须大于0");
+        }
+
+        if (options.ThumbnailQuality < 1 || options.ThumbnailQuality > 100)
+        {
+            errors.Add("缩略图质量必须在1-100之间");
+        }
 
         if (errors.Any())
         {

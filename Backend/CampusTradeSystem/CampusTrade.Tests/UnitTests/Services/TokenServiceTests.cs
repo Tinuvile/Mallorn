@@ -271,7 +271,7 @@ public class TokenServiceTests : IDisposable
         result.Should().NotBeNull();
         result!.Token.Should().Be(refreshTokenValue);
         result.UserId.Should().Be(1);
-        result.IsRevoked.Should().BeFalse();
+        result.IsRevoked.Should().Be(0); // 0表示false Be(0)表示未撤销
     }
 
     [Fact]
@@ -416,7 +416,7 @@ public class TokenServiceTests : IDisposable
         result.Should().NotBeNull();
         result.Should().NotBeEmpty();
         result.All(t => t.UserId == userId).Should().BeTrue();
-        result.All(t => !t.IsRevoked).Should().BeTrue();
+        result.All(t => t.IsRevoked == 0).Should().BeTrue();
         result.All(t => t.ExpiryDate > DateTime.UtcNow).Should().BeTrue();
     }
 
