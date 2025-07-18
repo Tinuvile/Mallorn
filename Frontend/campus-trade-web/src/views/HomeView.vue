@@ -2,6 +2,7 @@
   <v-app id="inspire">
     <!-- 导航栏 -->
     <v-app-bar color="#BBDEFB" height="72" dark>
+      <span class="title" style="font-size: 24px; margin-left: 30px;margin-right: 30px;">Campus Secondhand</span>
       <v-btn icon color="indigo" @click="goToCart" class="mx-2">
         <v-icon size="40">mdi-account-circle</v-icon>
       </v-btn>
@@ -20,83 +21,27 @@
       <v-spacer></v-spacer>
     </v-app-bar>
 
-
-    <!-- 页面左侧 -->
-    <v-navigation-drawer floating style="background:linear-gradient(to bottom,#fceeee,#F8BBD0);">
-      <h1 style="text-align: start; margin: 20px 0px -30px 15px;">在这里探索不同</h1>
-      <v-icon size="40">mdi-shop-find</v-icon>
-      
-      <v-card :disabled="loading" :loading="loading" class="mx-auto my-12" max-width="200" @click="goToBook">
-        <template v-slot:loader="{ isActive }">
-          <v-progress-linear :active="isActive" color="deep-purple" height="4" indeterminate></v-progress-linear>
-        </template>
-
-        <v-img height="120" src="/images/books.jpg" cover></v-img>
-
-        <v-card-item>
-          <v-card-title>Books</v-card-title>
-
-          <v-card-subtitle>
-            <span class="me-1">这里有你想要的所有书籍</span>
-          </v-card-subtitle>
-        </v-card-item>
-      </v-card>
-
-      <v-card :disabled="loading" :loading="loading" class="mx-auto my-12" max-width="200" @click="goToBook">
-        <template v-slot:loader="{ isActive }">
-          <v-progress-linear :active="isActive" color="deep-purple" height="4" indeterminate></v-progress-linear>
-        </template>
-
-        <v-img height="120" src="/images/daily.jpg" cover></v-img>
-
-        <v-card-item>
-          <v-card-title>Daily using</v-card-title>
-
-          <v-card-subtitle>
-            <span class="me-1">这里有你想要的日常用品</span>
-          </v-card-subtitle>
-        </v-card-item>
-      </v-card>
-
-      <v-card :disabled="loading" :loading="loading" class="mx-auto my-12" max-width="200" @click="goToBook">
-        <template v-slot:loader="{ isActive }">
-          <v-progress-linear :active="isActive" color="deep-purple" height="4" indeterminate></v-progress-linear>
-        </template>
-
-        <v-img height="120" src="/images/dianzi.jpg" cover></v-img>
-
-        <v-card-item>
-          <v-card-title>Electronic Products</v-card-title>
-
-          <v-card-subtitle>
-            <span class="me-1">这里有你想要的电子产品</span>
-          </v-card-subtitle>
-        </v-card-item>
-      </v-card>
-
-      <v-card :disabled="loading" :loading="loading" class="mx-auto my-12" max-width="200" @click="goToBook">
-        <template v-slot:loader="{ isActive }">
-          <v-progress-linear :active="isActive" color="deep-purple" height="4" indeterminate></v-progress-linear>
-        </template>
-
-        <v-img height="120" src="/images/food.jpg" cover></v-img>
-
-        <v-card-item>
-          <v-card-title>Food</v-card-title>
-
-          <v-card-subtitle>
-            <span class="me-1">这里有你想要的所有食品</span>
-          </v-card-subtitle>
-        </v-card-item>
-      </v-card>
-    </v-navigation-drawer>
-
     <v-divider></v-divider>
     <!-- 页面主体内容 -->
-    <v-main style="margin-top: -20px;" >
+    <v-main style="margin-top: 30px;" >
+      <div class="d-flex flex-row">
+
+      <!-- 分类列表 -->
+        <v-card class="pa-0" width = "15%" style="background-color: #f5f5f5; border-radius: 5px; margin: 40px 20px 20px 20px; ">
+        <v-list class="pa-4" style="margin-top: 20px;margin-left: -10px; background-color: transparent; ">
+          <v-list-item
+            v-for="(category, index) in categories"
+            :key="index"
+            link
+            @click="selectCategory(category.id)"
+          >
+            <v-list-item-title>{{ category.name }}</v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-card>
       <!-- 滚动图片展示 -->
       <v-carousel 
-      style="height: 350px;width: 80%; margin: 40px auto 20px; overflow: hidden;" 
+      style="height: 500px;width: 80%; margin: 40px auto 20px; overflow: hidden;" 
        interval="3000"
         show-arrows="hover" hide-delimiters rounded class="rounded-lg" contain cycle>
         <v-carousel-item v-for="(image, index) in carouselImages" :key="index">
@@ -122,10 +67,38 @@
         </v-carousel-item>
       </v-carousel>
 
+      <!-- 个人信息区块 -->
+        <v-card class="pa-4" width="20%" style="margin: 40px 20px 20px 20px; border-radius: 10px;background:linear-gradient(to bottom,#fceeee,#F8BBD0)">
+          <v-avatar size="100" class="mx-auto">
+            <img :src="userInfo.avatar" :alt="userInfo.name" />
+          </v-avatar>
+          <v-card-title class="text-center mt-4">{{ userInfo.name }}</v-card-title>
+          <v-card-subtitle class="text-center">{{ userInfo.email }}</v-card-subtitle>
+          <v-divider class="my-4"></v-divider>
+          <v-list style="background-color: transparent;">
+            <v-list-item>
+              <v-list-item-icon>
+                <v-icon>mdi-phone</v-icon>
+              </v-list-item-icon>
+              <v-list-item-content>
+                <v-list-item-title>{{ userInfo.phone }}</v-list-item-title>
+              </v-list-item-content>
+            </v-list-item>
+            <v-list-item>
+              <v-list-item-icon>
+                <v-icon>mdi-account-group</v-icon>
+              </v-list-item-icon>
+              <v-list-item-content>
+                <v-list-item-title>{{ userInfo.role }}</v-list-item-title>
+              </v-list-item-content>
+            </v-list-item>
+          </v-list>
+        </v-card>
+      </div>
       <!-- 促销 -->
       <v-sheet class="mx-auto pa-2 pt-6" style="border: 3px solid #fceeee; border-radius: 10px;box-shadow: 0 40px 8px rgba(0, 0, 0, 0.1);">
-        <v-icon>mdi-sale</v-icon>
-        <p style="font-size: 40px;">促销</p>
+        <v-icon color="deep-purple">mdi-sale</v-icon>
+        <p style="font-size: 40px; font-weight: bold; color: #E1BEE7;">促销</p>
         <v-slide-group show-arrows>
           <v-slide-group-item v-for="(product, index) in products" :key="index">
             <v-card class="ma-3" height="200" width="250" rounded >
@@ -138,8 +111,8 @@
 
       <!-- 热销商品 -->
       <v-sheet class="mx-auto pa-2 pt-6">
-        <v-icon>mdi-fire</v-icon>
-        <p style="font-size: 40px;">热销中</p>
+        <v-icon color="red">mdi-fire</v-icon>
+        <p style="font-size: 40px;font-weight: bold; color: #C2185B;">热销中</p>
 
         <v-slide-group show-arrows>
           <v-slide-group-item v-for="product in hotProducts" :key="product.id">
@@ -179,6 +152,35 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
+// 分类数据
+const categories = ref([
+  { id: 1, name: '电脑/配件/办公' },
+  { id: 2, name: '工业品/商业/农业' },
+  { id: 3, name: '家电/手机/通信' },
+  { id: 4, name: '家具/家装/家居' },
+  { id: 5, name: '食品/生鲜/酒类' },
+  { id: 6, name: '女装/男装/内衣' },
+  { id: 7, name: '美妆/个护/娱乐' },
+  { id: 8, name: '运动/户外/交通' },
+  { id: 9, name: '母婴/玩具/乐器' },
+])
+
+// 分类选择方法
+const selectCategory = (categoryId) => {
+  console.log('选中分类 ID:', categoryId)
+  // 这里可以添加跳转或筛选逻辑
+}
+
+// 个人信息数据
+const userInfo = ref({
+  avatar: 'https://picsum.photos/100/100?random=1',
+  name: '张三',
+  email: 'zhangsan@example.com',
+  phone: '13800138000',
+  role: '普通用户'
+})
+
+
 // 模拟购物车商品数量
 const cartItemsCount = ref(3)
 
@@ -200,11 +202,11 @@ const goToProductDetail = (id) => {
 
 // 模拟促销商品数据
 const products = ref([
-  { id: 1, name: '商品1', imageUrl: 'https://picsum.photos/250/150?random=1' },
-  { id: 2, name: '商品2', imageUrl: 'https://picsum.photos/250/150?random=2' },
-  { id: 3, name: '商品3', imageUrl: 'https://picsum.photos/250/150?random=3' },
-  { id: 4, name: '商品4', imageUrl: 'https://picsum.photos/250/150?random=4' },
-  { id: 5, name: '商品5', imageUrl: 'https://picsum.photos/250/150?random=5' },
+  { id: 1, name: '商品1', imageUrl: '/images/shoe1.jpg' },
+  { id: 2, name: '商品2', imageUrl: '/images/shoe2.jpg' },
+  { id: 3, name: '商品3', imageUrl: '/images/shoe3.jpg' },
+  { id: 4, name: '商品4', imageUrl: '/images/shoe4.jpg' },
+  { id: 5, name: '商品5', imageUrl: '/images/shoe5.jpg' },
   { id: 6, name: '商品6', imageUrl: 'https://picsum.photos/250/150?random=6' },
   { id: 7, name: '商品7', imageUrl: 'https://picsum.photos/250/150?random=7' },
   { id: 8, name: '商品8', imageUrl: 'https://picsum.photos/250/150?random=8' },
@@ -228,25 +230,21 @@ const hotProducts = ref([
 // 轮播图数据
 const carouselImages = ref([
   {
-    url: 'https://picsum.photos/1200/400?random=1',
-    title: '智能家电新体验',
+    url: '/images/campus.png',
+    title: '校园交易平台',
     subtitle: '开启便捷品质生活，品类齐全 现货热销'
   },
   {
-    url: 'https://picsum.photos/1200/400?random=2',
-    title: '轻盈夏日穿搭优选',
-    subtitle: '衣橱焕新精致指南，精选女装 火热开抢'
+    url: '/images/show.jpg',
+    title: '实战必备穿搭优选',
+    subtitle: '衣橱焕新精致指南，精选球鞋 火热开抢'
   },
   {
-    url: 'https://picsum.photos/1200/400?random=3',
-    title: '美食盛宴',
-    subtitle: '尽享美味，舌尖上的诱惑'
+    url: '/images/show2.jpg',
+    title: '崭新出售',
+    subtitle: '极限竞速，极限挑战'
   }
 ])
 
-  const loading = ref(false)
-  function goToBook() {
-    loading.value = true
-    setTimeout(() => (loading.value = false), 2000)
-  }
+const loading = ref(false)
 </script>
