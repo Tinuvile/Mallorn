@@ -1,16 +1,28 @@
 <template>
   <v-app id="inspire">
+    <v-system-bar>
+      <v-spacer></v-spacer>
+
+      <v-icon>mdi-circle</v-icon>
+      <v-icon>mdi-account</v-icon>
+    </v-system-bar>
+
     <!-- 导航栏 -->
-    <v-app-bar color="#BBDEFB" height="72" dark>
-      <v-btn icon color="indigo" @click="goToCart" class="mx-2">
+    <v-app-bar color="#E3F2FD" height="72" dark>
+      <template v-slot:img="{ props }">
+        <v-img v-bind="props" gradient="to top right, rgba(19,84,122,.5), rgba(128,208,199,.8)"></v-img>
+      </template>
+      <v-btn icon color="indigo"  class="mx-2">
         <v-icon size="40">mdi-account-circle</v-icon>
       </v-btn>
       <v-btn icon @click="goToCart" class="mx-2">
         <v-icon size="40">mdi-cart</v-icon>
       </v-btn>
 
-      <v-btn class="me-2" color="black" height="40" variant="text" width="100" style="margin-left: 100px;" @click="goToLogin"
-        size="large" v-if="!isLoggedIn">登录/注册</v-btn>
+      <v-btn class="me-2" color="black" height="40" variant="text" width="100" style="margin-left: 100px;"
+        size="large">登录</v-btn>
+      <v-btn class="me-3" color="black" height="40" variant="text" width="100" style="margin-left: 50px;"
+        size="large">注册</v-btn>
 
       <!-- 搜索框 -->
       <v-text-field :loading="loading" append-inner-icon="mdi-magnify" density="compact" label="Search" variant="solo"
@@ -20,9 +32,11 @@
       <v-spacer></v-spacer>
     </v-app-bar>
 
+    <!-- 页面底部 -->
+    <v-footer color="grey" height="30" app></v-footer>
 
     <!-- 页面左侧 -->
-    <v-navigation-drawer floating style="background:linear-gradient(to bottom,#fceeee,#F8BBD0);">
+    <v-navigation-drawer floating>
       <h1 style="text-align: start; margin: 20px 0px -30px 15px;">在这里探索不同</h1>
       <v-icon size="40">mdi-shop-find</v-icon>
       
@@ -93,11 +107,9 @@
 
     <v-divider></v-divider>
     <!-- 页面主体内容 -->
-    <v-main style="margin-top: -20px;" >
+    <v-main style="margin-top: -20px;">
       <!-- 滚动图片展示 -->
-      <v-carousel 
-      style="height: 350px;width: 80%; margin: 40px auto 20px; overflow: hidden;" 
-       interval="3000"
+      <v-carousel style=" height: 350px;width: 80%; margin: 40px auto 20px; overflow: hidden;" interval="3000"
         show-arrows="hover" hide-delimiters rounded class="rounded-lg" contain cycle>
         <v-carousel-item v-for="(image, index) in carouselImages" :key="index">
           <img :src="image.url" :alt="image.title" style="
@@ -123,12 +135,12 @@
       </v-carousel>
 
       <!-- 促销 -->
-      <v-sheet class="mx-auto pa-2 pt-6" style="border: 3px solid #fceeee; border-radius: 10px;box-shadow: 0 40px 8px rgba(0, 0, 0, 0.1);">
+      <v-sheet class="mx-auto pa-2 pt-6">
         <v-icon>mdi-sale</v-icon>
         <p style="font-size: 40px;">促销</p>
         <v-slide-group show-arrows>
           <v-slide-group-item v-for="(product, index) in products" :key="index">
-            <v-card class="ma-3" height="200" width="250" rounded >
+            <v-card class="ma-3" height="200" width="250" rounded>
               <v-img :src="product.imageUrl" :alt="product.name" height="150" contain placeholder="加载中..." />
               <v-card-title class="text-center pt-2">{{ product.name }}</v-card-title>
             </v-card>
@@ -142,21 +154,10 @@
         <p style="font-size: 40px;">热销中</p>
 
         <v-slide-group show-arrows>
-          <v-slide-group-item v-for="product in hotProducts" :key="product.id">
-
-            <v-card class="ma-3" elevation="0" @click="goToProductDetail(product.id)">
-              <v-img :width="product.id === 1 ? 300 : 150"
-                :src="'https://picsum.photos/'+(product.id === 1 ? '300/200' : '150/200')+'?random='+product.id" 
-                :alt="product.name" 
-                height="200" 
-                rounded 
-                contain 
-                loading="lazy" 
-              />
-              <v-card-item>
-                <v-card-title class="text-center">{{ product.name }}</v-card-title> 
-              </v-card-item>
-            </v-card>
+          <v-slide-group-item v-for="n in 12" :key="n">
+            <v-img :width="n === 1 ? 300 : 150"
+              :src="'https://picsum.photos/'+(n === 1 ? '300/200' : '150/200')+'?random='+n" :alt="'图片'+n" class="ma-3"
+              height="200" rounded contain loading="lazy" />
           </v-slide-group-item>
         </v-slide-group>
 
@@ -185,44 +186,14 @@ const cartItemsCount = ref(3)
 // 点击购物车图标时的跳转方法(还需要根据实际路由调整)
 const goToCart = () => {
   //router.push({ name: 'Cart' }) // 跳转到名为'Cart'的路由
+  // 也可以使用路径跳转: router.push('/cart')
 }
-
-// 跳转到登录页面
-const goToLogin = () => {
-  router.push('/login')
-}
-
-// 跳转到商品详情页
-const goToProductDetail = (id) => {
-  //router.push({ name: 'productDetail', params: { id } })
-}
-
-
-// 模拟促销商品数据
 const products = ref([
   { id: 1, name: '商品1', imageUrl: 'https://picsum.photos/250/150?random=1' },
   { id: 2, name: '商品2', imageUrl: 'https://picsum.photos/250/150?random=2' },
   { id: 3, name: '商品3', imageUrl: 'https://picsum.photos/250/150?random=3' },
   { id: 4, name: '商品4', imageUrl: 'https://picsum.photos/250/150?random=4' },
   { id: 5, name: '商品5', imageUrl: 'https://picsum.photos/250/150?random=5' },
-  { id: 6, name: '商品6', imageUrl: 'https://picsum.photos/250/150?random=6' },
-  { id: 7, name: '商品7', imageUrl: 'https://picsum.photos/250/150?random=7' },
-  { id: 8, name: '商品8', imageUrl: 'https://picsum.photos/250/150?random=8' },
-  { id: 9, name: '商品9', imageUrl: 'https://picsum.photos/250/150?random=9' },
-])
-
-// 模拟热销商品数据
-const hotProducts = ref([
-  { id: 1, name: '商品1', imageUrl: 'https://picsum.photos/300/200?random=1' },
-  { id: 2, name: '商品2', imageUrl: 'https://picsum.photos/150/200?random=2' },
-  { id: 3, name: '商品3', imageUrl: 'https://picsum.photos/150/200?random=3' },
-  { id: 4, name: '商品4', imageUrl: 'https://picsum.photos/150/200?random=4' },
-  { id: 5, name: '商品5', imageUrl: 'https://picsum.photos/150/200?random=5' },
-  { id: 6, name: '商品6', imageUrl: 'https://picsum.photos/150/200?random=6' },
-  { id: 7, name: '商品7', imageUrl: 'https://picsum.photos/150/200?random=7' },
-  { id: 8, name: '商品8', imageUrl: 'https://picsum.photos/150/200?random=8' },
-  { id: 9, name: '商品9', imageUrl: 'https://picsum.photos/150/200?random=9' },
-  // 可按需添加更多商品
 ])
 
 // 轮播图数据

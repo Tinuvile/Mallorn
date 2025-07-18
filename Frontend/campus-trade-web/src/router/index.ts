@@ -2,15 +2,21 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import HomeView from '@/views/HomeView.vue'
 import LoginView from '@/views/LoginView.vue'
+import Welcome from '@/views/Welcome.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    // {
+    //   path: '/',
+    //   name: 'welcome',
+    //   component: Welcome,
+    //   meta: { guest: true },
+    // },
     {
       path: '/',
       name: 'home',
       component: HomeView,
-      meta: { requiresAuth: true },
     },
     {
       path: '/login',
@@ -35,12 +41,6 @@ router.beforeEach((to, from, next) => {
   userStore.initializeAuth()
 
   const isLoggedIn = userStore.isLoggedIn
-
-  // 如果路由需要认证
-  if (to.meta.requiresAuth && !isLoggedIn) {
-    next('/login')
-    return
-  }
 
   // 如果已登录用户访问登录页面，重定向到首页
   if (to.meta.guest && isLoggedIn) {
