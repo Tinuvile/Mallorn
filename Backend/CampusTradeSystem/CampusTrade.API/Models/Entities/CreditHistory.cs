@@ -10,18 +10,17 @@ namespace CampusTrade.API.Models.Entities
     public class CreditHistory
     {
         /// <summary>
-        /// 日志ID - 主键，对应Oracle中的log_id字段，自增
+        /// 日志ID - 主键，对应Oracle中的log_id字段，自增（在Oracle中进行）
         /// </summary>
         [Key]
-        [Column("LOG_ID", TypeName = "NUMBER")]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        [Column("LOG_ID")]
         public int LogId { get; set; }
 
         /// <summary>
         /// 用户ID - 外键，对应Oracle中的user_id字段
         /// </summary>
         [Required]
-        [Column("USER_ID", TypeName = "NUMBER")]
+        [Column("USER_ID")]
         public int UserId { get; set; }
 
         /// <summary>
@@ -42,10 +41,10 @@ namespace CampusTrade.API.Models.Entities
         public decimal NewScore { get; set; }
 
         /// <summary>
-        /// 创建时间 - 对应Oracle中的created_at字段，默认为当前时间
+        /// 创建时间 - 对应Oracle中的created_at字段，默认为当前时间（由Oracle Default处理）
         /// </summary>
-        [Column("CREATED_AT", TypeName = "TIMESTAMP")]
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        [Column("CREATED_AT")]
+        public DateTime CreatedAt { get; set; }
 
         // 导航属性：关联的用户
         [ForeignKey("UserId")]
@@ -59,27 +58,6 @@ namespace CampusTrade.API.Models.Entities
             public const string TransactionCompleted = "交易完成";
             public const string ReportPenalty = "举报处罚";
             public const string PositiveReviewReward = "好评奖励";
-        }
-
-        /// <summary>
-        /// 检查变更类型是否有效
-        /// </summary>
-        /// <param name="changeType">变更类型</param>
-        /// <returns>是否有效</returns>
-        public static bool IsValidChangeType(string changeType)
-        {
-            return changeType == ChangeTypes.TransactionCompleted ||
-                   changeType == ChangeTypes.ReportPenalty ||
-                   changeType == ChangeTypes.PositiveReviewReward;
-        }
-
-        /// <summary>
-        /// 验证当前实例的变更类型是否有效
-        /// </summary>
-        /// <returns>是否有效</returns>
-        public bool IsValidChangeType()
-        {
-            return IsValidChangeType(ChangeType);
         }
     }
 }

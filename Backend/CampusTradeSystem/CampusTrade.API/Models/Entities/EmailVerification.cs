@@ -14,15 +14,14 @@ namespace CampusTrade.API.Models.Entities
         /// 验证ID - 主键，对应Oracle中的verification_id字段，自增
         /// </summary>
         [Key]
-        [Column("VERIFICATION_ID", TypeName = "NUMBER")]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        [Column("VERIFICATION_ID")]
         public int VerificationId { get; set; }
 
         /// <summary>
         /// 用户ID - 外键，对应Oracle中的user_id字段
         /// </summary>
         [Required]
-        [Column("USER_ID", TypeName = "NUMBER")]
+        [Column("USER_ID")]
         public int UserId { get; set; }
 
         /// <summary>
@@ -58,22 +57,22 @@ namespace CampusTrade.API.Models.Entities
         /// 过期时间 - 对应Oracle中的expire_time字段
         /// 验证码或令牌的过期时间
         /// </summary>
-        [Column("EXPIRE_TIME", TypeName = "TIMESTAMP")]
+        [Column("EXPIRE_TIME")]
         public DateTime? ExpireTime { get; set; }
 
         /// <summary>
         /// 使用状态 - 对应Oracle中的is_used字段
         /// 0=未使用，1=已使用，默认值0
         /// </summary>
-        [Column("IS_USED", TypeName = "NUMBER")]
+        [Column("IS_USED", TypeName = "NUMBER(1)")]
         [Range(0, 1, ErrorMessage = "使用状态必须是0或1")]
         public int IsUsed { get; set; } = 0;
 
         /// <summary>
         /// 创建时间 - 对应Oracle中的created_at字段，默认为当前时间
         /// </summary>
-        [Column("CREATED_AT", TypeName = "TIMESTAMP")]
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        [Column("CREATED_AT")]
+        public DateTime CreatedAt { get; set; }
 
         // 导航属性：关联的用户
         [ForeignKey("UserId")]
@@ -109,77 +108,6 @@ namespace CampusTrade.API.Models.Entities
             /// 令牌方式 - 邮箱验证链接
             /// </summary>
             Token
-        }
-
-        /// <summary>
-        /// 检查验证状态是否有效
-        /// </summary>
-        /// <param name="status">验证状态</param>
-        /// <returns>是否有效</returns>
-        public static bool IsValidVerificationStatus(int status)
-        {
-            return status == VerificationStates.Unused || status == VerificationStates.Used;
-        }
-
-        /// <summary>
-        /// 验证当前实例的状态是否有效
-        /// </summary>
-        /// <returns>是否有效</returns>
-        public bool IsValidVerificationStatus()
-        {
-            return IsValidVerificationStatus(IsUsed);
-        }
-
-        /// <summary>
-        /// 判断验证记录是否已过期
-        /// </summary>
-        /// <returns>是否过期</returns>
-        public bool IsExpired()
-        {
-            return ExpireTime.HasValue && ExpireTime.Value < DateTime.Now;
-        }
-
-        /// <summary>
-        /// 判断验证记录是否可用（未使用且未过期）
-        /// </summary>
-        /// <returns>是否可用</returns>
-        public bool IsAvailable()
-        {
-            return IsUsed == VerificationStates.Unused && !IsExpired();
-        }
-
-        /// <summary>
-        /// 获取验证类型
-        /// </summary>
-        /// <returns>验证类型</returns>
-        public VerificationType GetVerificationType()
-        {
-            if (!string.IsNullOrEmpty(VerificationCode))
-                return VerificationType.Code;
-
-            if (!string.IsNullOrEmpty(Token))
-                return VerificationType.Token;
-
-            throw new InvalidOperationException("验证记录必须包含验证码或令牌");
-        }
-
-        /// <summary>
-        /// 生成6位数字验证码
-        /// </summary>
-        /// <returns>6位数字验证码</returns>
-        public static string GenerateVerificationCode()
-        {
-            var random = new Random();
-            return random.Next(100000, 999999).ToString();
-        }
-
-        /// <summary>
-        /// 生成64位验证令牌
-        /// </summary>
-        /// <returns>64位验证令牌</returns>
-        public static string GenerateVerificationToken()
-        {
-            return Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
         }
     }
 }

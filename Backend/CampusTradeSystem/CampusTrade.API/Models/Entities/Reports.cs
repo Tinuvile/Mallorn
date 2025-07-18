@@ -9,14 +9,11 @@ namespace CampusTrade.API.Models.Entities
     [Table("REPORTS")]
     public class Reports
     {
-        #region 基本信息
-
         /// <summary>
-        /// 举报ID - 主键，自增
+        /// 举报ID - 主键，由序列和触发器自增
         /// </summary>
         [Key]
         [Column("REPORT_ID")]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int ReportId { get; set; }
 
         /// <summary>
@@ -37,40 +34,36 @@ namespace CampusTrade.API.Models.Entities
         /// 举报类型 - 商品问题/服务问题/欺诈/虚假描述/其他
         /// </summary>
         [Required]
-        [Column("TYPE")]
+        [Column("TYPE", TypeName = "VARCHAR2(50)")]
         [StringLength(50)]
         public string Type { get; set; } = string.Empty;
 
         /// <summary>
         /// 优先级 - 1-10，数字越大优先级越高
         /// </summary>
-        [Column("PRIORITY")]
+        [Column("PRIORITY", TypeName = "NUMBER(2,0)")]
         [Range(1, 10)]
         public int? Priority { get; set; }
 
         /// <summary>
         /// 举报描述
         /// </summary>
-        [Column("DESCRIPTION")]
+        [Column("DESCRIPTION", TypeName = "CLOB")]
         public string? Description { get; set; }
 
         /// <summary>
-        /// 处理状态 - 待处理/处理中/已处理/已关闭
+        /// 处理状态 - 待处理/处理中/已处理/已关闭（默认值由Oracle处理）
         /// </summary>
         [Required]
-        [Column("STATUS")]
+        [Column("STATUS", TypeName = "VARCHAR2(20)")]
         [StringLength(20)]
-        public string Status { get; set; } = "待处理";
+        public string Status { get; set; } = string.Empty;
 
         /// <summary>
-        /// 创建时间
+        /// 创建时间（由Oracle DEFAULT处理）
         /// </summary>
         [Column("CREATE_TIME")]
-        public DateTime CreateTime { get; set; } = DateTime.Now;
-
-        #endregion
-
-        #region 导航属性
+        public DateTime CreateTime { get; set; }
 
         /// <summary>
         /// 关联的抽象订单
@@ -86,187 +79,5 @@ namespace CampusTrade.API.Models.Entities
         /// 举报证据列表
         /// </summary>
         public virtual ICollection<ReportEvidence> Evidences { get; set; } = new List<ReportEvidence>();
-
-        #endregion
-
-        #region 业务方法
-
-        /// <summary>
-        /// 验证举报类型是否有效
-        /// </summary>
-        public bool IsValidType()
-        {
-            var validTypes = new[] { "商品问题", "服务问题", "欺诈", "虚假描述", "其他" };
-            return validTypes.Contains(Type);
-        }
-
-        /// <summary>
-        /// 验证举报状态是否有效
-        /// </summary>
-        public bool IsValidStatus()
-        {
-            var validStatuses = new[] { "待处理", "处理中", "已处理", "已关闭" };
-            return validStatuses.Contains(Status);
-        }
-
-        /// <summary>
-        /// 检查是否为高优先级举报
-        /// </summary>
-        public bool IsHighPriority()
-        {
-            return Priority.HasValue && Priority.Value >= 7;
-        }
-
-        /// <summary>
-        /// 检查是否为紧急举报
-        /// </summary>
-        public bool IsUrgent()
-        {
-            return Priority.HasValue && Priority.Value >= 9;
-        }
-
-        /// <summary>
-        /// 检查举报是否已处理
-        /// </summary>
-        public bool IsProcessed()
-        {
-            return Status == "已处理" || Status == "已关闭";
-        }
-
-        /// <summary>
-        /// 检查举报是否正在处理中
-        /// </summary>
-        public bool IsInProgress()
-        {
-            return Status == "处理中";
-        }
-
-        /// <summary>
-        /// 检查举报是否待处理
-        /// </summary>
-        public bool IsPending()
-        {
-            return Status == "待处理";
-        }
-
-        /// <summary>
-        /// 开始处理举报
-        /// </summary>
-        public void StartProcessing()
-        {
-            if (IsPending())
-            {
-                Status = "处理中";
-            }
-        }
-
-        /// <summary>
-        /// 完成处理举报
-        /// </summary>
-        public void CompleteProcessing()
-        {
-            if (IsInProgress())
-            {
-                Status = "已处理";
-            }
-        }
-
-        /// <summary>
-        /// 关闭举报
-        /// </summary>
-        public void CloseReport()
-        {
-            if (!IsProcessed())
-            {
-                Status = "已关闭";
-            }
-        }
-
-        /// <summary>
-        /// 设置优先级
-        /// </summary>
-        /// <param name="priority">优先级值（1-10）</param>
-        public void SetPriority(int priority)
-        {
-            if (priority >= 1 && priority <= 10)
-            {
-                Priority = priority;
-            }
-        }
-
-        /// <summary>
-        /// 添加证据
-        /// </summary>
-        /// <param name="evidence">证据对象</param>
-        public void AddEvidence(ReportEvidence evidence)
-        {
-            if (evidence != null && !IsProcessed())
-            {
-                evidence.ReportId = ReportId;
-                Evidences.Add(evidence);
-            }
-        }
-
-        /// <summary>
-        /// 获取证据数量
-        /// </summary>
-        public int GetEvidenceCount()
-        {
-            return Evidences?.Count ?? 0;
-        }
-
-        /// <summary>
-        /// 检查是否有足够证据
-        /// </summary>
-        public bool HasSufficientEvidence()
-        {
-            return GetEvidenceCount() > 0;
-        }
-
-        /// <summary>
-        /// 计算举报存在时长（小时）
-        /// </summary>
-        public double GetExistingHours()
-        {
-            return (DateTime.Now - CreateTime).TotalHours;
-        }
-
-        /// <summary>
-        /// 检查是否为超时举报（超过24小时未处理）
-        /// </summary>
-        public bool IsOverdue()
-        {
-            return IsPending() && GetExistingHours() > 24;
-        }
-
-        /// <summary>
-        /// 获取举报优先级描述
-        /// </summary>
-        public string GetPriorityDescription()
-        {
-            if (!Priority.HasValue) return "未设置";
-
-            return Priority.Value switch
-            {
-                >= 9 => "紧急",
-                >= 7 => "高",
-                >= 4 => "中",
-                _ => "低"
-            };
-        }
-
-        /// <summary>
-        /// 验证举报数据完整性
-        /// </summary>
-        public bool IsValid()
-        {
-            return OrderId > 0
-                && ReporterId > 0
-                && IsValidType()
-                && IsValidStatus()
-                && (!Priority.HasValue || (Priority.Value >= 1 && Priority.Value <= 10));
-        }
-
-        #endregion
     }
 }

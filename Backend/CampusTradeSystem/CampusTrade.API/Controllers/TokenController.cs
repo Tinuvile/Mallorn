@@ -51,7 +51,7 @@ public class TokenController : ControllerBase
         catch (UnauthorizedAccessException ex)
         {
             _logger.LogWarning("Token刷新被拒绝, 原因: {Reason}", ex.Message);
-            return Unauthorized(ApiResponse.CreateError(ex.Message, "REFRESH_DENIED"));
+            return Unauthorized(ApiResponse.CreateError("刷新失败 - " + ex.Message, "REFRESH_DENIED"));
         }
         catch (Exception ex)
         {

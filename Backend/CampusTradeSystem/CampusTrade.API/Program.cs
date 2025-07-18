@@ -76,11 +76,17 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddDbContext<CampusTradeDbContext>(options =>
     options.UseOracle(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// 添加Repository层服务
+builder.Services.AddRepositoryServices();
+
 // 添加JWT认证和Token服务
 builder.Services.AddJwtAuthentication(builder.Configuration);
 
 // 添加认证相关服务
 builder.Services.AddAuthenticationServices();
+
+// 添加文件管理服务
+builder.Services.AddFileManagementServices(builder.Configuration);
 
 // 配置 CORS
 builder.Services.AddCorsPolicy(builder.Configuration);
@@ -161,8 +167,22 @@ else
 // 使用全局异常处理中间件
 app.UseGlobalExceptionHandler();
 
+// 使用安全头中间件
+app.UseSecurityHeaders();
+
 // 使用安全检查中间件
 app.UseSecurity();
+
+// 启用静态文件访问（用于文件下载和预览）
+app.UseStaticFiles();
+
+// 配置Storage目录的静态文件服务
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+        Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "Storage")),
+    RequestPath = "/files"
+});
 
 // 在开发环境下禁用HTTPS重定向，避免影响Swagger
 if (!app.Environment.IsDevelopment())
@@ -173,8 +193,15 @@ if (!app.Environment.IsDevelopment())
 // 启用路由匹配中间件
 app.UseRouting();
 
-// 启用 CORS
-app.UseCors("CampusTradeCors");
+// 启用 CORS - 在开发环境使用宽松的CORS策略
+if (app.Environment.IsDevelopment())
+{
+    app.UseCors("DevelopmentCors");
+}
+else
+{
+    app.UseCors("CampusTradeCors");
+}
 
 // 启用JWT验证中间件（在认证之前）
 app.UseJwtValidation();

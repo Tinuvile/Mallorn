@@ -14,8 +14,7 @@ namespace CampusTrade.API.Models.Entities
         /// 图片ID - 主键，对应Oracle中的image_id字段，自增
         /// </summary>
         [Key]
-        [Column("IMAGE_ID", TypeName = "NUMBER")]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        [Column("IMAGE_ID")]
         public int ImageId { get; set; }
 
         /// <summary>
@@ -23,7 +22,7 @@ namespace CampusTrade.API.Models.Entities
         /// 关联到products表，标识图片所属商品
         /// </summary>
         [Required]
-        [Column("PRODUCT_ID", TypeName = "NUMBER")]
+        [Column("PRODUCT_ID")]
         public int ProductId { get; set; }
 
         /// <summary>
@@ -38,7 +37,6 @@ namespace CampusTrade.API.Models.Entities
 
         /// <summary>
         /// 图片显示顺序 - 用于前端显示排序
-        /// 数据库中没有此字段，但应用层需要
         /// </summary>
         [NotMapped]
         public int DisplayOrder { get; set; } = 0;
@@ -77,54 +75,10 @@ namespace CampusTrade.API.Models.Entities
             public const string PNG = ".png";
             public const string GIF = ".gif";
             public const string WEBP = ".webp";
-
             /// <summary>
             /// 获取所有支持的格式
             /// </summary>
             public static string[] GetAll() => new[] { JPEG, PNG, GIF, WEBP };
-        }
-
-        /// <summary>
-        /// 验证图片URL是否为支持的格式
-        /// </summary>
-        /// <returns>是否为支持的格式</returns>
-        public bool IsSupportedFormat()
-        {
-            if (string.IsNullOrEmpty(ImageUrl))
-                return false;
-
-            var extension = Path.GetExtension(ImageUrl).ToLower();
-            return SupportedFormats.GetAll().Contains(extension);
-        }
-
-        /// <summary>
-        /// 获取图片文件扩展名
-        /// </summary>
-        /// <returns>文件扩展名</returns>
-        public string GetFileExtension()
-        {
-            return Path.GetExtension(ImageUrl).ToLower();
-        }
-
-        /// <summary>
-        /// 验证图片URL是否有效
-        /// </summary>
-        /// <returns>是否有效</returns>
-        public bool IsValidImageUrl()
-        {
-            if (string.IsNullOrEmpty(ImageUrl))
-                return false;
-
-            // 检查URL格式
-            if (!Uri.TryCreate(ImageUrl, UriKind.Absolute, out Uri? uri))
-                return false;
-
-            // 检查是否为HTTP或HTTPS协议
-            if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
-                return false;
-
-            // 检查文件格式
-            return IsSupportedFormat();
         }
     }
 }

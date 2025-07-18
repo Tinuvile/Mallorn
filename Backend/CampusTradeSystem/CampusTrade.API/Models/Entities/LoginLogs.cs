@@ -11,18 +11,17 @@ namespace CampusTrade.API.Models.Entities
     public class LoginLogs
     {
         /// <summary>
-        /// 日志ID - 主键，对应Oracle中的log_id字段，自增
+        /// 日志ID - 主键，对应Oracle中的log_id字段，Oracle自增
         /// </summary>
         [Key]
-        [Column("LOG_ID", TypeName = "NUMBER")]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        [Column("LOG_ID")]
         public int LogId { get; set; }
 
         /// <summary>
         /// 用户ID - 外键，对应Oracle中的user_id字段
         /// </summary>
         [Required]
-        [Column("USER_ID", TypeName = "NUMBER")]
+        [Column("USER_ID")]
         public int UserId { get; set; }
 
         /// <summary>
@@ -36,8 +35,8 @@ namespace CampusTrade.API.Models.Entities
         /// <summary>
         /// 登录时间 - 对应Oracle中的log_time字段，默认为当前时间
         /// </summary>
-        [Column("LOG_TIME", TypeName = "TIMESTAMP")]
-        public DateTime LogTime { get; set; } = DateTime.Now;
+        [Column("LOG_TIME")]
+        public DateTime LogTime { get; set; }
 
         /// <summary>
         /// 设备类型 - 对应Oracle中的device_type字段
@@ -52,7 +51,7 @@ namespace CampusTrade.API.Models.Entities
         /// 风险等级 - 对应Oracle中的risk_level字段
         /// 0=低风险，1=中风险，2=高风险
         /// </summary>
-        [Column("RISK_LEVEL", TypeName = "NUMBER")]
+        [Column("RISK_LEVEL")]
         [Range(0, 2, ErrorMessage = "风险等级必须在0-2之间")]
         public int? RiskLevel { get; set; }
 
@@ -75,81 +74,9 @@ namespace CampusTrade.API.Models.Entities
         /// </summary>
         public static class RiskLevels
         {
-            /// <summary>
-            /// 低风险 - 正常登录行为
-            /// </summary>
             public const int Low = 0;
-
-            /// <summary>
-            /// 中风险 - 异常但可接受的登录行为
-            /// </summary>
             public const int Medium = 1;
-
-            /// <summary>
-            /// 高风险 - 可疑的登录行为，需要额外验证
-            /// </summary>
             public const int High = 2;
-        }
-
-        /// <summary>
-        /// 检查设备类型是否有效
-        /// </summary>
-        /// <param name="deviceType">设备类型</param>
-        /// <returns>是否有效</returns>
-        public static bool IsValidDeviceType(string deviceType)
-        {
-            return deviceType == DeviceTypes.Mobile
-                || deviceType == DeviceTypes.PC
-                || deviceType == DeviceTypes.Tablet;
-        }
-
-        /// <summary>
-        /// 验证当前实例的设备类型是否有效
-        /// </summary>
-        /// <returns>是否有效</returns>
-        public bool IsValidDeviceType()
-        {
-            return IsValidDeviceType(DeviceType);
-        }
-
-        /// <summary>
-        /// 检查风险等级是否有效
-        /// </summary>
-        /// <param name="riskLevel">风险等级</param>
-        /// <returns>是否有效</returns>
-        public static bool IsValidRiskLevel(int? riskLevel)
-        {
-            return riskLevel >= RiskLevels.Low && riskLevel <= RiskLevels.High;
-        }
-
-        /// <summary>
-        /// 验证当前实例的风险等级是否有效
-        /// </summary>
-        /// <returns>是否有效</returns>
-        public bool IsValidRiskLevel()
-        {
-            return IsValidRiskLevel(RiskLevel);
-        }
-
-        /// <summary>
-        /// 根据设备信息推断设备类型
-        /// </summary>
-        /// <param name="userAgent">用户代理字符串</param>
-        /// <returns>推断的设备类型</returns>
-        public static string InferDeviceType(string? userAgent)
-        {
-            if (string.IsNullOrEmpty(userAgent))
-                return DeviceTypes.PC;
-
-            userAgent = userAgent.ToLower();
-
-            if (userAgent.Contains("mobile") || userAgent.Contains("android") || userAgent.Contains("iphone"))
-                return DeviceTypes.Mobile;
-
-            if (userAgent.Contains("tablet") || userAgent.Contains("ipad"))
-                return DeviceTypes.Tablet;
-
-            return DeviceTypes.PC;
         }
     }
 }

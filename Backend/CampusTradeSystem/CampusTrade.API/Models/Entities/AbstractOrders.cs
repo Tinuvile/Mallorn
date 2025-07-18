@@ -16,7 +16,7 @@ namespace CampusTrade.API.Models.Entities
         /// 由ORDER_SEQ序列生成
         /// </summary>
         [Key]
-        [Column("ABSTRACT_ORDER_ID", TypeName = "NUMBER")]
+        [Column("ABSTRACT_ORDER_ID")]
         public int AbstractOrderId { get; set; }
 
         /// <summary>
@@ -27,8 +27,6 @@ namespace CampusTrade.API.Models.Entities
         [Column("ORDER_TYPE", TypeName = "VARCHAR2(20)")]
         [StringLength(20)]
         public string OrderType { get; set; } = OrderTypes.Normal;
-
-        #region 导航属性
 
         /// <summary>
         /// 对应的普通订单 - 一对一关系
@@ -60,10 +58,6 @@ namespace CampusTrade.API.Models.Entities
         /// </summary>
         public virtual ICollection<Reports> Reports { get; set; } = new List<Reports>();
 
-        #endregion
-
-        #region 静态常量
-
         /// <summary>
         /// 订单类型的有效值 - 与Oracle检查约束保持一致
         /// </summary>
@@ -78,71 +72,6 @@ namespace CampusTrade.API.Models.Entities
             /// 换物请求 - 用户之间商品交换的订单
             /// </summary>
             public const string Exchange = "exchange";
-        }
-
-        #endregion
-
-        #region 业务方法
-
-        /// <summary>
-        /// 检查订单类型是否有效
-        /// </summary>
-        /// <param name="orderType">订单类型</param>
-        /// <returns>是否有效</returns>
-        public static bool IsValidOrderType(string orderType)
-        {
-            return orderType == OrderTypes.Normal || orderType == OrderTypes.Exchange;
-        }
-
-        /// <summary>
-        /// 验证当前实例的订单类型是否有效
-        /// </summary>
-        /// <returns>是否有效</returns>
-        public bool IsValidOrderType()
-        {
-            return IsValidOrderType(OrderType);
-        }
-
-        /// <summary>
-        /// 判断是否为普通订单
-        /// </summary>
-        /// <returns>是否为普通订单</returns>
-        public bool IsNormalOrder()
-        {
-            return OrderType == OrderTypes.Normal;
-        }
-
-        /// <summary>
-        /// 判断是否为换物请求
-        /// </summary>
-        /// <returns>是否为换物请求</returns>
-        public bool IsExchangeRequest()
-        {
-            return OrderType == OrderTypes.Exchange;
-        }
-
-        /// <summary>
-        /// 更新订单类型
-        /// </summary>
-        /// <param name="newOrderType">新的订单类型</param>
-        /// <exception cref="ArgumentException">订单类型无效时抛出异常</exception>
-        public void UpdateOrderType(string newOrderType)
-        {
-            if (!IsValidOrderType(newOrderType))
-                throw new ArgumentException($"无效的订单类型: {newOrderType}");
-
-            OrderType = newOrderType;
-        }
-
-        #endregion
-
-        /// <summary>
-        /// 重写ToString方法，返回订单信息
-        /// </summary>
-        /// <returns>订单的基本信息</returns>
-        public override string ToString()
-        {
-            return $"AbstractOrder[{AbstractOrderId}] - Type: {OrderType}";
         }
     }
 }
