@@ -4,10 +4,14 @@ using CampusTrade.API.Data;
 using CampusTrade.API.Extensions;
 using CampusTrade.API.Middleware;
 using CampusTrade.API.Options;
+using CampusTrade.API.Services.Cache;
+using CampusTrade.API.Services.Interface;
+using CampusTrade.API.Services.BackgroundServices;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+
 
 // 设置控制台编码为UTF-8，确保中文字符正确显示
 Console.OutputEncoding = Encoding.UTF8;
@@ -90,6 +94,16 @@ builder.Services.AddFileManagementServices(builder.Configuration);
 
 // 配置 CORS
 builder.Services.AddCorsPolicy(builder.Configuration);
+
+// 注册后台服务
+builder.Services.AddHostedService<CacheRefreshBackgroundService>();
+
+// 注册缓存服务（确保这些已存在）
+builder.Services.AddScoped<ICategoryCacheService, CategoryCacheService>();
+builder.Services.AddScoped<IProductCacheService, ProductCacheService>();
+builder.Services.AddScoped<ISystemConfigCacheService, SystemConfigCacheService>();
+builder.Services.AddScoped<IUserCacheService, UserCacheService>();
+
 
 var app = builder.Build();
 
@@ -217,3 +231,4 @@ app.Run();
 
 // 使Program类可供测试访问
 public partial class Program { }
+
