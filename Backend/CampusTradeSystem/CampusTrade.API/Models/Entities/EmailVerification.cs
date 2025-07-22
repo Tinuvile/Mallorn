@@ -62,10 +62,9 @@ namespace CampusTrade.API.Models.Entities
 
         /// <summary>
         /// 使用状态 - 对应Oracle中的is_used字段
-        /// 0=未使用，1=已使用，默认值0
+        /// false=未使用，true=已使用，默认值false
         /// </summary>
-        [Column("IS_USED", TypeName = "NUMBER(1)")]
-        [Range(0, 1, ErrorMessage = "使用状态必须是0或1")]
+        [Column("IS_USED")]
         public int IsUsed { get; set; } = 0;
 
         /// <summary>
@@ -86,12 +85,12 @@ namespace CampusTrade.API.Models.Entities
             /// <summary>
             /// 未使用 - 验证码/令牌还未被使用
             /// </summary>
-            public const int Unused = 0;
+            public const bool Unused = false;
 
             /// <summary>
             /// 已使用 - 验证码/令牌已被使用
             /// </summary>
-            public const int Used = 1;
+            public const bool Used = true;
         }
 
         /// <summary>

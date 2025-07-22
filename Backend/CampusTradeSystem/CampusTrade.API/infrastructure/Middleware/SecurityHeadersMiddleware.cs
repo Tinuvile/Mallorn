@@ -1,4 +1,4 @@
-namespace CampusTrade.API.Middleware
+namespace CampusTrade.API.Infrastructure.Middleware
 {
     /// <summary>
     /// 安全头中间件

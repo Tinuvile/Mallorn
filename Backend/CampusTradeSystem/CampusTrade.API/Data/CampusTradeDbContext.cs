@@ -254,7 +254,7 @@ namespace CampusTrade.API.Data
 
                 entity.Property(e => e.IsRevoked)
                     .HasColumnName("IS_REVOKED")
-                    .HasDefaultValue(false);
+                    .HasDefaultValue(0);
 
                 entity.Property(e => e.CreatedAt)
                     .HasColumnName("CREATED_AT")
@@ -493,7 +493,6 @@ namespace CampusTrade.API.Data
                 // 使用状态配置 - 默认值0
                 entity.Property(e => e.IsUsed)
                     .HasColumnName("IS_USED")
-                    .HasColumnType("NUMBER")
                     .HasDefaultValue(0);
 
                 // 创建时间配置 - 默认当前时间
@@ -1361,7 +1360,6 @@ namespace CampusTrade.API.Data
                 // 是否启用配置 - 默认值1
                 entity.Property(e => e.IsActive)
                     .HasColumnName("IS_ACTIVE")
-                    .HasColumnType("NUMBER")
                     .IsRequired()
                     .HasDefaultValue(1);
 
@@ -1587,7 +1585,6 @@ namespace CampusTrade.API.Data
                 // 匿名状态配置 - 默认值0
                 entity.Property(e => e.IsAnonymous)
                     .HasColumnName("IS_ANONYMOUS")
-                    .HasColumnType("NUMBER")
                     .IsRequired()
                     .HasDefaultValue(0);
 

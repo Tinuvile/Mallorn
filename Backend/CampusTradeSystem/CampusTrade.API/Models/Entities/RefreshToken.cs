@@ -41,8 +41,8 @@ public class RefreshToken
     /// <summary>
     /// 是否已撤销（默认值由Oracle处理）
     /// </summary>
-    [Column("IS_REVOKED", TypeName = "NUMBER(1)")]
-    public int IsRevoked { get; set; }
+    [Column("IS_REVOKED")]
+    public int IsRevoked { get; set; } = 0;
 
     /// <summary>
     /// 创建时间（由Oracle DEFAULT处理）

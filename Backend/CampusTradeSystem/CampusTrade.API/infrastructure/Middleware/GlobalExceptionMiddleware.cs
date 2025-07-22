@@ -2,8 +2,10 @@ using System.Diagnostics;
 using System.Net;
 using System.Text.Json;
 using CampusTrade.API.Models.DTOs.Common;
+using Serilog;
+using Serilog.Context;
 
-namespace CampusTrade.API.Middleware;
+namespace CampusTrade.API.Infrastructure.Middleware;
 
 /// <summary>
 /// 全局异常处理中间件
@@ -11,16 +13,13 @@ namespace CampusTrade.API.Middleware;
 public class GlobalExceptionMiddleware
 {
     private readonly RequestDelegate _next;
-    private readonly ILogger<GlobalExceptionMiddleware> _logger;
     private readonly IWebHostEnvironment _environment;
 
     public GlobalExceptionMiddleware(
         RequestDelegate next,
-        ILogger<GlobalExceptionMiddleware> logger,
         IWebHostEnvironment environment)
     {
         _next = next;
-        _logger = logger;
         _environment = environment;
     }
 
@@ -54,62 +53,60 @@ public class GlobalExceptionMiddleware
         var userId = GetUserId(context);
 
         // 结构化日志记录
-        using var scope = _logger.BeginScope(new Dictionary<string, object>
+        using (LogContext.PushProperty("TraceId", traceId))
+        using (LogContext.PushProperty("UserId", userId ?? "anonymous"))
+        using (LogContext.PushProperty("IPAddress", ipAddress))
+        using (LogContext.PushProperty("UserAgent", userAgent ?? "unknown"))
+        using (LogContext.PushProperty("RequestPath", context.Request.Path))
+        using (LogContext.PushProperty("RequestMethod", context.Request.Method))
+        using (LogContext.PushProperty("ElapsedMilliseconds", elapsedMs))
         {
-            ["TraceId"] = traceId,
-            ["UserId"] = userId ?? "anonymous",
-            ["IPAddress"] = ipAddress,
-            ["UserAgent"] = userAgent ?? "unknown",
-            ["RequestPath"] = context.Request.Path,
-            ["RequestMethod"] = context.Request.Method,
-            ["ElapsedMilliseconds"] = elapsedMs
-        });
+            var (statusCode, errorCode, message, logLevel) = GetErrorDetails(exception);
 
-        var (statusCode, errorCode, message, logLevel) = GetErrorDetails(exception);
-
-        // 根据异常类型选择日志级别
-        if (logLevel == LogLevel.Error)
-        {
-            _logger.LogError(exception, "未处理的异常: {ExceptionType}", exception.GetType().Name);
-        }
-        else
-        {
-            _logger.LogWarning(exception, "应用程序异常: {ExceptionType}", exception.GetType().Name);
-        }
-
-        var response = context.Response;
-        response.ContentType = "application/json";
-        response.StatusCode = statusCode;
-
-        var errorResponse = new ApiResponse
-        {
-            Success = false,
-            Message = message,
-            ErrorCode = errorCode
-        };
-
-        // 在开发环境中包含详细错误信息
-        if (_environment.IsDevelopment())
-        {
-            var devResponse = new
+            // 根据异常类型选择日志级别
+            if (logLevel == LogLevel.Error)
             {
-                errorResponse.Success,
-                errorResponse.Message,
-                errorResponse.ErrorCode,
-                errorResponse.Timestamp,
-                TraceId = traceId,
-                ExceptionType = exception.GetType().Name,
-                StackTrace = exception.StackTrace,
-                InnerException = exception.InnerException?.Message
+                Log.Logger.Error(exception, "未处理的异常: {ExceptionType}", exception.GetType().Name);
+            }
+            else
+            {
+                Log.Logger.Warning(exception, "应用程序异常: {ExceptionType}", exception.GetType().Name);
+            }
+
+            var response = context.Response;
+            response.ContentType = "application/json";
+            response.StatusCode = statusCode;
+
+            var errorResponse = new ApiResponse
+            {
+                Success = false,
+                Message = message,
+                ErrorCode = errorCode
             };
 
-            var devJson = JsonSerializer.Serialize(devResponse, GetJsonOptions());
-            await response.WriteAsync(devJson);
-        }
-        else
-        {
-            var json = JsonSerializer.Serialize(errorResponse, GetJsonOptions());
-            await response.WriteAsync(json);
+            // 在开发环境中包含详细错误信息
+            if (_environment.IsDevelopment())
+            {
+                var devResponse = new
+                {
+                    errorResponse.Success,
+                    errorResponse.Message,
+                    errorResponse.ErrorCode,
+                    errorResponse.Timestamp,
+                    TraceId = traceId,
+                    ExceptionType = exception.GetType().Name,
+                    StackTrace = exception.StackTrace,
+                    InnerException = exception.InnerException?.Message
+                };
+
+                var devJson = JsonSerializer.Serialize(devResponse, GetJsonOptions());
+                await response.WriteAsync(devJson);
+            }
+            else
+            {
+                var json = JsonSerializer.Serialize(errorResponse, GetJsonOptions());
+                await response.WriteAsync(json);
+            }
         }
     }
 
@@ -118,24 +115,22 @@ public class GlobalExceptionMiddleware
         var ipAddress = GetClientIPAddress(context);
         var userId = GetUserId(context);
 
-        using var scope = _logger.BeginScope(new Dictionary<string, object>
+        using (LogContext.PushProperty("TraceId", traceId))
+        using (LogContext.PushProperty("UserId", userId ?? "anonymous"))
+        using (LogContext.PushProperty("IPAddress", ipAddress))
+        using (LogContext.PushProperty("RequestPath", context.Request.Path))
+        using (LogContext.PushProperty("RequestMethod", context.Request.Method))
+        using (LogContext.PushProperty("ResponseStatusCode", context.Response.StatusCode))
+        using (LogContext.PushProperty("ElapsedMilliseconds", elapsedMs))
         {
-            ["TraceId"] = traceId,
-            ["UserId"] = userId ?? "anonymous",
-            ["IPAddress"] = ipAddress,
-            ["RequestPath"] = context.Request.Path,
-            ["RequestMethod"] = context.Request.Method,
-            ["ResponseStatusCode"] = context.Response.StatusCode,
-            ["ElapsedMilliseconds"] = elapsedMs
-        });
-
-        if (context.Response.StatusCode >= 400)
-        {
-            _logger.LogWarning("请求完成，状态码: {StatusCode}", context.Response.StatusCode);
-        }
-        else
-        {
-            _logger.LogInformation("请求完成");
+            if (context.Response.StatusCode >= 400)
+            {
+                Log.Logger.Warning("请求完成，状态码: {StatusCode}", context.Response.StatusCode);
+            }
+            else
+            {
+                Log.Logger.Information("请求完成");
+            }
         }
     }
 

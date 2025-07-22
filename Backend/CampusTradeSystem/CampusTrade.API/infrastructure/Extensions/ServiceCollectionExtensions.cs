@@ -1,14 +1,16 @@
+using CampusTrade.API.Infrastructure.Utils.Security;
 using CampusTrade.API.Options;
 using CampusTrade.API.Repositories.Implementations;
 using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Auth;
+using CampusTrade.API.Services.Background;
 using CampusTrade.API.Services.File;
-using CampusTrade.API.Utils.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
 
-namespace CampusTrade.API.Extensions;
+namespace CampusTrade.API.Infrastructure.Extensions;
 
 /// <summary>
 /// 服务注册扩展
@@ -51,8 +53,7 @@ public static class ServiceCollectionExtensions
             {
                 OnAuthenticationFailed = context =>
                 {
-                    var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                    logger.LogWarning("JWT认证失败: {Error}", context.Exception.Message);
+                    Log.Logger.Warning("JWT认证失败: {Error}", context.Exception.Message);
                     return Task.CompletedTask;
                 },
                 OnTokenValidated = async context =>
@@ -66,8 +67,7 @@ public static class ServiceCollectionExtensions
                 },
                 OnChallenge = context =>
                 {
-                    var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                    logger.LogWarning("JWT认证质询: {Error}", context.Error);
+                    Log.Logger.Warning("JWT认证质询: {Error}", context.Error);
                     return Task.CompletedTask;
                 }
             };
@@ -112,8 +112,32 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddAuthenticationServices(this IServiceCollection services)
     {
         services.AddScoped<IAuthService, AuthService>();
+
+        // 注册通知服务
+        services.AddScoped<Services.Auth.NotifiService>();
+        services.AddScoped<Services.Auth.NotifiSenderService>();
+
+        // 注册邮件服务
+        services.AddScoped<Services.Email.EmailService>();
+
+        // 添加内存缓存（用于Token黑名单）
         services.AddMemoryCache();
         services.AddHttpContextAccessor();
+        return services;
+    }
+
+    /// <summary>
+    /// 添加SignalR支持
+    /// </summary>
+    public static IServiceCollection AddSignalRSupport(this IServiceCollection services)
+    {
+        services.AddSignalR(options =>
+        {
+            options.EnableDetailedErrors = true;
+            options.MaximumReceiveMessageSize = 32 * 1024; // 32KB
+            options.StreamBufferCapacity = 10;
+        });
+
         return services;
     }
 
@@ -142,6 +166,19 @@ public static class ServiceCollectionExtensions
                       .AllowAnyHeader();
             });
         });
+        return services;
+    }
+
+    /// <summary>
+    /// 添加后台服务
+    /// </summary>
+    /// <param name="services">服务集合</param>
+    /// <returns>服务集合</returns>
+    public static IServiceCollection AddBackgroundServices(this IServiceCollection services)
+    {
+        // 注册通知发送后台服务
+        services.AddHostedService<NotificationBackgroundService>();
+
         return services;
     }
 

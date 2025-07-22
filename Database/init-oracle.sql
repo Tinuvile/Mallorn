@@ -430,7 +430,7 @@ CREATE TABLE notification_templates (
     template_type VARCHAR2(20) CHECK (template_type IN ('商品相关','交易相关','评价相关','系统通知')),
     template_content CLOB NOT NULL,
     description VARCHAR2(500),
-    priority NUMBER CHECK (priority BETWEEN 1 AND 5) DEFAULT 2,
+    priority NUMBER DEFAULT 2 CHECK (priority BETWEEN 1 AND 5),
     is_active NUMBER(1) DEFAULT 1 CHECK (is_active IN (0,1)),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP,
@@ -439,7 +439,7 @@ CREATE TABLE notification_templates (
 );
 
 -- ================================================================
--- 19. 通知表 (notifications) 
+-- 19. 通知表 (notifications)
 -- ================================================================
 CREATE TABLE notifications (
     notification_id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

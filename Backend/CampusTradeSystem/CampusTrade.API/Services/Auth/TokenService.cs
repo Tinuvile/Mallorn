@@ -1,13 +1,14 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using CampusTrade.API.Infrastructure.Utils.Security;
 using CampusTrade.API.Models.DTOs.Auth;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Options;
 using CampusTrade.API.Repositories.Interfaces;
-using CampusTrade.API.Utils.Security;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
 
 namespace CampusTrade.API.Services.Auth;
 
@@ -19,18 +20,15 @@ public class TokenService : ITokenService
     private readonly IUnitOfWork _unitOfWork;
     private readonly JwtOptions _jwtOptions;
     private readonly IMemoryCache _cache;
-    private readonly ILogger<TokenService> _logger;
 
     public TokenService(
         IUnitOfWork unitOfWork,
         IOptions<JwtOptions> jwtOptions,
-        IMemoryCache cache,
-        ILogger<TokenService> logger)
+        IMemoryCache cache)
     {
         _unitOfWork = unitOfWork;
         _jwtOptions = jwtOptions.Value;
         _cache = cache;
-        _logger = logger;
     }
 
     public async Task<string> GenerateAccessTokenAsync(User user, IEnumerable<Claim>? additionalClaims = null)
@@ -60,12 +58,12 @@ public class TokenService : ITokenService
             var securityToken = tokenHandler.CreateToken(tokenDescriptor);
             var accessToken = tokenHandler.WriteToken(securityToken);
 
-            _logger.LogDebug("生成访问令牌成功，用户ID: {UserId}", user.UserId);
+            Log.Logger.Information("生成访问令牌成功，用户ID: {UserId}", user.UserId);
             return accessToken;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "生成访问令牌失败，用户ID: {UserId}", user.UserId);
+            Log.Logger.Error(ex, "生成访问令牌失败，用户ID: {UserId}", user.UserId);
             throw;
         }
     }
@@ -92,12 +90,12 @@ public class TokenService : ITokenService
             await _unitOfWork.RefreshTokens.AddAsync(refreshToken);
             await _unitOfWork.SaveChangesAsync();
 
-            _logger.LogDebug("生成刷新令牌成功，用户ID: {UserId}, 设备ID: {DeviceId}", userId, refreshToken.DeviceId);
+            Log.Logger.Information("生成刷新令牌成功，用户ID: {UserId}, 设备ID: {DeviceId}", userId, refreshToken.DeviceId);
             return refreshToken;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "生成刷新令牌失败，用户ID: {UserId}", userId);
+            Log.Logger.Error(ex, "生成刷新令牌失败，用户ID: {UserId}", userId);
             throw;
         }
     }
@@ -149,12 +147,12 @@ public class TokenService : ITokenService
                 UserStatus = user.IsActive == 1 ? "Active" : "Inactive"
             };
 
-            _logger.LogInformation("生成Token响应成功，用户ID: {UserId}", user.UserId);
+            Log.Logger.Information("生成Token响应成功，用户ID: {UserId}", user.UserId);
             return response;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "生成Token响应失败，用户ID: {UserId}", user.UserId);
+            Log.Logger.Error(ex, "生成Token响应失败，用户ID: {UserId}", user.UserId);
             throw;
         }
     }
@@ -201,7 +199,7 @@ public class TokenService : ITokenService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "验证访问令牌失败");
+            Log.Logger.Error(ex, "验证访问令牌失败");
             return new TokenValidationResponse
             {
                 IsValid = false,
@@ -221,13 +219,13 @@ public class TokenService : ITokenService
             var refreshTokenEntity = tokens.FirstOrDefault();
             if (refreshTokenEntity == null)
             {
-                _logger.LogWarning("刷新令牌不存在: {Token}", SecurityHelper.ObfuscateSensitive(refreshToken));
+                Log.Logger.Warning("刷新令牌不存在: {Token}", SecurityHelper.ObfuscateSensitive(refreshToken));
                 return null;
             }
 
             if (!TokenHelper.IsRefreshTokenValid(refreshTokenEntity))
             {
-                _logger.LogWarning("刷新令牌无效，用户ID: {UserId}, 原因: {Reason}",
+                Log.Logger.Warning("刷新令牌无效，用户ID: {UserId}, 原因: {Reason}",
                     refreshTokenEntity.UserId, refreshTokenEntity.IsRevoked == 1 ? "已撤销" : "已过期");
                 return null;
             }
@@ -240,7 +238,7 @@ public class TokenService : ITokenService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "验证刷新令牌失败");
+            Log.Logger.Error(ex, "验证刷新令牌失败");
             return null;
         }
     }
@@ -256,7 +254,7 @@ public class TokenService : ITokenService
         try
         {
             // 检查用户状态
-            if (refreshToken.User.IsActive != 1)
+            if (refreshToken.User.IsActive == 0)
             {
                 throw new UnauthorizedAccessException("用户账户已被禁用");
             }
@@ -281,12 +279,12 @@ public class TokenService : ITokenService
                 await _unitOfWork.SaveChangesAsync();
             }
 
-            _logger.LogInformation("刷新Token成功，用户ID: {UserId}", refreshToken.UserId);
+            Log.Logger.Information("刷新Token成功，用户ID: {UserId}", refreshToken.UserId);
             return response;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "刷新Token失败，用户ID: {UserId}", refreshToken.UserId);
+            Log.Logger.Error(ex, "刷新Token失败，用户ID: {UserId}", refreshToken.UserId);
             throw;
         }
     }
@@ -298,13 +296,13 @@ public class TokenService : ITokenService
             var token = await _unitOfWork.RefreshTokens.FirstOrDefaultAsync(rt => rt.Token == refreshToken);
             if (token == null)
             {
-                _logger.LogWarning("尝试撤销不存在的刷新令牌: {Token}", SecurityHelper.ObfuscateSensitive(refreshToken));
+                Log.Logger.Warning("尝试撤销不存在的刷新令牌: {Token}", SecurityHelper.ObfuscateSensitive(refreshToken));
                 return false;
             }
 
             if (token.IsRevoked == 1)
             {
-                _logger.LogDebug("刷新令牌已经撤销: {Token}", SecurityHelper.ObfuscateSensitive(refreshToken));
+                Log.Logger.Debug("刷新令牌已经撤销: {Token}", SecurityHelper.ObfuscateSensitive(refreshToken));
                 return true;
             }
 
@@ -318,12 +316,12 @@ public class TokenService : ITokenService
 
             await _unitOfWork.SaveChangesAsync();
 
-            _logger.LogInformation("撤销刷新令牌成功，用户ID: {UserId}", token.UserId);
+            Log.Logger.Information("撤销刷新令牌成功，用户ID: {UserId}", token.UserId);
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "撤销刷新令牌失败");
+            Log.Logger.Error(ex, "撤销刷新令牌失败");
             return false;
         }
     }
@@ -341,12 +339,12 @@ public class TokenService : ITokenService
 
             await _unitOfWork.SaveChangesAsync();
 
-            _logger.LogInformation("撤销用户所有Token成功，用户ID: {UserId}, 数量: {Count}", userId, tokens.Count());
+            Log.Logger.Information("撤销用户所有Token成功，用户ID: {UserId}, 数量: {Count}", userId, tokens.Count());
             return tokens.Count();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "撤销用户所有Token失败，用户ID: {UserId}", userId);
+            Log.Logger.Error(ex, "撤销用户所有Token失败，用户ID: {UserId}", userId);
             return 0;
         }
     }
@@ -360,7 +358,7 @@ public class TokenService : ITokenService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "获取活跃刷新令牌失败，用户ID: {UserId}", userId);
+            Log.Logger.Error(ex, "获取活跃刷新令牌失败，用户ID: {UserId}", userId);
             return Enumerable.Empty<RefreshToken>();
         }
     }
@@ -372,12 +370,12 @@ public class TokenService : ITokenService
             var deletedCount = await _unitOfWork.RefreshTokens.CleanupExpiredTokensAsync();
             await _unitOfWork.SaveChangesAsync();
 
-            _logger.LogInformation("清理过期刷新令牌成功，数量: {Count}", deletedCount);
+            Log.Logger.Information("清理过期刷新令牌成功，数量: {Count}", deletedCount);
             return deletedCount;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "清理过期刷新令牌失败");
+            Log.Logger.Error(ex, "清理过期刷新令牌失败");
             return 0;
         }
     }
@@ -394,7 +392,7 @@ public class TokenService : ITokenService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "检查Token黑名单失败，JTI: {Jti}", jti);
+            Log.Logger.Error(ex, "检查Token黑名单失败，JTI: {Jti}", jti);
             return false;
         }
     }
@@ -412,14 +410,14 @@ public class TokenService : ITokenService
             if (timeToLive > TimeSpan.Zero)
             {
                 _cache.Set(cacheKey, true, timeToLive);
-                _logger.LogDebug("Token加入黑名单成功，JTI: {Jti}", jti);
+                Log.Logger.Debug("Token加入黑名单成功，JTI: {Jti}", jti);
             }
 
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Token加入黑名单失败，JTI: {Jti}", jti);
+            Log.Logger.Error(ex, "Token加入黑名单失败，JTI: {Jti}", jti);
             return false;
         }
     }

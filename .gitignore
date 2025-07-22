@@ -246,6 +246,7 @@ secrets.json
 *.log
 logs/
 log/
+!Backend/CampusTradeSystem/CampusTrade.API/Services/Log/
 
 # =========================
 # 数据库文件

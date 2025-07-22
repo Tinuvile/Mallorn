@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace CampusTrade.API.Utils.Security;
+namespace CampusTrade.API.Infrastructure.Utils.Security;
 
 /// <summary>
 /// 安全相关工具类

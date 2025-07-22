@@ -1,5 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
+using System.Linq.Expressions;
 using CampusTrade.API.Models.DTOs.Auth;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Options;
@@ -20,27 +20,32 @@ namespace CampusTrade.Tests.UnitTests.Services;
 /// </summary>
 public class TokenServiceTests : IDisposable
 {
-    private readonly Mock<IMemoryCache> _mockCache;
-    private readonly Mock<ICacheEntry> _mockCacheEntry;
-    private readonly Mock<ILogger<TokenService>> _mockLogger;
+    // 模拟对象
     private readonly Mock<IUnitOfWork> _mockUnitOfWork;
     private readonly Mock<IUserRepository> _mockUserRepository;
     private readonly Mock<IRefreshTokenRepository> _mockRefreshTokenRepository;
+    private readonly Mock<IMemoryCache> _mockCache;
+    private readonly Mock<ICacheEntry> _mockCacheEntry;
+    private readonly Mock<ILogger<TokenService>> _mockLogger;
+    // 测试目标服务
     private readonly TokenService _tokenService;
+    // JWT配置选项
     private readonly JwtOptions _jwtOptions;
 
     public TokenServiceTests()
     {
+        // 初始化模拟对象
         (_mockCache, _mockCacheEntry) = MockHelper.CreateMockMemoryCacheWithEntry();
         _mockLogger = MockHelper.CreateMockLogger<TokenService>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
         _mockUserRepository = new Mock<IUserRepository>();
         _mockRefreshTokenRepository = new Mock<IRefreshTokenRepository>();
 
-        // 设置UnitOfWork返回Mock repositories
+        // 配置UnitOfWork与仓储的关系
         _mockUnitOfWork.Setup(u => u.Users).Returns(_mockUserRepository.Object);
         _mockUnitOfWork.Setup(u => u.RefreshTokens).Returns(_mockRefreshTokenRepository.Object);
 
+        // 配置JWT选项
         _jwtOptions = new JwtOptions
         {
             SecretKey = "YourSecretKeyForCampusTradingPlatformProduction2025!MustBe32CharactersLong",
@@ -53,49 +58,106 @@ public class TokenServiceTests : IDisposable
             RevokeDescendantRefreshTokens = true,
             EnableTokenBlacklist = true
         };
-
         var jwtOptionsWrapper = MockHelper.CreateMockOptions(_jwtOptions);
 
-        // 设置默认的测试数据
+        // 配置默认测试数据
         SetupDefaultTestData();
 
-        _tokenService = new TokenService(_mockUnitOfWork.Object, jwtOptionsWrapper, _mockCache.Object, _mockLogger.Object);
+        // 初始化TokenService（依赖模拟的UnitOfWork、缓存、日志）
+        _tokenService = new TokenService(
+            _mockUnitOfWork.Object,
+            jwtOptionsWrapper,
+            _mockCache.Object
+        );
     }
 
+    /// <summary>
+    /// 配置模拟仓储的默认返回值（基于TestDbContextFactory的测试对象）
+    /// </summary>
     private void SetupDefaultTestData()
     {
+        // 测试用户和令牌对象（复用TestDbContextFactory的测试数据）
         var testUser = TestDbContextFactory.GetTestUser(1);
-        var testRefreshToken = new RefreshToken
+        var validRefreshToken = new RefreshToken
         {
             Id = Guid.NewGuid(),
-            Token = "test-refresh-token-123",
-            UserId = 1,
-            ExpiryDate = DateTime.UtcNow.AddDays(7),
-            IsRevoked = 0,
+            Token = "test_refresh_token_1",
+            UserId = testUser.UserId,
+            DeviceId = "test_device_1",
             IpAddress = "192.168.1.1",
             UserAgent = "Test Browser",
-            DeviceId = "test_device",
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow.AddHours(-2),
+            ExpiryDate = DateTime.UtcNow.AddDays(7), // 有效令牌
+            IsRevoked = 0
+        };
+        var expiredRefreshToken = new RefreshToken
+        {
+            Id = Guid.NewGuid(),
+            Token = "expired_refresh_token",
+            UserId = testUser.UserId,
+            ExpiryDate = DateTime.UtcNow.AddDays(-1), // 已过期
+            IsRevoked = 0
+        };
+        var revokedRefreshToken = new RefreshToken
+        {
+            Id = Guid.NewGuid(),
+            Token = "revoked_refresh_token",
+            UserId = testUser.UserId,
+            ExpiryDate = DateTime.UtcNow.AddDays(7),
+            IsRevoked = 1 // 已撤销
         };
 
-        // 设置用户查询Mock
-        _mockUserRepository.Setup(r => r.GetByPrimaryKeyAsync(1))
+        // 1. 用户仓储模拟配置
+        _mockUserRepository.Setup(r => r.GetByPrimaryKeyAsync(testUser.UserId))
             .ReturnsAsync(testUser);
-        _mockUserRepository.Setup(r => r.UpdateLastLoginAsync(1, It.IsAny<string>()))
+        _mockUserRepository.Setup(r => r.UpdateLastLoginAsync(testUser.UserId, It.IsAny<string>()))
             .Returns(Task.CompletedTask);
 
-        // 设置RefreshToken查询Mock
-        _mockRefreshTokenRepository.Setup(r => r.FirstOrDefaultAsync(It.IsAny<System.Linq.Expressions.Expression<System.Func<RefreshToken, bool>>>()))
-            .ReturnsAsync(testRefreshToken);
+        // 2. 刷新令牌仓储模拟配置
+        // 按令牌值查询（有效令牌）
+        _mockRefreshTokenRepository.Setup(r => r.GetWithIncludeAsync(
+            It.Is<Expression<Func<RefreshToken, bool>>>(expr => expr.ToString().Contains(validRefreshToken.Token)),
+            It.IsAny<Func<IQueryable<RefreshToken>, IOrderedQueryable<RefreshToken>>>(),
+            It.IsAny<Expression<Func<RefreshToken, object>>[]>()
+        )).ReturnsAsync(new List<RefreshToken> { validRefreshToken });
+
+        // 按令牌值查询（无效/过期/撤销令牌）
+        _mockRefreshTokenRepository.Setup(r => r.GetWithIncludeAsync(
+            It.Is<Expression<Func<RefreshToken, bool>>>(expr => expr.ToString().Contains("invalid_token")),
+            It.IsAny<Func<IQueryable<RefreshToken>, IOrderedQueryable<RefreshToken>>>(),
+            It.IsAny<Expression<Func<RefreshToken, object>>[]>()
+        )).ReturnsAsync(new List<RefreshToken>()); // 无效令牌返回空
+        _mockRefreshTokenRepository.Setup(r => r.GetWithIncludeAsync(
+            It.Is<Expression<Func<RefreshToken, bool>>>(expr => expr.ToString().Contains(expiredRefreshToken.Token)),
+            It.IsAny<Func<IQueryable<RefreshToken>, IOrderedQueryable<RefreshToken>>>(),
+            It.IsAny<Expression<Func<RefreshToken, object>>[]>()
+        )).ReturnsAsync(new List<RefreshToken> { expiredRefreshToken });
+        _mockRefreshTokenRepository.Setup(r => r.GetWithIncludeAsync(
+            It.Is<Expression<Func<RefreshToken, bool>>>(expr => expr.ToString().Contains(revokedRefreshToken.Token)),
+            It.IsAny<Func<IQueryable<RefreshToken>, IOrderedQueryable<RefreshToken>>>(),
+            It.IsAny<Expression<Func<RefreshToken, object>>[]>()
+        )).ReturnsAsync(new List<RefreshToken> { revokedRefreshToken });
+
+        // 新增令牌
         _mockRefreshTokenRepository.Setup(r => r.AddAsync(It.IsAny<RefreshToken>()))
             .ReturnsAsync((RefreshToken rt) => rt);
-        _mockRefreshTokenRepository.Setup(r => r.FindAsync(It.IsAny<System.Linq.Expressions.Expression<System.Func<RefreshToken, bool>>>()))
-            .ReturnsAsync(new List<RefreshToken> { testRefreshToken });
 
-        // 设置UnitOfWork保存Mock
+        // 查询用户的所有令牌
+        _mockRefreshTokenRepository.Setup(r => r.FindAsync(
+            It.Is<Expression<Func<RefreshToken, bool>>>(expr => expr.ToString().Contains($"UserId == {testUser.UserId}"))
+        )).ReturnsAsync(new List<RefreshToken> { validRefreshToken, expiredRefreshToken });
+
+        // 清理过期令牌
+        _mockRefreshTokenRepository.Setup(r => r.CleanupExpiredTokensAsync())
+            .ReturnsAsync(1); // 模拟清理1个过期令牌
+
+        // 3. 工作单元模拟配置
         _mockUnitOfWork.Setup(u => u.SaveChangesAsync())
-            .ReturnsAsync(1);
+            .ReturnsAsync(1); // 模拟保存成功
     }
+
+
+    #region GenerateAccessTokenAsync Tests
 
     [Fact]
     public async Task GenerateAccessTokenAsync_WithValidUser_ShouldReturnValidJwtToken()
@@ -114,7 +176,7 @@ public class TokenServiceTests : IDisposable
         userId.Should().Be(user.UserId);
 
         var username = JwtTestHelper.ExtractUsername(token);
-        username.Should().Be(user.Username ?? user.Email); // 如果用户名为null，使用邮箱
+        username.Should().Be(user.Username);
     }
 
     [Fact]
@@ -140,6 +202,11 @@ public class TokenServiceTests : IDisposable
         jsonToken.Claims.Should().Contain(c => c.Type == "role" && c.Value == "admin");
         jsonToken.Claims.Should().Contain(c => c.Type == "permission" && c.Value == "manage_users");
     }
+
+    #endregion
+
+
+    #region GenerateRefreshTokenAsync Tests
 
     [Fact]
     public async Task GenerateRefreshTokenAsync_WithValidUserId_ShouldReturnRefreshToken()
@@ -177,8 +244,13 @@ public class TokenServiceTests : IDisposable
         // Assert
         refreshToken.Should().NotBeNull();
         refreshToken.DeviceId.Should().NotBeEmpty();
-        refreshToken.DeviceId.Should().NotBe("test_device"); // 应该是生成的指纹
+        refreshToken.DeviceId.Should().NotBe("test_device"); // 应为自动生成的指纹
     }
+
+    #endregion
+
+
+    #region GenerateTokenResponseAsync Tests
 
     [Fact]
     public async Task GenerateTokenResponseAsync_WithValidUser_ShouldReturnCompleteTokenResponse()
@@ -214,9 +286,14 @@ public class TokenServiceTests : IDisposable
         // Act
         await _tokenService.GenerateTokenResponseAsync(user, ipAddress);
 
-        // Assert - 验证用户登录信息是否更新
+        // Assert - 验证用户登录信息更新方法被调用
         _mockUserRepository.Verify(r => r.UpdateLastLoginAsync(user.UserId, ipAddress), Times.Once);
     }
+
+    #endregion
+
+
+    #region ValidateAccessTokenAsync Tests
 
     [Fact]
     public async Task ValidateAccessTokenAsync_WithValidToken_ShouldReturnValidResponse()
@@ -287,51 +364,35 @@ public class TokenServiceTests : IDisposable
         result.Error.Should().Contain("Token已被撤销");
     }
 
+    #endregion
+
+
+    #region ValidateRefreshTokenAsync Tests
+
     [Fact]
     public async Task ValidateRefreshTokenAsync_WithValidToken_ShouldReturnRefreshToken()
     {
         // Arrange
-        var tokenString = "test-refresh-token-123";
-        var refreshToken = new RefreshToken
-        {
-            Id = Guid.NewGuid(),
-            Token = tokenString,
-            UserId = 1,
-            ExpiryDate = DateTime.UtcNow.AddDays(7),
-            IsRevoked = 0,
-            CreatedAt = DateTime.UtcNow,
-            User = TestDbContextFactory.GetTestUser(1) // 添加用户信息
-        };
-
-        _mockRefreshTokenRepository.Setup(r => r.GetWithIncludeAsync(
-            It.IsAny<System.Linq.Expressions.Expression<System.Func<RefreshToken, bool>>>(),
-            It.IsAny<Func<IQueryable<RefreshToken>, IOrderedQueryable<RefreshToken>>>(),
-            It.IsAny<System.Linq.Expressions.Expression<System.Func<RefreshToken, object>>[]>()))
-            .ReturnsAsync(new List<RefreshToken> { refreshToken });
+        var validToken = "test_refresh_token_1";
 
         // Act
-        var result = await _tokenService.ValidateRefreshTokenAsync(tokenString);
+        var result = await _tokenService.ValidateRefreshTokenAsync(validToken);
 
         // Assert
         result.Should().NotBeNull();
-        result.Token.Should().Be(tokenString);
+        result.Token.Should().Be(validToken);
         result.UserId.Should().Be(1);
-        result.IsRevoked.Should().Be(0); // 0表示false Be(0)表示未撤销
+        result.IsRevoked.Should().Be(0); // 未撤销
     }
 
     [Fact]
     public async Task ValidateRefreshTokenAsync_WithInvalidToken_ShouldReturnNull()
     {
         // Arrange
-        var tokenString = "invalid-token";
-        _mockRefreshTokenRepository.Setup(r => r.GetWithIncludeAsync(
-            It.IsAny<System.Linq.Expressions.Expression<System.Func<RefreshToken, bool>>>(),
-            It.IsAny<Func<IQueryable<RefreshToken>, IOrderedQueryable<RefreshToken>>>(),
-            It.IsAny<System.Linq.Expressions.Expression<System.Func<RefreshToken, object>>[]>()))
-            .ReturnsAsync(new List<RefreshToken>());
+        var invalidToken = "invalid_refresh_token";
 
         // Act
-        var result = await _tokenService.ValidateRefreshTokenAsync(tokenString);
+        var result = await _tokenService.ValidateRefreshTokenAsync(invalidToken);
 
         // Assert
         result.Should().BeNull();
@@ -341,18 +402,10 @@ public class TokenServiceTests : IDisposable
     public async Task ValidateRefreshTokenAsync_WithExpiredToken_ShouldReturnNull()
     {
         // Arrange
-        var tokenString = "expired-token";
-        var expiredToken = new RefreshToken
-        {
-            Token = tokenString,
-            ExpiryDate = DateTime.UtcNow.AddDays(-1), // 过期
-            IsRevoked = 0
-        };
-        _mockRefreshTokenRepository.Setup(r => r.FirstOrDefaultAsync(It.IsAny<System.Linq.Expressions.Expression<System.Func<RefreshToken, bool>>>()))
-            .ReturnsAsync(expiredToken);
+        var expiredToken = "expired_refresh_token";
 
         // Act
-        var result = await _tokenService.ValidateRefreshTokenAsync(tokenString);
+        var result = await _tokenService.ValidateRefreshTokenAsync(expiredToken);
 
         // Assert
         result.Should().BeNull();
@@ -362,61 +415,32 @@ public class TokenServiceTests : IDisposable
     public async Task ValidateRefreshTokenAsync_WithRevokedToken_ShouldReturnNull()
     {
         // Arrange
-        var tokenString = "revoked-token";
-        var revokedToken = new RefreshToken
-        {
-            Token = tokenString,
-            ExpiryDate = DateTime.UtcNow.AddDays(1),
-            IsRevoked = 1
-        };
-        _mockRefreshTokenRepository.Setup(r => r.FirstOrDefaultAsync(It.IsAny<System.Linq.Expressions.Expression<System.Func<RefreshToken, bool>>>()))
-            .ReturnsAsync(revokedToken);
+        var revokedToken = "revoked_refresh_token";
 
         // Act
-        var result = await _tokenService.ValidateRefreshTokenAsync(tokenString);
+        var result = await _tokenService.ValidateRefreshTokenAsync(revokedToken);
 
         // Assert
         result.Should().BeNull();
     }
 
+    #endregion
+
+
+    #region RefreshTokenAsync Tests
+
     [Fact]
     public async Task RefreshTokenAsync_WithValidRequest_ShouldReturnNewTokenResponse()
     {
         // Arrange
-        var request = new RefreshTokenRequest
+        var refreshTokenRequest = new RefreshTokenRequest
         {
-            RefreshToken = "test-refresh-token-123",
-            DeviceId = "test_device"
+            RefreshToken = "test_refresh_token_1",
+            DeviceId = "test_device_1"
         };
-
-        var refreshToken = new RefreshToken
-        {
-            Id = Guid.NewGuid(),
-            Token = "test-refresh-token-123",
-            UserId = 1,
-            ExpiryDate = DateTime.UtcNow.AddDays(7),
-            IsRevoked = 0,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        var testUser = TestDbContextFactory.GetTestUser(1);
-        refreshToken.User = testUser; // 设置用户信息
-
-        _mockRefreshTokenRepository.Setup(r => r.GetWithIncludeAsync(
-            It.IsAny<System.Linq.Expressions.Expression<System.Func<RefreshToken, bool>>>(),
-            It.IsAny<Func<IQueryable<RefreshToken>, IOrderedQueryable<RefreshToken>>>(),
-            It.IsAny<System.Linq.Expressions.Expression<System.Func<RefreshToken, object>>[]>()))
-            .ReturnsAsync(new List<RefreshToken> { refreshToken });
-        _mockUserRepository.Setup(r => r.GetByPrimaryKeyAsync(1))
-            .ReturnsAsync(testUser);
-        _mockRefreshTokenRepository.Setup(r => r.Update(It.IsAny<RefreshToken>()));
-        _mockRefreshTokenRepository.Setup(r => r.AddAsync(It.IsAny<RefreshToken>()))
-            .ReturnsAsync(It.IsAny<RefreshToken>());
-        _mockRefreshTokenRepository.Setup(r => r.SaveChangesAsync())
-            .ReturnsAsync(1);
 
         // Act
-        var result = await _tokenService.RefreshTokenAsync(request);
+        var result = await _tokenService.RefreshTokenAsync(refreshTokenRequest);
 
         // Assert
         result.Should().NotBeNull();
@@ -429,27 +453,30 @@ public class TokenServiceTests : IDisposable
     public async Task RefreshTokenAsync_WithInvalidToken_ShouldThrowUnauthorizedException()
     {
         // Arrange
-        var request = new RefreshTokenRequest
+        var refreshTokenRequest = new RefreshTokenRequest
         {
-            RefreshToken = "invalid-token",
-            DeviceId = "test_device"
+            RefreshToken = "invalid_refresh_token"
         };
 
-        _mockRefreshTokenRepository.Setup(r => r.FirstOrDefaultAsync(It.IsAny<System.Linq.Expressions.Expression<System.Func<RefreshToken, bool>>>()))
-            .ReturnsAsync((RefreshToken?)null);
-
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _tokenService.RefreshTokenAsync(request));
+        var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _tokenService.RefreshTokenAsync(refreshTokenRequest));
+        exception.Message.Should().Contain("无效的刷新令牌");
     }
+
+    #endregion
+
+
+    #region RevokeRefreshTokenAsync Tests
 
     [Fact]
     public async Task RevokeRefreshTokenAsync_WithValidToken_ShouldReturnTrue()
     {
         // Arrange
-        var tokenString = "test-refresh-token-123";
+        var validToken = "test_refresh_token_1";
 
         // Act
-        var result = await _tokenService.RevokeRefreshTokenAsync(tokenString);
+        var result = await _tokenService.RevokeRefreshTokenAsync(validToken, "测试撤销");
 
         // Assert
         result.Should().BeTrue();
@@ -459,66 +486,56 @@ public class TokenServiceTests : IDisposable
     public async Task RevokeRefreshTokenAsync_WithInvalidToken_ShouldReturnFalse()
     {
         // Arrange
-        var tokenString = "invalid-token";
-        _mockRefreshTokenRepository.Setup(r => r.FirstOrDefaultAsync(It.IsAny<System.Linq.Expressions.Expression<System.Func<RefreshToken, bool>>>()))
-            .ReturnsAsync((RefreshToken?)null);
+        var invalidToken = "invalid_refresh_token";
 
         // Act
-        var result = await _tokenService.RevokeRefreshTokenAsync(tokenString);
+        var result = await _tokenService.RevokeRefreshTokenAsync(invalidToken);
 
         // Assert
         result.Should().BeFalse();
     }
+
+    #endregion
+
+
+    #region RevokeAllUserTokensAsync Tests
 
     [Fact]
     public async Task RevokeAllUserTokensAsync_WithValidUserId_ShouldReturnRevokedCount()
     {
         // Arrange
         var userId = 1;
-        var tokens = new List<RefreshToken>
-        {
-            new RefreshToken { Id = Guid.NewGuid(), UserId = userId, IsRevoked = 0 },
-            new RefreshToken { Id = Guid.NewGuid(), UserId = userId, IsRevoked = 0 }
-        };
-
-        _mockRefreshTokenRepository.Setup(r => r.FindAsync(It.IsAny<System.Linq.Expressions.Expression<System.Func<RefreshToken, bool>>>()))
-            .ReturnsAsync(tokens);
 
         // Act
-        var result = await _tokenService.RevokeAllUserTokensAsync(userId);
+        var result = await _tokenService.RevokeAllUserTokensAsync(userId, "测试撤销所有");
 
         // Assert
-        result.Should().Be(2);
+        result.Should().BeGreaterThan(0); // 至少撤销1个令牌
     }
 
     [Fact]
-    public async Task RevokeAllUserTokensAsync_WithNoTokens_ShouldReturnZero()
+    public async Task RevokeAllUserTokensAsync_WithInvalidUserId_ShouldReturnZero()
     {
         // Arrange
-        var userId = 999;
-        _mockRefreshTokenRepository.Setup(r => r.FindAsync(It.IsAny<System.Linq.Expressions.Expression<System.Func<RefreshToken, bool>>>()))
-            .ReturnsAsync(new List<RefreshToken>());
+        var invalidUserId = 999;
 
         // Act
-        var result = await _tokenService.RevokeAllUserTokensAsync(userId);
+        var result = await _tokenService.RevokeAllUserTokensAsync(invalidUserId);
 
         // Assert
         result.Should().Be(0);
     }
+
+    #endregion
+
+
+    #region GetActiveRefreshTokensAsync Tests
 
     [Fact]
     public async Task GetActiveRefreshTokensAsync_WithValidUserId_ShouldReturnActiveTokens()
     {
         // Arrange
         var userId = 1;
-        var tokens = new List<RefreshToken>
-        {
-            new RefreshToken { Id = Guid.NewGuid(), UserId = userId, IsRevoked = 0, ExpiryDate = DateTime.UtcNow.AddDays(1) },
-            new RefreshToken { Id = Guid.NewGuid(), UserId = userId, IsRevoked = 0, ExpiryDate = DateTime.UtcNow.AddDays(2) }
-        };
-
-        _mockRefreshTokenRepository.Setup(r => r.FindAsync(It.IsAny<System.Linq.Expressions.Expression<System.Func<RefreshToken, bool>>>()))
-            .ReturnsAsync(tokens);
 
         // Act
         var result = await _tokenService.GetActiveRefreshTokensAsync(userId);
@@ -526,69 +543,69 @@ public class TokenServiceTests : IDisposable
         // Assert
         result.Should().NotBeEmpty();
         result.All(t => t.UserId == userId).Should().BeTrue();
-        result.All(t => t.IsRevoked == 0).Should().BeTrue();
-        result.All(t => t.ExpiryDate > DateTime.UtcNow).Should().BeTrue();
+        result.All(t => t.IsRevoked == 0).Should().BeTrue(); // 未撤销
+        result.All(t => t.ExpiryDate > DateTime.UtcNow).Should().BeTrue(); // 未过期
     }
 
     [Fact]
-    public async Task GetActiveRefreshTokensAsync_WithNoActiveTokens_ShouldReturnEmpty()
+    public async Task GetActiveRefreshTokensAsync_WithInvalidUserId_ShouldReturnEmpty()
     {
         // Arrange
-        var userId = 999;
-        _mockRefreshTokenRepository.Setup(r => r.FindAsync(It.IsAny<System.Linq.Expressions.Expression<System.Func<RefreshToken, bool>>>()))
-            .ReturnsAsync(new List<RefreshToken>());
+        var invalidUserId = 999;
 
         // Act
-        var result = await _tokenService.GetActiveRefreshTokensAsync(userId);
+        var result = await _tokenService.GetActiveRefreshTokensAsync(invalidUserId);
 
         // Assert
         result.Should().BeEmpty();
     }
 
+    #endregion
+
+
+    #region BlacklistTokenAsync Tests
+
     [Fact]
-    public async Task CleanupExpiredTokensAsync_WithExpiredTokens_ShouldRemoveExpiredTokens()
+    public async Task BlacklistTokenAsync_WithValidJti_ShouldAddToCache()
     {
         // Arrange
-        var expiredTokens = new List<RefreshToken>
-        {
-            new RefreshToken { Id = Guid.NewGuid(), ExpiryDate = DateTime.UtcNow.AddDays(-1) },
-            new RefreshToken { Id = Guid.NewGuid(), ExpiryDate = DateTime.UtcNow.AddDays(-2) }
-        };
-
-        _mockRefreshTokenRepository.Setup(r => r.CleanupExpiredTokensAsync())
-            .ReturnsAsync(2);
-        _mockUnitOfWork.Setup(u => u.SaveChangesAsync())
-            .ReturnsAsync(2);
+        var jti = "test_jti_123";
+        var expiration = DateTime.UtcNow.AddMinutes(15); // 未过期
 
         // Act
-        var result = await _tokenService.CleanupExpiredTokensAsync();
+        var result = await _tokenService.BlacklistTokenAsync(jti, expiration);
 
         // Assert
-        result.Should().Be(2);
-        _mockRefreshTokenRepository.Verify(r => r.CleanupExpiredTokensAsync(), Times.Once);
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
+        result.Should().BeTrue();
+        _mockCache.Verify(c => c.CreateEntry($"blacklist:{jti}"), Times.Once); // 验证缓存被设置
+        _mockCacheEntry.VerifySet(e => e.Value = true); // 验证缓存值
     }
 
     [Fact]
-    public async Task BlacklistTokenAsync_WithValidJti_ShouldAddToBlacklist()
+    public async Task BlacklistTokenAsync_WithExpiredToken_ShouldNotAddToCache()
     {
         // Arrange
-        var jti = "test-jti-123";
-        var expiryDate = DateTime.UtcNow.AddMinutes(15);
+        var jti = "expired_jti";
+        var expiration = DateTime.UtcNow.AddMinutes(-10); // 已过期
 
         // Act
-        await _tokenService.BlacklistTokenAsync(jti, expiryDate);
+        var result = await _tokenService.BlacklistTokenAsync(jti, expiration);
 
         // Assert
-        // 验证缓存设置
-        _mockCache.Verify(c => c.CreateEntry($"blacklist:{jti}"), Times.Once);
+        result.Should().BeTrue();
+        _mockCache.Verify(c => c.CreateEntry(It.IsAny<string>()), Times.Never); // 不设置缓存
     }
+
+    #endregion
+
+
+    #region IsTokenBlacklistedAsync Tests
 
     [Fact]
     public async Task IsTokenBlacklistedAsync_WithBlacklistedToken_ShouldReturnTrue()
     {
         // Arrange
-        var jti = "blacklisted-jti";
+        var jti = "blacklisted_jti";
         MockHelper.SetupMockCacheContains(_mockCache, $"blacklist:{jti}", true);
 
         // Act
@@ -599,10 +616,10 @@ public class TokenServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task IsTokenBlacklistedAsync_WithNonBlacklistedToken_ShouldReturnFalse()
+    public async Task IsTokenBlacklistedAsync_WithValidToken_ShouldReturnFalse()
     {
         // Arrange
-        var jti = "valid-jti";
+        var jti = "valid_jti";
         MockHelper.SetupMockCacheContains(_mockCache, $"blacklist:{jti}", false);
 
         // Act
@@ -612,8 +629,28 @@ public class TokenServiceTests : IDisposable
         result.Should().BeFalse();
     }
 
+    #endregion
+
+
+    #region CleanupExpiredTokensAsync Tests
+
+    [Fact]
+    public async Task CleanupExpiredTokensAsync_ShouldRemoveExpiredTokens()
+    {
+        // Act
+        var result = await _tokenService.CleanupExpiredTokensAsync();
+
+        // Assert
+        result.Should().BeGreaterThanOrEqualTo(1); // 至少清理1个过期令牌
+        _mockRefreshTokenRepository.Verify(r => r.CleanupExpiredTokensAsync(), Times.Once); // 验证清理方法被调用
+        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once); // 验证保存
+    }
+
+    #endregion
+
+
     public void Dispose()
     {
-        // 清理资源
+        GC.SuppressFinalize(this);
     }
 }

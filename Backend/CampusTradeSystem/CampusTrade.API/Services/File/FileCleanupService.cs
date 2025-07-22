@@ -1,4 +1,5 @@
 using System.IO;
+using CampusTrade.API.Options;
 using CampusTrade.API.Services.File;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;

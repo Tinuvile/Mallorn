@@ -71,8 +71,8 @@ namespace CampusTrade.API.Models.Entities
         /// 是否匿名评价（默认值由Oracle处理）
         /// </summary>
         [Required]
-        [Column("IS_ANONYMOUS", TypeName = "NUMBER(1)")]
-        public int IsAnonymous { get; set; }
+        [Column("IS_ANONYMOUS")]
+        public int IsAnonymous { get; set; } = 0;
 
         /// <summary>
         /// 评价创建时间（由Oracle DEFAULT处理）

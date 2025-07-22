@@ -1,8 +1,9 @@
 using System.IdentityModel.Tokens.Jwt;
+using CampusTrade.API.Infrastructure.Utils.Security;
 using CampusTrade.API.Services.Auth;
-using CampusTrade.API.Utils.Security;
+using Serilog;
 
-namespace CampusTrade.API.Middleware;
+namespace CampusTrade.API.Infrastructure.Middleware;
 
 /// <summary>
 /// JWT验证中间件
@@ -10,12 +11,10 @@ namespace CampusTrade.API.Middleware;
 public class JwtValidationMiddleware
 {
     private readonly RequestDelegate _next;
-    private readonly ILogger<JwtValidationMiddleware> _logger;
 
-    public JwtValidationMiddleware(RequestDelegate next, ILogger<JwtValidationMiddleware> logger)
+    public JwtValidationMiddleware(RequestDelegate next)
     {
         _next = next;
-        _logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context, ITokenService tokenService)
@@ -42,7 +41,7 @@ public class JwtValidationMiddleware
                         var isBlacklisted = await tokenService.IsTokenBlacklistedAsync(jti);
                         if (isBlacklisted)
                         {
-                            _logger.LogWarning("检测到已撤销的Token访问, JTI: {Jti}, IP: {IpAddress}",
+                            Log.Logger.Warning("检测到已撤销的Token访问, JTI: {Jti}, IP: {IpAddress}",
                                 jti, context.Connection.RemoteIpAddress);
 
                             context.Response.StatusCode = 401;
@@ -60,7 +59,7 @@ public class JwtValidationMiddleware
                         {
                             // 添加即将过期的头信息
                             context.Response.Headers.Append("X-Token-Warning", "Token即将过期，请及时刷新");
-                            _logger.LogDebug("Token即将过期, JTI: {Jti}, 过期时间: {Expiration}", jti, expiration);
+                            Log.Logger.Debug("Token即将过期, JTI: {Jti}, 过期时间: {Expiration}", jti, expiration);
                         }
                     }
 
@@ -68,14 +67,14 @@ public class JwtValidationMiddleware
                     var userId = jwtToken.Claims.FirstOrDefault(x => x.Type == "sub")?.Value;
                     if (!string.IsNullOrEmpty(userId))
                     {
-                        _logger.LogDebug("用户 {UserId} 使用Token访问 {Path}, IP: {IpAddress}",
+                        Log.Logger.Debug("用户 {UserId} 使用Token访问 {Path}, IP: {IpAddress}",
                             userId, context.Request.Path, context.Connection.RemoteIpAddress);
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "JWT中间件处理Token时发生错误");
+                Log.Logger.Warning(ex, "JWT中间件处理Token时发生错误");
                 // 继续处理，让JWT认证中间件处理具体的验证错误
             }
         }

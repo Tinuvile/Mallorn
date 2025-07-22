@@ -4,7 +4,7 @@ using System.Text;
 using CampusTrade.API.Options;
 using Microsoft.IdentityModel.Tokens;
 
-namespace CampusTrade.API.Utils.Security;
+namespace CampusTrade.API.Infrastructure.Utils.Security;
 
 /// <summary>
 /// Token操作工具类

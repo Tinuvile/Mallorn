@@ -2,8 +2,9 @@ using System.Net;
 using System.Text.Json;
 using CampusTrade.API.Models.DTOs.Common;
 using Microsoft.Extensions.Caching.Memory;
+using Serilog;
 
-namespace CampusTrade.API.Middleware;
+namespace CampusTrade.API.Infrastructure.Middleware;
 
 /// <summary>
 /// 安全检查中间件
@@ -11,7 +12,6 @@ namespace CampusTrade.API.Middleware;
 public class SecurityMiddleware
 {
     private readonly RequestDelegate _next;
-    private readonly ILogger<SecurityMiddleware> _logger;
     private readonly IMemoryCache _cache;
     private readonly IConfiguration _configuration;
 
@@ -26,12 +26,10 @@ public class SecurityMiddleware
 
     public SecurityMiddleware(
         RequestDelegate next,
-        ILogger<SecurityMiddleware> logger,
         IMemoryCache cache,
         IConfiguration configuration)
     {
         _next = next;
-        _logger = logger;
         _cache = cache;
         _configuration = configuration;
 
@@ -70,7 +68,7 @@ public class SecurityMiddleware
             // 2. 可疑UserAgent检查
             if (IsSuspiciousUserAgent(userAgent))
             {
-                _logger.LogWarning("检测到可疑UserAgent访问, IP: {IP}, UserAgent: {UserAgent}", ipAddress, userAgent);
+                Log.Warning("检测到可疑UserAgent访问, IP: {IP}, UserAgent: {UserAgent}", ipAddress, userAgent);
                 await LogSecurityEvent("SUSPICIOUS_USER_AGENT", ipAddress, userAgent, path);
             }
 
@@ -101,23 +99,23 @@ public class SecurityMiddleware
             // 6. 恶意路径检查
             if (IsMaliciousPath(path))
             {
-                _logger.LogWarning("检测到恶意路径访问, IP: {IP}, Path: {Path}", ipAddress, path);
+                Log.Warning("检测到恶意路径访问, IP: {IP}, Path: {Path}", ipAddress, path);
                 await LogSecurityEvent("MALICIOUS_PATH", ipAddress, userAgent, path);
                 await HandleBlocked(context, "无效的请求路径", "INVALID_PATH");
                 return;
             }
 
             // 记录正常访问（仅在Debug模式下）
-            if (_logger.IsEnabled(LogLevel.Debug))
+            if (Log.IsEnabled(Serilog.Events.LogEventLevel.Debug))
             {
-                _logger.LogDebug("安全检查通过, IP: {IP}, Path: {Path}", ipAddress, path);
+                Log.Debug("安全检查通过, IP: {IP}, Path: {Path}", ipAddress, path);
             }
 
             await _next(context);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "安全中间件执行异常, IP: {IP}, Path: {Path}", ipAddress, path);
+            Log.Error(ex, "安全中间件执行异常, IP: {IP}, Path: {Path}", ipAddress, path);
             await _next(context); // 继续处理，避免因安全中间件异常导致服务不可用
         }
     }
@@ -244,7 +242,7 @@ public class SecurityMiddleware
     /// </summary>
     private async Task LogSecurityEvent(string eventType, string ipAddress, string userAgent, string path)
     {
-        _logger.LogWarning("安全事件: {EventType}, IP: {IP}, UserAgent: {UserAgent}, Path: {Path}",
+        Log.Warning("安全事件: {EventType}, IP: {IP}, UserAgent: {UserAgent}, Path: {Path}",
             eventType, ipAddress, userAgent, path);
 
         // 这里可以扩展为存储到数据库或发送警报
