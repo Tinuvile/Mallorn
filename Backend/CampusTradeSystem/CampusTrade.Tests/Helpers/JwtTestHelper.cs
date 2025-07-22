@@ -199,8 +199,8 @@ public static class JwtTestHelper
             CreditScore = user.CreditScore,
             DeviceId = deviceId,
             UserStatus = user.IsActive == 1 ? "Active" : "Inactive",
-            EmailVerified = true,
-            TwoFactorEnabled = false,
+            EmailVerified = user.EmailVerified == 1,
+            TwoFactorEnabled = user.TwoFactorEnabled == 1,
             RefreshExpiresAt = DateTime.UtcNow.AddDays(7)
         };
     }

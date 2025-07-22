@@ -293,6 +293,265 @@ namespace CampusTrade.Tests.UnitTests.Controllers
             Assert.NotNull(badRequestResult.Value);
         }
 
+        [Fact]
+        public async Task DeleteFiles_WithValidFileNames_ShouldReturnOk()
+        {
+            // Arrange
+            var fileNames = new List<string> { "test1.jpg", "test2.png", "test3.pdf" };
+
+            _mockFileService.Setup(x => x.DeleteFileAsync("test1.jpg"))
+                .ReturnsAsync(true);
+            _mockFileService.Setup(x => x.DeleteFileAsync("test2.png"))
+                .ReturnsAsync(true);
+            _mockFileService.Setup(x => x.DeleteFileAsync("test3.pdf"))
+                .ReturnsAsync(true);
+
+            // Act
+            var result = await _controller.DeleteFiles(fileNames);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            Assert.NotNull(okResult.Value);
+
+            // 验证调用次数
+            _mockFileService.Verify(x => x.DeleteFileAsync(It.IsAny<string>()), Times.Exactly(3));
+        }
+
+        [Fact]
+        public async Task DeleteFiles_WithMixedResults_ShouldReturnOkWithDetails()
+        {
+            // Arrange
+            var fileNames = new List<string> { "existing.jpg", "nonexistent.png" };
+
+            _mockFileService.Setup(x => x.DeleteFileAsync("existing.jpg"))
+                .ReturnsAsync(true);
+            _mockFileService.Setup(x => x.DeleteFileAsync("nonexistent.png"))
+                .ReturnsAsync(false);
+
+            // Act
+            var result = await _controller.DeleteFiles(fileNames);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            Assert.NotNull(okResult.Value);
+
+            // 验证返回的数据结构
+            var response = okResult.Value;
+            var successProperty = response?.GetType().GetProperty("success");
+            var dataProperty = response?.GetType().GetProperty("data");
+            var totalCountProperty = response?.GetType().GetProperty("totalCount");
+            var successCountProperty = response?.GetType().GetProperty("successCount");
+            var failedCountProperty = response?.GetType().GetProperty("failedCount");
+
+            Assert.NotNull(successProperty);
+            Assert.NotNull(dataProperty);
+            Assert.NotNull(totalCountProperty);
+            Assert.NotNull(successCountProperty);
+            Assert.NotNull(failedCountProperty);
+
+            Assert.True((bool)successProperty.GetValue(response)!);
+            Assert.Equal(2, (int)totalCountProperty.GetValue(response)!);
+            Assert.Equal(1, (int)successCountProperty.GetValue(response)!);
+            Assert.Equal(1, (int)failedCountProperty.GetValue(response)!);
+        }
+
+        [Fact]
+        public async Task DeleteFiles_WithEmptyList_ShouldReturnBadRequest()
+        {
+            // Arrange
+            var fileNames = new List<string>();
+
+            // Act
+            var result = await _controller.DeleteFiles(fileNames);
+
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+            Assert.NotNull(badRequestResult.Value);
+        }
+
+        [Fact]
+        public async Task DeleteFiles_WithNullList_ShouldReturnBadRequest()
+        {
+            // Act
+            var result = await _controller.DeleteFiles(null!);
+
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+            Assert.NotNull(badRequestResult.Value);
+        }
+
+        [Fact]
+        public async Task DeleteFiles_WithException_ShouldHandleGracefully()
+        {
+            // Arrange
+            var fileNames = new List<string> { "error.jpg", "normal.png" };
+
+            _mockFileService.Setup(x => x.DeleteFileAsync("error.jpg"))
+                .ThrowsAsync(new Exception("文件删除异常"));
+            _mockFileService.Setup(x => x.DeleteFileAsync("normal.png"))
+                .ReturnsAsync(true);
+
+            // Act
+            var result = await _controller.DeleteFiles(fileNames);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            Assert.NotNull(okResult.Value);
+
+            var response = okResult.Value;
+            var successCountProperty = response?.GetType().GetProperty("successCount");
+            var failedCountProperty = response?.GetType().GetProperty("failedCount");
+
+            Assert.Equal(1, (int)successCountProperty!.GetValue(response)!);
+            Assert.Equal(1, (int)failedCountProperty!.GetValue(response)!);
+        }
+
+        [Fact]
+        public async Task DeleteFilesByUrl_WithValidUrls_ShouldReturnOk()
+        {
+            // Arrange
+            var request = new CampusTrade.API.Controllers.BatchFileUrlRequest
+            {
+                FileUrls = new List<string>
+                {
+                    "http://localhost:5085/api/file/files/products/test1.jpg",
+                    "http://localhost:5085/api/file/files/avatars/test2.png"
+                }
+            };
+
+            _mockFileService.Setup(x => x.ExtractFileNameFromUrl(It.IsAny<string>()))
+                .Returns((string url) => Path.GetFileName(url));
+            _mockFileService.Setup(x => x.DeleteFileByUrlAsync(It.IsAny<string>()))
+                .ReturnsAsync(true);
+
+            // Act
+            var result = await _controller.DeleteFilesByUrl(request);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            Assert.NotNull(okResult.Value);
+
+            // 验证调用次数
+            _mockFileService.Verify(x => x.DeleteFileByUrlAsync(It.IsAny<string>()), Times.Exactly(2));
+            _mockFileService.Verify(x => x.ExtractFileNameFromUrl(It.IsAny<string>()), Times.Exactly(2));
+        }
+
+        [Fact]
+        public async Task DeleteFilesByUrl_WithMixedResults_ShouldReturnOkWithDetails()
+        {
+            // Arrange
+            var request = new CampusTrade.API.Controllers.BatchFileUrlRequest
+            {
+                FileUrls = new List<string>
+                {
+                    "http://localhost:5085/api/file/files/products/existing.jpg",
+                    "http://localhost:5085/api/file/files/products/nonexistent.png"
+                }
+            };
+
+            _mockFileService.Setup(x => x.ExtractFileNameFromUrl(It.IsAny<string>()))
+                .Returns((string url) => Path.GetFileName(url));
+            _mockFileService.Setup(x => x.DeleteFileByUrlAsync("http://localhost:5085/api/file/files/products/existing.jpg"))
+                .ReturnsAsync(true);
+            _mockFileService.Setup(x => x.DeleteFileByUrlAsync("http://localhost:5085/api/file/files/products/nonexistent.png"))
+                .ReturnsAsync(false);
+
+            // Act
+            var result = await _controller.DeleteFilesByUrl(request);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            Assert.NotNull(okResult.Value);
+
+            // 验证返回的数据结构
+            var response = okResult.Value;
+            var successProperty = response?.GetType().GetProperty("success");
+            var dataProperty = response?.GetType().GetProperty("data");
+            var totalCountProperty = response?.GetType().GetProperty("totalCount");
+            var successCountProperty = response?.GetType().GetProperty("successCount");
+            var failedCountProperty = response?.GetType().GetProperty("failedCount");
+
+            Assert.NotNull(successProperty);
+            Assert.NotNull(dataProperty);
+            Assert.NotNull(totalCountProperty);
+            Assert.NotNull(successCountProperty);
+            Assert.NotNull(failedCountProperty);
+
+            Assert.True((bool)successProperty.GetValue(response)!);
+            Assert.Equal(2, (int)totalCountProperty.GetValue(response)!);
+            Assert.Equal(1, (int)successCountProperty.GetValue(response)!);
+            Assert.Equal(1, (int)failedCountProperty.GetValue(response)!);
+        }
+
+        [Fact]
+        public async Task DeleteFilesByUrl_WithEmptyUrlList_ShouldReturnBadRequest()
+        {
+            // Arrange
+            var request = new CampusTrade.API.Controllers.BatchFileUrlRequest
+            {
+                FileUrls = new List<string>()
+            };
+
+            // Act
+            var result = await _controller.DeleteFilesByUrl(request);
+
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+            Assert.NotNull(badRequestResult.Value);
+        }
+
+        [Fact]
+        public async Task DeleteFilesByUrl_WithNullUrls_ShouldReturnBadRequest()
+        {
+            // Arrange
+            var request = new CampusTrade.API.Controllers.BatchFileUrlRequest
+            {
+                FileUrls = null!
+            };
+
+            // Act
+            var result = await _controller.DeleteFilesByUrl(request);
+
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+            Assert.NotNull(badRequestResult.Value);
+        }
+
+        [Fact]
+        public async Task DeleteFilesByUrl_WithException_ShouldHandleGracefully()
+        {
+            // Arrange
+            var request = new CampusTrade.API.Controllers.BatchFileUrlRequest
+            {
+                FileUrls = new List<string>
+                {
+                    "http://localhost:5085/api/file/files/products/error.jpg",
+                    "http://localhost:5085/api/file/files/products/normal.png"
+                }
+            };
+
+            _mockFileService.Setup(x => x.ExtractFileNameFromUrl(It.IsAny<string>()))
+                .Returns((string url) => Path.GetFileName(url));
+            _mockFileService.Setup(x => x.DeleteFileByUrlAsync("http://localhost:5085/api/file/files/products/error.jpg"))
+                .ThrowsAsync(new Exception("URL删除异常"));
+            _mockFileService.Setup(x => x.DeleteFileByUrlAsync("http://localhost:5085/api/file/files/products/normal.png"))
+                .ReturnsAsync(true);
+
+            // Act
+            var result = await _controller.DeleteFilesByUrl(request);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            Assert.NotNull(okResult.Value);
+
+            var response = okResult.Value;
+            var successCountProperty = response?.GetType().GetProperty("successCount");
+            var failedCountProperty = response?.GetType().GetProperty("failedCount");
+
+            Assert.Equal(1, (int)successCountProperty!.GetValue(response)!);
+            Assert.Equal(1, (int)failedCountProperty!.GetValue(response)!);
+        }
+
         private Mock<IFormFile> CreateMockFile(string fileName, string content, string contentType)
         {
             var mockFile = new Mock<IFormFile>();

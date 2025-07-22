@@ -6,16 +6,9 @@ namespace CampusTrade.API.Repositories.Interfaces
 {
     /// <summary>
     /// 分类管理仓储接口（CategoriesRepository Interface）
-    /// <para>所属分层：仓储层（Repositories）</para>
-    /// <para>用途：定义Category实体的数据访问操作，规范所有分类相关的数据持久化方法</para>
-    /// <para>继承关系：继承自IRepository<Category></para>
     /// </summary>
     public interface ICategoriesRepository : IRepository<Category>
     {
-        #region 创建操作
-        // 暂无特定创建操作，使用基础仓储接口方法
-        #endregion
-
         #region 读取操作
         /// <summary>
         /// 获取所有根分类

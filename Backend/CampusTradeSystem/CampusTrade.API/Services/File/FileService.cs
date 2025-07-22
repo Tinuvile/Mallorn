@@ -1,4 +1,5 @@
 using System.IO;
+using CampusTrade.API.Options;
 using Microsoft.Extensions.Options;
 
 namespace CampusTrade.API.Services.File
@@ -72,7 +73,7 @@ namespace CampusTrade.API.Services.File
                 };
 
                 // 如果是图片且需要生成缩略图
-                if (generateThumbnail && IsImageFile(file.ContentType))
+                if (generateThumbnail && FileHelper.IsImageFile(file.FileName))
                 {
                     var thumbnailFileName = GetThumbnailFileName(uniqueFileName);
                     var thumbnailPath = Path.Combine(_uploadPath, GetFileTypeFolder(fileType), thumbnailFileName);
@@ -207,9 +208,7 @@ namespace CampusTrade.API.Services.File
         /// </summary>
         public string GetThumbnailFileName(string originalFileName)
         {
-            var extension = Path.GetExtension(originalFileName);
-            var nameWithoutExtension = Path.GetFileNameWithoutExtension(originalFileName);
-            return $"{nameWithoutExtension}_thumb{extension}";
+            return FileHelper.GetThumbnailFileName(originalFileName);
         }
 
         /// <summary>
@@ -273,24 +272,7 @@ namespace CampusTrade.API.Services.File
         /// </summary>
         public string ExtractFileNameFromUrl(string fileUrl)
         {
-            if (string.IsNullOrEmpty(fileUrl))
-            {
-                return string.Empty;
-            }
-
-            try
-            {
-                // 处理完整URL格式: http://localhost:5085/api/file/files/products/filename.jpg
-                var uri = new Uri(fileUrl);
-                var fileName = Path.GetFileName(uri.LocalPath);
-                return fileName;
-            }
-            catch
-            {
-                // 如果不是完整URL，尝试从路径中提取
-                var fileName = Path.GetFileName(fileUrl);
-                return fileName;
-            }
+            return FileHelper.ExtractFileNameFromUrl(fileUrl);
         }
 
         /// <summary>
@@ -329,6 +311,81 @@ namespace CampusTrade.API.Services.File
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// 获取所有文件列表
+        /// </summary>
+        public Task<FileListResult> GetAllFilesAsync(FileType? fileType = null)
+        {
+            try
+            {
+                var result = new FileListResult { Success = true };
+                var folders = fileType.HasValue
+                    ? new[] { GetFileTypeFolder(fileType.Value) }
+                    : new[] { "products", "reports", "avatars", "others" };
+
+                foreach (var folder in folders)
+                {
+                    var folderPath = Path.Combine(_uploadPath, folder);
+                    if (!Directory.Exists(folderPath))
+                        continue;
+
+                    var files = Directory.GetFiles(folderPath, "*", SearchOption.TopDirectoryOnly);
+
+                    foreach (var filePath in files)
+                    {
+                        var fileName = Path.GetFileName(filePath);
+
+                        // 跳过缩略图文件，避免重复
+                        if (FileHelper.IsThumbnailFile(fileName))
+                            continue;
+
+                        var fileInfo = new FileInfo(filePath);
+                        var detectedFileType = DetermineFileTypeFromFolder(folder);
+
+                        var fileInfoItem = new FileInfoItem
+                        {
+                            FileName = fileName,
+                            FileUrl = GetFileUrl(detectedFileType, fileName),
+                            FileType = detectedFileType,
+                            FileSize = fileInfo.Length,
+                            CreatedAt = fileInfo.CreationTime,
+                            ModifiedAt = fileInfo.LastWriteTime,
+                            Extension = fileInfo.Extension
+                        };
+
+                        // 检查是否有缩略图
+                        var thumbnailFileName = FileHelper.GetThumbnailFileName(fileName);
+                        var thumbnailPath = Path.Combine(folderPath, thumbnailFileName);
+                        if (System.IO.File.Exists(thumbnailPath))
+                        {
+                            fileInfoItem.ThumbnailFileName = thumbnailFileName;
+                            fileInfoItem.ThumbnailUrl = GetFileUrl(detectedFileType, thumbnailFileName);
+                        }
+
+                        result.Files.Add(fileInfoItem);
+                    }
+                }
+
+                // 统计信息
+                result.TotalCount = result.Files.Count;
+                result.FileTypeStats = result.Files
+                    .GroupBy(f => f.FileType)
+                    .ToDictionary(g => g.Key, g => g.Count());
+
+                _logger.LogInformation("获取文件列表成功，共找到 {Count} 个文件", result.TotalCount);
+                return Task.FromResult(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取文件列表失败");
+                return Task.FromResult(new FileListResult
+                {
+                    Success = false,
+                    ErrorMessage = "获取文件列表失败"
+                });
+            }
         }
 
         #region 私有方法
@@ -424,30 +481,24 @@ namespace CampusTrade.API.Services.File
         }
 
         /// <summary>
-        /// 判断是否为图片文件
-        /// </summary>
-        private bool IsImageFile(string contentType)
-        {
-            return contentType.StartsWith("image/");
-        }
-
-        /// <summary>
         /// 获取内容类型
         /// </summary>
         private string GetContentType(string fileName)
         {
-            var extension = Path.GetExtension(fileName).ToLower();
-            return extension switch
+            return FileHelper.GetMimeType(fileName);
+        }
+
+        /// <summary>
+        /// 根据文件夹名确定文件类型
+        /// </summary>
+        private FileType DetermineFileTypeFromFolder(string folder)
+        {
+            return folder switch
             {
-                ".jpg" or ".jpeg" => "image/jpeg",
-                ".png" => "image/png",
-                ".gif" => "image/gif",
-                ".webp" => "image/webp",
-                ".pdf" => "application/pdf",
-                ".txt" => "text/plain",
-                ".doc" => "application/msword",
-                ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                _ => "application/octet-stream"
+                "products" => FileType.ProductImage,
+                "reports" => FileType.ReportEvidence,
+                "avatars" => FileType.UserAvatar,
+                _ => FileType.ProductImage // 默认值
             };
         }
 
