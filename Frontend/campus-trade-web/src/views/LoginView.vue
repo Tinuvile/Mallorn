@@ -221,7 +221,7 @@
             <!-- 动画贴纸区域 -->
             <div class="lottie-right-center">
               <Vue3Lottie
-                :animationData="lottieData"
+                :animationData="lottieData2"
                 style="width: 500px; height: 500px"
                 :loop="true"
                 :autoplay="true"
