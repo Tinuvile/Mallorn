@@ -16,7 +16,14 @@
       <!-- 搜索框 -->
       <v-text-field :loading="loading" append-inner-icon="mdi-magnify" density="compact" label="Search" variant="solo"
         hide-details single-line @click:append-inner="onClick" style="margin-left: 100px;"></v-text-field>
-
+ <v-btn
+    color="primary"
+    class="mx-2"
+    to="/order"
+    prepend-icon="mdi-file-document-outline"
+  >
+    我的订单
+  </v-btn>
 
       <v-spacer></v-spacer>
     </v-app-bar>
