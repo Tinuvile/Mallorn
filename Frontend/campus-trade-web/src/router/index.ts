@@ -2,17 +2,18 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import HomeView from '@/views/HomeView.vue'
 import LoginView from '@/views/LoginView.vue'
+import UserDetailView from '@/views/UserDetailView.vue'
 import Welcome from '@/views/Welcome.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    // {
-    //   path: '/',
-    //   name: 'welcome',
-    //   component: Welcome,
-    //   meta: { guest: true },
-    // },
+    {
+      path: '/',
+       name: 'welcome',
+       component: Welcome,
+       meta: { guest: true },
+     },
     {
       path: '/',
       name: 'home',
@@ -23,6 +24,11 @@ const router = createRouter({
       name: 'login',
       component: LoginView,
       meta: { guest: true },
+    },
+    {
+      path: '/userdetailview',
+      name: 'userdetailview',
+      component: UserDetailView,
     },
     {
       path: '/about',
