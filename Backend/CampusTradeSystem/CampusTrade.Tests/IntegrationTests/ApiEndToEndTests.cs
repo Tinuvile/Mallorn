@@ -4,13 +4,17 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using CampusTrade.API;
+using CampusTrade.API.Data;
 using CampusTrade.API.Models.DTOs.Auth;
 using CampusTrade.API.Models.DTOs.Common;
+using CampusTrade.API.Services.Background;
 using CampusTrade.Tests.Helpers;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
@@ -32,12 +36,44 @@ public class ApiEndToEndTests : IClassFixture<WebApplicationFactory<Program>>, I
 
             builder.ConfigureServices(services =>
             {
-                // 使用内存数据库进行测试
-                services.Remove(services.SingleOrDefault(d => d.ServiceType == typeof(CampusTrade.API.Data.CampusTradeDbContext))!);
+                // 彻底移除原有的DbContext和相关服务
+                var dbContextDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(CampusTradeDbContext));
+                if (dbContextDescriptor != null)
+                    services.Remove(dbContextDescriptor);
 
-                // 添加测试专用的数据库上下文
-                var context = TestDbContextFactory.CreateInMemoryDbContext("EndToEndTest");
-                services.AddSingleton(context);
+                var dbContextOptionsDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<CampusTradeDbContext>));
+                if (dbContextOptionsDescriptor != null)
+                    services.Remove(dbContextOptionsDescriptor);
+
+                // 移除Oracle拦截器
+                var interceptorDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DatabasePerformanceInterceptor));
+                if (interceptorDescriptor != null)
+                    services.Remove(interceptorDescriptor);
+
+                // 移除所有后台服务，避免测试阻塞
+                var backgroundServices = services.Where(d => d.ServiceType == typeof(IHostedService)).ToList();
+                foreach (var service in backgroundServices)
+                {
+                    services.Remove(service);
+                }
+
+                // 生成唯一的数据库名称，避免测试间冲突
+                var testDbName = $"ApiEndToEndTest_{Guid.NewGuid():N}";
+
+                // 使用内存数据库进行测试
+                services.AddDbContext<CampusTradeDbContext>(options =>
+                {
+                    // 使用唯一的数据库名称，确保测试隔离
+                    options.UseInMemoryDatabase(testDbName)
+                           .EnableSensitiveDataLogging()
+                           .EnableServiceProviderCaching(false)
+                           .EnableDetailedErrors();
+                    options.ConfigureWarnings(warnings =>
+                    {
+                        warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning);
+                        warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.CoreEventId.RowLimitingOperationWithoutOrderByWarning);
+                    });
+                }, ServiceLifetime.Scoped); // 改回Scoped避免生命周期问题
 
                 // 配置测试日志
                 services.AddLogging(builder => builder.SetMinimumLevel(LogLevel.Warning));
@@ -45,6 +81,22 @@ public class ApiEndToEndTests : IClassFixture<WebApplicationFactory<Program>>, I
         });
 
         _client = _factory.CreateClient();
+
+        // 设置测试用的UserAgent，避免安全中间件检测为可疑行为
+        _client.DefaultRequestHeaders.Add("User-Agent", "ApiEndToEndTest/1.0 (Campus Trade Test Suite)");
+
+        // 初始化数据库并播种测试数据
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<CampusTradeDbContext>();
+            // 确保数据库已创建并清空
+            context.Database.EnsureDeleted();
+            context.Database.EnsureCreated();
+
+            // 播种测试数据
+            TestDbContextFactory.SeedTestDataToContext(context);
+            context.SaveChanges();
+        }
     }
 
     #region 性能测试
@@ -360,7 +412,7 @@ public class ApiEndToEndTests : IClassFixture<WebApplicationFactory<Program>>, I
             Task<HttpResponseMessage> task = (i % 4) switch
             {
                 0 => _client.GetAsync("/api/auth/user/zhangsan"),
-                1 => _client.GetAsync("/api/auth/validate-student?studentId=2025001&name=张三"),
+                1 => PostJsonAsync("/api/auth/validate-student", new { StudentId = "2025001", Name = "张三" }),
                 2 => PostJsonAsync("/api/auth/login", new LoginWithDeviceRequest
                 {
                     Username = "zhangsan",
@@ -406,7 +458,7 @@ public class ApiEndToEndTests : IClassFixture<WebApplicationFactory<Program>>, I
         var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
         // Step 1: 验证学生身份
-        var validateResponse = await _client.GetAsync($"/api/auth/validate-student?studentId=2025003&name=王五");
+        var validateResponse = await PostJsonAsync("/api/auth/validate-student", new { StudentId = "2025003", Name = "王五" });
         validateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Step 2: 注册用户

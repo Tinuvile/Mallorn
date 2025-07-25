@@ -109,7 +109,27 @@ public static class JwtTestHelper
     {
         var handler = new JwtSecurityTokenHandler();
         var jsonToken = handler.ReadJwtToken(token);
-        return jsonToken.Claims.FirstOrDefault(x => x.Type == "username")?.Value;
+
+        // 尝试多种可能的name claim类型
+        var nameClaimTypes = new[]
+        {
+            "unique_name",  // JWT序列化后的标准名称
+            ClaimTypes.Name,
+            "name",
+            "username",
+            "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"
+        };
+
+        foreach (var claimType in nameClaimTypes)
+        {
+            var claim = jsonToken.Claims.FirstOrDefault(x => x.Type == claimType);
+            if (claim != null)
+            {
+                return claim.Value;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -179,8 +199,8 @@ public static class JwtTestHelper
             CreditScore = user.CreditScore,
             DeviceId = deviceId,
             UserStatus = user.IsActive == 1 ? "Active" : "Inactive",
-            EmailVerified = true,
-            TwoFactorEnabled = false,
+            EmailVerified = user.EmailVerified == 1,
+            TwoFactorEnabled = user.TwoFactorEnabled == 1,
             RefreshExpiresAt = DateTime.UtcNow.AddDays(7)
         };
     }

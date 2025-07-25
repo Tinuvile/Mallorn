@@ -1,4 +1,4 @@
-namespace CampusTrade.API.Services.File
+namespace CampusTrade.API.Options
 {
     /// <summary>
     /// 文件存储配置选项

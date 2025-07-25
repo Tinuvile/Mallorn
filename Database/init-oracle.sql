@@ -190,7 +190,7 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     is_active NUMBER(1) DEFAULT 1 CHECK (is_active IN (0,1)),
-    -- Entity Framework 需要的额外字段
+    -- 额外字段
     last_login_at TIMESTAMP,
     last_login_ip VARCHAR2(45),
     login_count NUMBER DEFAULT 0,
@@ -199,7 +199,7 @@ CREATE TABLE users (
     failed_login_attempts NUMBER DEFAULT 0,
     two_factor_enabled NUMBER(1) DEFAULT 0 CHECK (two_factor_enabled IN (0,1)),
     password_changed_at TIMESTAMP,
-    security_stamp VARCHAR2(256) DEFAULT SYS_GUID(),
+    security_stamp VARCHAR2(256),
     email_verified NUMBER(1) DEFAULT 0 CHECK (email_verified IN (0,1)),
     email_verification_token VARCHAR2(256),
     CONSTRAINT fk_users_student FOREIGN KEY (student_id) REFERENCES students(student_id)
@@ -270,7 +270,7 @@ CREATE TABLE email_verification (
     verification_code VARCHAR2(6),
     token VARCHAR2(64),
     expire_time TIMESTAMP,
-    is_used NUMBER DEFAULT 0 CHECK (is_used IN (0,1)),
+    is_used NUMBER(1) DEFAULT 0 CHECK (is_used IN (0,1)),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_verification_user FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
@@ -430,8 +430,8 @@ CREATE TABLE notification_templates (
     template_type VARCHAR2(20) CHECK (template_type IN ('商品相关','交易相关','评价相关','系统通知')),
     template_content CLOB NOT NULL,
     description VARCHAR2(500),
-    priority NUMBER CHECK (priority BETWEEN 1 AND 5) DEFAULT 2,
-    is_active NUMBER DEFAULT 1 CHECK (is_active IN (0,1)),
+    priority NUMBER DEFAULT 2 CHECK (priority BETWEEN 1 AND 5),
+    is_active NUMBER(1) DEFAULT 1 CHECK (is_active IN (0,1)),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP,
     created_by NUMBER,
@@ -439,7 +439,7 @@ CREATE TABLE notification_templates (
 );
 
 -- ================================================================
--- 19. 通知表 (notifications) 
+-- 19. 通知表 (notifications)
 -- ================================================================
 CREATE TABLE notifications (
     notification_id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -466,7 +466,7 @@ CREATE TABLE reviews (
     rating NUMBER(2,1) CHECK (rating BETWEEN 1 AND 5),
     desc_accuracy NUMBER(2,0) CHECK (desc_accuracy BETWEEN 1 AND 5),
     service_attitude NUMBER(2,0) CHECK (service_attitude BETWEEN 1 AND 5),
-    is_anonymous NUMBER DEFAULT 0 CHECK (is_anonymous IN (0,1)),
+    is_anonymous NUMBER(1) DEFAULT 0 CHECK (is_anonymous IN (0,1)),
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     seller_reply CLOB,
     content CLOB,
@@ -704,6 +704,6 @@ SELECT '========================================' AS separator FROM dual;
 DESC users;
 
 SELECT '========================================' AS separator FROM dual;
-SELECT 'Database initialization complete with all fixes applied!' AS final_message FROM dual;
+SELECT 'Database initialization complete with all fixes applied!' AS final_message FROM dual; 
 SELECT 'Ready for application usage!' AS status FROM dual;
 SELECT '========================================' AS separator FROM dual; 

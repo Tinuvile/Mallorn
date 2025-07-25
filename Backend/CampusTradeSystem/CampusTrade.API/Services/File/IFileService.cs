@@ -107,6 +107,13 @@ namespace CampusTrade.API.Services.File
         /// <param name="allowedTypes">允许的文件类型</param>
         /// <returns>是否有效</returns>
         bool ValidateFileType(IFormFile file, string[] allowedTypes);
+
+        /// <summary>
+        /// 获取所有文件列表
+        /// </summary>
+        /// <param name="fileType">文件类型（可选，为null时返回所有类型）</param>
+        /// <returns>文件列表结果</returns>
+        Task<FileListResult> GetAllFilesAsync(FileType? fileType = null);
     }
 
     /// <summary>
@@ -200,6 +207,88 @@ namespace CampusTrade.API.Services.File
         /// 内容类型
         /// </summary>
         public string ContentType { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 错误消息
+        /// </summary>
+        public string? ErrorMessage { get; set; }
+    }
+
+    /// <summary>
+    /// 文件信息项
+    /// </summary>
+    public class FileInfoItem
+    {
+        /// <summary>
+        /// 文件名
+        /// </summary>
+        public string FileName { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 文件URL
+        /// </summary>
+        public string FileUrl { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 文件类型
+        /// </summary>
+        public FileType FileType { get; set; }
+
+        /// <summary>
+        /// 文件大小（字节）
+        /// </summary>
+        public long FileSize { get; set; }
+
+        /// <summary>
+        /// 创建时间
+        /// </summary>
+        public DateTime CreatedAt { get; set; }
+
+        /// <summary>
+        /// 修改时间
+        /// </summary>
+        public DateTime ModifiedAt { get; set; }
+
+        /// <summary>
+        /// 文件扩展名
+        /// </summary>
+        public string Extension { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 缩略图文件名（如果有）
+        /// </summary>
+        public string? ThumbnailFileName { get; set; }
+
+        /// <summary>
+        /// 缩略图URL（如果有）
+        /// </summary>
+        public string? ThumbnailUrl { get; set; }
+    }
+
+    /// <summary>
+    /// 文件列表结果
+    /// </summary>
+    public class FileListResult
+    {
+        /// <summary>
+        /// 是否成功
+        /// </summary>
+        public bool Success { get; set; }
+
+        /// <summary>
+        /// 文件列表
+        /// </summary>
+        public List<FileInfoItem> Files { get; set; } = new();
+
+        /// <summary>
+        /// 文件总数
+        /// </summary>
+        public int TotalCount { get; set; }
+
+        /// <summary>
+        /// 按文件类型分组的统计
+        /// </summary>
+        public Dictionary<FileType, int> FileTypeStats { get; set; } = new();
 
         /// <summary>
         /// 错误消息

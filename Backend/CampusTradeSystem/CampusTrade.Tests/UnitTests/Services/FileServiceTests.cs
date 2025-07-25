@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text;
+using CampusTrade.API.Options;
 using CampusTrade.API.Services.File;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -667,5 +668,266 @@ namespace CampusTrade.Tests.UnitTests.Services
                 Directory.Delete(_testUploadPath, true);
             }
         }
+
+        #region 批量删除功能测试
+
+        [Fact]
+        public async Task DeleteFiles_WithMultipleFileNames_ShouldDeleteAllFiles()
+        {
+            // Arrange
+            var fileNames = new List<string> { "test1.jpg", "test2.png", "test3.pdf" };
+            var testFiles = new List<string>();
+
+            // 创建测试文件
+            foreach (var fileName in fileNames)
+            {
+                var filePath = Path.Combine(_testUploadPath, "products", fileName);
+                Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+                await File.WriteAllTextAsync(filePath, "test content");
+                testFiles.Add(filePath);
+            }
+
+            // Act
+            var results = new List<bool>();
+            foreach (var fileName in fileNames)
+            {
+                var result = await _fileService.DeleteFileAsync(fileName);
+                results.Add(result);
+            }
+
+            // Assert
+            Assert.All(results, result => Assert.True(result));
+            Assert.All(testFiles, filePath => Assert.False(File.Exists(filePath)));
+        }
+
+        [Fact]
+        public async Task DeleteFiles_WithNonExistentFiles_ShouldReturnFalse()
+        {
+            // Arrange
+            var fileNames = new List<string> { "nonexistent1.jpg", "nonexistent2.png" };
+
+            // Act
+            var results = new List<bool>();
+            foreach (var fileName in fileNames)
+            {
+                var result = await _fileService.DeleteFileAsync(fileName);
+                results.Add(result);
+            }
+
+            // Assert
+            Assert.All(results, result => Assert.False(result));
+        }
+
+        [Fact]
+        public async Task DeleteFiles_WithMixedExistentAndNonExistentFiles_ShouldReturnMixedResults()
+        {
+            // Arrange
+            var existentFile = "existent.jpg";
+            var nonExistentFile = "nonexistent.jpg";
+            var fileNames = new List<string> { existentFile, nonExistentFile };
+
+            // 创建一个存在的文件
+            var existentFilePath = Path.Combine(_testUploadPath, "products", existentFile);
+            Directory.CreateDirectory(Path.GetDirectoryName(existentFilePath)!);
+            await File.WriteAllTextAsync(existentFilePath, "test content");
+
+            // Act
+            var results = new List<bool>();
+            foreach (var fileName in fileNames)
+            {
+                var result = await _fileService.DeleteFileAsync(fileName);
+                results.Add(result);
+            }
+
+            // Assert
+            Assert.True(results[0]); // 存在的文件应该删除成功
+            Assert.False(results[1]); // 不存在的文件应该删除失败
+            Assert.False(File.Exists(existentFilePath)); // 文件应该被删除
+        }
+
+        [Fact]
+        public async Task DeleteFilesByUrl_WithMultipleUrls_ShouldDeleteAllFiles()
+        {
+            // Arrange
+            var fileUrls = new List<string>
+            {
+                "http://localhost:5085/api/file/files/products/test1.jpg",
+                "http://localhost:5085/api/file/files/avatars/test2.png",
+                "http://localhost:5085/api/file/files/reports/test3.pdf"
+            };
+
+            // 创建对应的测试文件
+            var testFiles = new List<string>();
+            foreach (var fileUrl in fileUrls)
+            {
+                var fileName = _fileService.ExtractFileNameFromUrl(fileUrl);
+                var fileType = _fileService.ExtractFileTypeFromUrl(fileUrl);
+                var folder = fileType switch
+                {
+                    FileType.ProductImage => "products",
+                    FileType.UserAvatar => "avatars",
+                    FileType.ReportEvidence => "reports",
+                    _ => "others"
+                };
+
+                var filePath = Path.Combine(_testUploadPath, folder, fileName);
+                Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+                await File.WriteAllTextAsync(filePath, "test content");
+                testFiles.Add(filePath);
+            }
+
+            // Act
+            var results = new List<bool>();
+            foreach (var fileUrl in fileUrls)
+            {
+                var result = await _fileService.DeleteFileByUrlAsync(fileUrl);
+                results.Add(result);
+            }
+
+            // Assert
+            Assert.All(results, result => Assert.True(result));
+            Assert.All(testFiles, filePath => Assert.False(File.Exists(filePath)));
+        }
+
+        [Fact]
+        public async Task DeleteFilesByUrl_WithNonExistentUrls_ShouldReturnFalse()
+        {
+            // Arrange
+            var fileUrls = new List<string>
+            {
+                "http://localhost:5085/api/file/files/products/nonexistent1.jpg",
+                "http://localhost:5085/api/file/files/avatars/nonexistent2.png"
+            };
+
+            // Act
+            var results = new List<bool>();
+            foreach (var fileUrl in fileUrls)
+            {
+                var result = await _fileService.DeleteFileByUrlAsync(fileUrl);
+                results.Add(result);
+            }
+
+            // Assert
+            Assert.All(results, result => Assert.False(result));
+        }
+
+        [Fact]
+        public async Task DeleteFilesByUrl_WithInvalidUrls_ShouldReturnFalse()
+        {
+            // Arrange
+            var invalidUrls = new List<string>
+            {
+                "invalid-url",
+                "",
+                "http://localhost:5085/api/file/invalid-path/test.jpg"
+            };
+
+            // Act
+            var results = new List<bool>();
+            foreach (var url in invalidUrls)
+            {
+                var result = await _fileService.DeleteFileByUrlAsync(url);
+                results.Add(result);
+            }
+
+            // Assert
+            Assert.All(results, result => Assert.False(result));
+        }
+
+        [Fact]
+        public async Task DeleteFilesByUrl_WithThumbnailFiles_ShouldDeleteBothOriginalAndThumbnail()
+        {
+            // Arrange
+            var originalFileName = "test-image.jpg";
+            var thumbnailFileName = "test-image_thumb.jpg";
+            var fileUrl = "http://localhost:5085/api/file/files/products/test-image.jpg";
+
+            // 创建原始文件和缩略图
+            var originalFilePath = Path.Combine(_testUploadPath, "products", originalFileName);
+            var thumbnailFilePath = Path.Combine(_testUploadPath, "products", thumbnailFileName);
+
+            Directory.CreateDirectory(Path.GetDirectoryName(originalFilePath)!);
+            await File.WriteAllTextAsync(originalFilePath, "original content");
+            await File.WriteAllTextAsync(thumbnailFilePath, "thumbnail content");
+
+            // Act
+            var result = await _fileService.DeleteFileByUrlAsync(fileUrl);
+
+            // Assert
+            Assert.True(result);
+            Assert.False(File.Exists(originalFilePath));
+            Assert.False(File.Exists(thumbnailFilePath)); // 缩略图也应该被删除
+        }
+
+        #endregion
+
+        #region 文件列表功能测试
+
+        [Fact]
+        public async Task GetAllFilesAsync_WithoutFileTypeFilter_ShouldReturnAllFiles()
+        {
+            // Arrange & Act
+            var result = await _fileService.GetAllFilesAsync();
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.True(result.Success);
+            Assert.NotNull(result.Files);
+            Assert.NotNull(result.FileTypeStats);
+            Assert.Equal(result.Files.Count, result.TotalCount);
+        }
+
+        [Theory]
+        [InlineData(FileType.ProductImage)]
+        [InlineData(FileType.UserAvatar)]
+        [InlineData(FileType.ReportEvidence)]
+        public async Task GetAllFilesAsync_WithFileTypeFilter_ShouldReturnFilteredFiles(FileType fileType)
+        {
+            // Arrange & Act
+            var result = await _fileService.GetAllFilesAsync(fileType);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.True(result.Success);
+            Assert.NotNull(result.Files);
+            Assert.All(result.Files, file => Assert.Equal(fileType, file.FileType));
+        }
+
+        [Fact]
+        public async Task GetAllFilesAsync_ShouldNotIncludeThumbnailsInMainList()
+        {
+            // Arrange & Act
+            var result = await _fileService.GetAllFilesAsync();
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.True(result.Success);
+            Assert.All(result.Files, file =>
+                Assert.False(file.FileName.Contains("_thumb"),
+                    $"Main file list should not contain thumbnail files, but found: {file.FileName}"));
+        }
+
+        [Fact]
+        public async Task GetAllFilesAsync_ShouldIncludeCorrectFileInformation()
+        {
+            // Arrange & Act
+            var result = await _fileService.GetAllFilesAsync();
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.True(result.Success);
+
+            foreach (var file in result.Files)
+            {
+                Assert.NotEmpty(file.FileName);
+                Assert.NotEmpty(file.FileUrl);
+                Assert.NotEmpty(file.Extension);
+                Assert.True(file.FileSize >= 0);
+                Assert.NotEqual(default(DateTime), file.CreatedAt);
+                Assert.NotEqual(default(DateTime), file.ModifiedAt);
+            }
+        }
+
+        #endregion
     }
 }
