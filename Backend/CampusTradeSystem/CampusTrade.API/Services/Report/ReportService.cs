@@ -1,7 +1,9 @@
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Interfaces;
+using CampusTrade.API.Infrastructure.Utils.Performance;
 using Microsoft.Extensions.Logging;
+using Serilog;
 
 namespace CampusTrade.API.Services.Report
 {
@@ -13,6 +15,7 @@ namespace CampusTrade.API.Services.Report
         private readonly IReportsRepository _reportsRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<ReportService> _logger;
+        private readonly Serilog.ILogger _serilogLogger;
 
         public ReportService(
             IReportsRepository reportsRepository,
@@ -22,6 +25,7 @@ namespace CampusTrade.API.Services.Report
             _reportsRepository = reportsRepository;
             _unitOfWork = unitOfWork;
             _logger = logger;
+            _serilogLogger = Log.ForContext<ReportService>();
         }
 
         /// <summary>
@@ -40,23 +44,38 @@ namespace CampusTrade.API.Services.Report
             string? description = null,
             List<EvidenceFileInfo>? evidenceFiles = null)
         {
+            using var performanceTracker = new PerformanceTracker(_serilogLogger, "CreateReport", "ReportService")
+                .AddContext("OrderId", orderId)
+                .AddContext("ReporterId", reporterId)
+                .AddContext("ReportType", type);
+
             try
             {
+                _serilogLogger.Information("开始创建举报 - 订单ID: {OrderId}, 举报人ID: {ReporterId}, 类型: {ReportType}", 
+                    orderId, reporterId, type);
+
                 // 验证举报类型
                 var validTypes = new[] { "商品问题", "服务问题", "欺诈", "虚假描述", "其他" };
                 if (!validTypes.Contains(type))
                 {
+                    _serilogLogger.Warning("举报类型验证失败 - 无效类型: {ReportType}, 订单ID: {OrderId}, 用户ID: {ReporterId}", 
+                        type, orderId, reporterId);
                     return (false, "无效的举报类型", null);
                 }
 
                 // 检查用户是否已经对该订单进行过举报
                 var existingReports = await _reportsRepository.GetByOrderIdAsync(orderId);
-                if (existingReports.Any(r => r.ReporterId == reporterId && r.Status != "已关闭"))
+                var duplicateReport = existingReports.FirstOrDefault(r => r.ReporterId == reporterId && r.Status != "已关闭");
+                
+                if (duplicateReport != null)
                 {
+                    _serilogLogger.Warning("重复举报拦截 - 用户ID: {ReporterId}, 订单ID: {OrderId}, 现有举报ID: {ExistingReportId}, 状态: {Status}", 
+                        reporterId, orderId, duplicateReport.ReportId, duplicateReport.Status);
                     return (false, "您已经对此订单提交过举报，请等待处理结果", null);
                 }
 
                 // 创建举报记录
+                var priority = CalculatePriority(type);
                 var report = new Reports
                 {
                     OrderId = orderId,
@@ -64,14 +83,18 @@ namespace CampusTrade.API.Services.Report
                     Type = type,
                     Description = description,
                     Status = "待处理",
-                    Priority = CalculatePriority(type),
+                    Priority = priority,
                     CreateTime = DateTime.Now
                 };
 
                 await _reportsRepository.AddAsync(report);
                 await _unitOfWork.SaveChangesAsync();
 
+                _serilogLogger.Information("举报记录创建成功 - 举报ID: {ReportId}, 优先级: {Priority}", 
+                    report.ReportId, priority);
+
                 // 添加证据文件
+                var evidenceCount = 0;
                 if (evidenceFiles != null && evidenceFiles.Any())
                 {
                     foreach (var evidence in evidenceFiles)
@@ -80,18 +103,30 @@ namespace CampusTrade.API.Services.Report
                             report.ReportId, 
                             evidence.FileType, 
                             evidence.FileUrl);
+                        evidenceCount++;
                     }
                     await _unitOfWork.SaveChangesAsync();
+                    
+                    _serilogLogger.Information("举报证据添加完成 - 举报ID: {ReportId}, 证据数量: {EvidenceCount}", 
+                        report.ReportId, evidenceCount);
                 }
 
-                _logger.LogInformation("用户 {ReporterId} 对订单 {OrderId} 创建举报成功，举报ID: {ReportId}", 
-                    reporterId, orderId, report.ReportId);
+                // 根据优先级记录不同级别的日志
+                if (priority >= 7)
+                {
+                    _serilogLogger.Warning("高优先级举报创建 - 举报ID: {ReportId}, 类型: {ReportType}, 优先级: {Priority}, 需要优先处理", 
+                        report.ReportId, type, priority);
+                }
+
+                _serilogLogger.Information("用户举报创建成功 - 用户ID: {ReporterId}, 订单ID: {OrderId}, 举报类型: {ReportType}, 举报ID: {ReportId}, 优先级: {Priority}, 证据数量: {EvidenceCount}", 
+                    reporterId, orderId, type, report.ReportId, report.Priority, evidenceFiles?.Count ?? 0);
 
                 return (true, "举报提交成功，我们将尽快处理", report.ReportId);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "创建举报时发生异常");
+                _serilogLogger.Error(ex, "创建举报失败 - 订单ID: {OrderId}, 用户ID: {ReporterId}, 错误: {ErrorMessage}", 
+                    orderId, reporterId, ex.Message);
                 return (false, "系统异常，请稍后重试", null);
             }
         }
@@ -106,17 +141,27 @@ namespace CampusTrade.API.Services.Report
             int reportId, 
             List<EvidenceFileInfo> evidenceFiles)
         {
+            using var performanceTracker = new PerformanceTracker(_serilogLogger, "AddReportEvidence", "ReportService")
+                .AddContext("ReportId", reportId)
+                .AddContext("EvidenceCount", evidenceFiles.Count);
+
             try
             {
+                _serilogLogger.Information("开始添加举报证据 - 举报ID: {ReportId}, 证据数量: {Count}", 
+                    reportId, evidenceFiles.Count);
+
                 // 验证举报是否存在且可以添加证据
                 var report = await _reportsRepository.GetByPrimaryKeyAsync(reportId);
                 if (report == null)
                 {
+                    _serilogLogger.Warning("添加证据失败 - 举报不存在: {ReportId}", reportId);
                     return (false, "举报不存在");
                 }
 
                 if (report.Status == "已处理" || report.Status == "已关闭")
                 {
+                    _serilogLogger.Warning("添加证据失败 - 举报状态不允许: 举报ID: {ReportId}, 状态: {Status}", 
+                        reportId, report.Status);
                     return (false, "该举报已处理，无法添加证据");
                 }
 
@@ -131,14 +176,15 @@ namespace CampusTrade.API.Services.Report
 
                 await _unitOfWork.SaveChangesAsync();
 
-                _logger.LogInformation("为举报 {ReportId} 添加了 {Count} 个证据文件", 
-                    reportId, evidenceFiles.Count);
+                _serilogLogger.Information("举报证据添加成功 - 举报ID: {ReportId}, 添加证据数: {Count}, 举报类型: {ReportType}", 
+                    reportId, evidenceFiles.Count, report.Type);
 
                 return (true, "证据添加成功");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "添加举报证据时发生异常");
+                _serilogLogger.Error(ex, "添加举报证据异常 - 举报ID: {ReportId}, 错误: {ErrorMessage}", 
+                    reportId, ex.Message);
                 return (false, "系统异常，请稍后重试");
             }
         }
@@ -184,21 +230,35 @@ namespace CampusTrade.API.Services.Report
         {
             try
             {
+                _serilogLogger.Debug("查询举报详情 - 举报ID: {ReportId}, 请求用户: {UserId}", 
+                    reportId, requestUserId);
+
                 var report = await _reportsRepository.GetReportWithDetailsAsync(reportId);
                 
                 // 权限验证：只有举报人可以查看详情
                 if (report != null && report.ReporterId != requestUserId)
                 {
-                    _logger.LogWarning("用户 {UserId} 尝试访问不属于自己的举报 {ReportId}", 
-                        requestUserId, reportId);
+                    _serilogLogger.Warning("举报详情访问权限拒绝 - 举报ID: {ReportId}, 举报人: {ReporterId}, 请求用户: {RequestUserId}", 
+                        reportId, report.ReporterId, requestUserId);
                     return null;
+                }
+
+                if (report != null)
+                {
+                    _serilogLogger.Information("举报详情查询成功 - 举报ID: {ReportId}, 类型: {ReportType}, 状态: {Status}", 
+                        reportId, report.Type, report.Status);
+                }
+                else
+                {
+                    _serilogLogger.Information("举报详情查询 - 未找到记录: {ReportId}", reportId);
                 }
 
                 return report;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "获取举报详情时发生异常");
+                _serilogLogger.Error(ex, "获取举报详情异常 - 举报ID: {ReportId}, 用户ID: {UserId}", 
+                    reportId, requestUserId);
                 return null;
             }
         }
