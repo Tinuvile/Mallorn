@@ -119,6 +119,9 @@ try
     // 添加Repository层服务
     builder.Services.AddRepositoryServices();
 
+    // 添加业务服务
+    builder.Services.AddBusinessServices();
+
     // 添加日志清理后台服务
     builder.Services.AddHostedService<CampusTrade.API.Services.LogCleanupService>();
 
