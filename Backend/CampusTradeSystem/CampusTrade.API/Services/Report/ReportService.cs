@@ -235,7 +235,7 @@ namespace CampusTrade.API.Services.Report
 
                 var report = await _reportsRepository.GetReportWithDetailsAsync(reportId);
                 
-                // 权限验证：只有举报人可以查看详情
+                // 权限验证：只有举报人可以查看详情 （修改：后续需加入管理员）
                 if (report != null && report.ReporterId != requestUserId)
                 {
                     _serilogLogger.Warning("举报详情访问权限拒绝 - 举报ID: {ReportId}, 举报人: {ReporterId}, 请求用户: {RequestUserId}", 
@@ -273,7 +273,7 @@ namespace CampusTrade.API.Services.Report
         {
             try
             {
-                // 先验证权限
+                // 先验证权限（修改：后续需加入管理员）
                 var report = await _reportsRepository.GetByPrimaryKeyAsync(reportId);
                 if (report == null || report.ReporterId != requestUserId)
                 {
