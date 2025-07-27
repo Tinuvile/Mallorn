@@ -12,7 +12,7 @@
       <template v-slot:img="{ props }">
         <v-img v-bind="props" gradient="to top right, rgba(19,84,122,.5), rgba(128,208,199,.8)"></v-img>
       </template>
-      <v-btn icon color="indigo"  class="mx-2">
+      <v-btn icon color="indigo"  class="mx-2" to="/userdetailview">
         <v-icon size="40">mdi-account-circle</v-icon>
       </v-btn>
       <v-btn icon @click="goToCart" class="mx-2">
@@ -178,6 +178,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+
 const router = useRouter()
 
 // 模拟购物车商品数量
@@ -188,6 +189,8 @@ const goToCart = () => {
   //router.push({ name: 'Cart' }) // 跳转到名为'Cart'的路由
   // 也可以使用路径跳转: router.push('/cart')
 }
+
+
 const products = ref([
   { id: 1, name: '商品1', imageUrl: 'https://picsum.photos/250/150?random=1' },
   { id: 2, name: '商品2', imageUrl: 'https://picsum.photos/250/150?random=2' },

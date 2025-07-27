@@ -3,7 +3,7 @@
     <!-- 导航栏 -->
     <v-app-bar color="#BBDEFB" height="72" dark>
       <span class="title" style="font-size: 24px; margin-left: 30px;margin-right: 30px;">Campus Secondhand</span>
-      <v-btn icon color="indigo" @click="goToCart" class="mx-2">
+      <v-btn icon color="indigo" to="/userdetailview" class="mx-2">
         <v-icon size="40">mdi-account-circle</v-icon>
       </v-btn>
       <v-btn icon @click="goToCart" class="mx-2">
