@@ -31,8 +31,8 @@
     <v-divider></v-divider>
     <!-- 页面主体内容 -->
     <v-main style="margin-top: 30px;" >
-      <div class="d-flex flex-row">
 
+      <div class="d-flex flex-row">
       <!-- 分类列表 -->
         <v-card class="pa-0" width = "15%" style="background-color: #f5f5f5; border-radius: 5px; margin: 40px 20px 20px 20px; ">
         <v-list class="pa-4" style="margin-top: 20px;margin-left: -10px; background-color: transparent; ">
@@ -102,13 +102,15 @@
           </v-list>
         </v-card>
       </div>
+
+      
       <!-- 促销 -->
       <v-sheet class="mx-auto pa-2 pt-6" style="border: 3px solid #fceeee; border-radius: 10px;box-shadow: 0 40px 8px rgba(0, 0, 0, 0.1);">
         <v-icon color="deep-purple">mdi-sale</v-icon>
         <p style="font-size: 40px; font-weight: bold; color: #E1BEE7;">促销</p>
         <v-slide-group show-arrows>
-          <v-slide-group-item v-for="(product, index) in products" :key="index">
-            <v-card class="ma-3" height="200" width="250" rounded >
+          <v-slide-group-item v-for="(product, index) in saleProducts" :key="index">
+            <v-card class="ma-3" height="200" width="250" rounded @click="goToProductDetail(product.id)">
               <v-img :src="product.imageUrl" :alt="product.name" height="150" contain placeholder="加载中..." />
               <v-card-title class="text-center pt-2">{{ product.name }}</v-card-title>
             </v-card>
@@ -142,11 +144,22 @@
 
         <v-container fluid>
           <v-row>
-            <v-col v-for="n in 12" :key="n" cols="2">
-              <v-img :width="200" :src="'https://picsum.photos/200/200?random=' + n" :alt="'图片' + n" rounded contain
-                loading="lazy" class="ma-2 rounded-lg" />
-            </v-col>
-          </v-row>
+        <v-col v-for="product in recommendedProducts" :key="product.id" cols="2">
+          <v-card class="ma-3" elevation="0" @click="goToProductDetail(product.id)">
+            <v-img 
+              :src="product.imageUrl" 
+              :alt="product.name" 
+              height="200" 
+              rounded 
+              contain 
+              loading="lazy" 
+            />
+            <v-card-item>
+              <v-card-title class="text-center">{{ product.name }}</v-card-title> 
+            </v-card-item>
+          </v-card>
+        </v-col>
+      </v-row>
         </v-container>
       </v-sheet>
     </v-main>
@@ -203,12 +216,14 @@ const goToLogin = () => {
 
 // 跳转到商品详情页
 const goToProductDetail = (id) => {
-  //router.push({ name: 'productDetail', params: { id } })
+  router.push({ 
+    path: `/goods/${id}`,  // 路由路径格式：/goods/商品ID
+    params: { id }         // 传递商品ID参数
+  })
 }
 
-
-// 模拟促销商品数据
-const products = ref([
+// 模拟促销商品数据 (ID范围: 1-9)
+const saleProducts = ref([
   { id: 1, name: '商品1', imageUrl: '/images/shoe1.jpg' },
   { id: 2, name: '商品2', imageUrl: '/images/shoe2.jpg' },
   { id: 3, name: '商品3', imageUrl: '/images/shoe3.jpg' },
@@ -220,19 +235,36 @@ const products = ref([
   { id: 9, name: '商品9', imageUrl: 'https://picsum.photos/250/150?random=9' },
 ])
 
-// 模拟热销商品数据
+// 模拟热销商品数据 (ID范围: 100-108)
 const hotProducts = ref([
-  { id: 1, name: '商品1', imageUrl: 'https://picsum.photos/300/200?random=1' },
-  { id: 2, name: '商品2', imageUrl: 'https://picsum.photos/150/200?random=2' },
-  { id: 3, name: '商品3', imageUrl: 'https://picsum.photos/150/200?random=3' },
-  { id: 4, name: '商品4', imageUrl: 'https://picsum.photos/150/200?random=4' },
-  { id: 5, name: '商品5', imageUrl: 'https://picsum.photos/150/200?random=5' },
-  { id: 6, name: '商品6', imageUrl: 'https://picsum.photos/150/200?random=6' },
-  { id: 7, name: '商品7', imageUrl: 'https://picsum.photos/150/200?random=7' },
-  { id: 8, name: '商品8', imageUrl: 'https://picsum.photos/150/200?random=8' },
-  { id: 9, name: '商品9', imageUrl: 'https://picsum.photos/150/200?random=9' },
+  { id: 100, name: '热销商品1', imageUrl: 'https://picsum.photos/300/200?random=1' },
+  { id: 101, name: '热销商品2', imageUrl: 'https://picsum.photos/150/200?random=2' },
+  { id: 102, name: '热销商品3', imageUrl: 'https://picsum.photos/150/200?random=3' },
+  { id: 103, name: '热销商品4', imageUrl: 'https://picsum.photos/150/200?random=4' },
+  { id: 104, name: '热销商品5', imageUrl: 'https://picsum.photos/150/200?random=5' },
+  { id: 105, name: '热销商品6', imageUrl: 'https://picsum.photos/150/200?random=6' },
+  { id: 106, name: '热销商品7', imageUrl: 'https://picsum.photos/150/200?random=7' },
+  { id: 107, name: '热销商品8', imageUrl: 'https://picsum.photos/150/200?random=8' },
+  { id: 108, name: '热销商品9', imageUrl: 'https://picsum.photos/150/200?random=9' },
   // 可按需添加更多商品
 ])
+
+// 添加推荐商品数据 (ID范围: 200-211)
+const recommendedProducts = ref([
+  { id: 200, name: '推荐商品1', imageUrl: 'https://picsum.photos/200/200?random=200' },
+  { id: 201, name: '推荐商品2', imageUrl: 'https://picsum.photos/200/200?random=201' },
+  { id: 202, name: '推荐商品3', imageUrl: 'https://picsum.photos/200/200?random=202' },
+  { id: 203, name: '推荐商品4', imageUrl: 'https://picsum.photos/200/200?random=203' },
+  { id: 204, name: '推荐商品5', imageUrl: 'https://picsum.photos/200/200?random=204' },
+  { id: 205, name: '推荐商品6', imageUrl: 'https://picsum.photos/200/200?random=205' },
+  { id: 206, name: '推荐商品7', imageUrl: 'https://picsum.photos/200/200?random=206' },
+  { id: 207, name: '推荐商品8', imageUrl: 'https://picsum.photos/200/200?random=207' },
+  { id: 208, name: '推荐商品9', imageUrl: 'https://picsum.photos/200/200?random=208' },
+  { id: 209, name: '推荐商品10', imageUrl: 'https://picsum.photos/200/200?random=209' },
+  { id: 210, name: '推荐商品11', imageUrl: 'https://picsum.photos/200/200?random=210' },
+  { id: 211, name: '推荐商品12', imageUrl: 'https://picsum.photos/200/200?random=211' },
+])
+
 
 // 轮播图数据
 const carouselImages = ref([
