@@ -146,6 +146,9 @@ try
     // 添加文件管理服务
     builder.Services.AddFileManagementServices(builder.Configuration);
 
+    // 添加订单服务
+    builder.Services.AddOrderServices();
+
     // 配置 CORS
     builder.Services.AddCorsPolicy(builder.Configuration);
 

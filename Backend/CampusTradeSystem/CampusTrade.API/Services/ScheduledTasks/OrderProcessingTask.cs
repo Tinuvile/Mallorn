@@ -1,18 +1,19 @@
-using System;
-using System.Threading.Tasks;
-using CampusTrade.API.Data;
-using Microsoft.EntityFrameworkCore;
+using CampusTrade.API.Services.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace CampusTrade.API.Services.ScheduledTasks
 {
+    /// <summary>
+    /// 订单处理定时任务
+    /// 定期处理过期订单和订单状态维护
+    /// </summary>
     public class OrderProcessingTask : ScheduledService
     {
         private readonly IServiceScopeFactory _scopeFactory;
 
-        // 注入 IServiceScopeFactory 而非直接注入 DbContext
-        public OrderProcessingTask(ILogger<OrderProcessingTask> logger, IServiceScopeFactory scopeFactory) : base(logger)
+        public OrderProcessingTask(ILogger<OrderProcessingTask> logger, IServiceScopeFactory scopeFactory) 
+            : base(logger)
         {
             _scopeFactory = scopeFactory;
         }
@@ -21,20 +22,34 @@ namespace CampusTrade.API.Services.ScheduledTasks
 
         protected override async Task ExecuteTaskAsync()
         {
-            // 手动创建作用域，确保 DbContext 在作用域内使用
-            using (var scope = _scopeFactory.CreateScope())
-            {
-                // 从作用域中获取 DbContext（符合 Scoped 生命周期）
-                var context = scope.ServiceProvider.GetRequiredService<CampusTradeDbContext>();
+            using var scope = _scopeFactory.CreateScope();
+            var orderService = scope.ServiceProvider.GetRequiredService<IOrderService>();
 
-                var cutoffDate = DateTime.Now.AddHours(-24); // 取消 24 小时未支付的订单
-                var ordersToCancel = await context.Orders.Where(o => o.Status == "待付款" && o.CreateTime < cutoffDate).ToListAsync();
-                foreach (var order in ordersToCancel)
+            try
+            {
+                // 处理过期订单
+                var processedCount = await orderService.ProcessExpiredOrdersAsync();
+                
+                if (processedCount > 0)
                 {
-                    order.Status = "已取消";
+                    _logger.LogInformation("定时任务处理了 {Count} 个过期订单", processedCount);
                 }
-                await context.SaveChangesAsync();
+                else
+                {
+                    _logger.LogInformation("定时任务未发现需要处理的过期订单");
+                }
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "订单处理定时任务执行失败");
+                throw;
+            }
+        }
+
+        protected override async Task OnTaskErrorAsync(Exception exception)
+        {
+            _logger.LogError(exception, "订单处理定时任务发生错误，将在下次调度时重试");
+            await Task.CompletedTask;
         }
     }
 }

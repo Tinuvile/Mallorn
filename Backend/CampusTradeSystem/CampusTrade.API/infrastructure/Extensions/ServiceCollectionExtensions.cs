@@ -5,6 +5,7 @@ using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Auth;
 using CampusTrade.API.Services.Background;
 using CampusTrade.API.Services.File;
+using CampusTrade.API.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -102,6 +103,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         return services;
     }
@@ -178,6 +180,9 @@ public static class ServiceCollectionExtensions
     {
         // 注册通知发送后台服务
         services.AddHostedService<NotificationBackgroundService>();
+        
+        // 注册订单超时监控后台服务
+        services.AddHostedService<OrderTimeoutBackgroundService>();
 
         return services;
     }
@@ -191,6 +196,15 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IFileService, FileService>();
         services.AddScoped<IThumbnailService, ThumbnailService>();
         services.AddSingleton<IValidateOptions<FileStorageOptions>, FileStorageOptionsValidator>();
+        return services;
+    }
+
+    /// <summary>
+    /// 添加订单相关服务
+    /// </summary>
+    public static IServiceCollection AddOrderServices(this IServiceCollection services)
+    {
+        services.AddScoped<IOrderService, CampusTrade.API.Services.Order.OrderService>();
         return services;
     }
 }
