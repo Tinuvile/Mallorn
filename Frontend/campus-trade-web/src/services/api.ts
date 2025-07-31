@@ -123,6 +123,7 @@ export interface UserInfo {
   phone?: string
   studentId: string
   creditScore: number
+  emailVerified: boolean
   createdAt: string
   student?: {
     studentId: string
@@ -173,6 +174,7 @@ export const authApi = {
       refresh_token: refreshToken,
     })
   },
+
 }
 
 export default api

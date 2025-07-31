@@ -26,168 +26,184 @@
         <v-icon size="32" color="red-darken-1">mdi-logout-variant</v-icon>
       </v-btn>
 
-      <!-- Decorative background images on the right -->
-      <div class="decorative-bg">
-        <img src="https://grace-l-hub.oss-cn-shanghai.aliyuncs.com/OIP-C%281%29%281%29.png" class="top-image" alt="Decorative image">
-        <img src="https://grace-l-hub.oss-cn-shanghai.aliyuncs.com/OIP-C%282%29%281%29.png" class="bottom-image" alt="Decorative image">
-      </div>
-      
-      <!-- Main content container - 调整了位置 -->
-      <v-container class="content-wrapper py-2">
-        <v-row class="row-wrapper">
-          <v-col cols="12" md="8" lg="6" class="col-wrapper">
-            <v-card class="user-profile-card" elevation="12">
-              <v-card-title class="text-center pt-6">
-                <v-avatar size="120" color="indigo-lighten-4" class="profile-avatar">
-                  <v-icon size="64" color="indigo-darken-3">mdi-account-circle</v-icon>
-                </v-avatar>
-              </v-card-title>
-              
-              <v-card-text class="text-center px-6 pb-0">
-                <div class="user-info-column">
-                  <p class="text-h4 font-weight-bold mb-6" style="font-family: 'Comic Sans MS', cursive;">User Information</p>
-                  
-                  <v-divider class="my-4"></v-divider>
-                  
-                  <v-list lines="two" density="comfortable" class="text-left">
-                    <v-list-item prepend-icon="mdi-account" title="用户名">
-                      <template v-slot:append>
-                        <span class="text-body-1">{{ user.name }}</span>
-                      </template>
-                    </v-list-item>
-                    
-                    <v-list-item prepend-icon="mdi-identifier" title="用户ID">
-                      <template v-slot:append>
-                        <span class="text-body-1">{{ user.userID }}</span>
-                      </template>
-                    </v-list-item>
-                    
-                    <v-list-item prepend-icon="mdi-card-account-details" title="学号">
-                      <template v-slot:append>
-                        <span class="text-body-1">{{ user.studentId }}</span>
-                      </template>
-                    </v-list-item>
-                    
-                    <v-list-item prepend-icon="mdi-email" title="邮箱">
-                      <template v-slot:append>
-                        <span class="text-body-1">{{ user.email }}</span>
-                        <v-chip :color="user.emailVerified ? 'success' : 'warning'" size="small" class="ml-2">
-                          {{ user.emailVerified ? '已认证' : '未认证' }}
-                        </v-chip>
-                      </template>
-                    </v-list-item>
-                    
-                    <v-list-item prepend-icon="mdi-phone" title="电话">
-                      <template v-slot:append>
-                        <span class="text-body-1">{{ user.phone }}</span>
-                      </template>
-                    </v-list-item>
-                  </v-list>
-                </div>
+      <!-- 加载状态 -->
+      <v-overlay
+        :model-value="isLoading"
+        class="align-center justify-center"
+      >
+        <v-progress-circular
+          color="primary"
+          indeterminate
+          size="64"
+        ></v-progress-circular>
+      </v-overlay>
+
+      <!-- 只在非加载状态显示内容 -->
+      <template v-if="!isLoading">
+        <!-- Decorative background images on the right -->
+        <div class="decorative-bg">
+          <img src="https://grace-l-hub.oss-cn-shanghai.aliyuncs.com/OIP-C%281%29%281%29.png" class="top-image" alt="Decorative image">
+          <img src="https://grace-l-hub.oss-cn-shanghai.aliyuncs.com/OIP-C%282%29%281%29.png" class="bottom-image" alt="Decorative image">
+        </div>
+        
+        <!-- Main content container - 调整了位置 -->
+        <v-container class="content-wrapper py-2">
+          <v-row class="row-wrapper">
+            <v-col cols="12" md="8" lg="6" class="col-wrapper">
+              <v-card class="user-profile-card" elevation="12">
+                <v-card-title class="text-center pt-6">
+                  <v-avatar size="120" color="indigo-lighten-4" class="profile-avatar">
+                    <v-icon size="64" color="indigo-darken-3">mdi-account-circle</v-icon>
+                  </v-avatar>
+                </v-card-title>
                 
-                <div class="credit-score-container mt-6">
-                  <div class="d-flex justify-center align-center">
-                    <v-progress-circular
-                      :model-value="user.creditScore"
-                      :color="creditScoreColor"
-                      :size="120"
-                      :width="12"
-                      class="mr-4"
-                    >
-                      <span class="text-h5 font-weight-bold">{{ user.creditScore }}</span>
-                    </v-progress-circular>
+                <v-card-text class="text-center px-6 pb-0">
+                  <div class="user-info-column">
+                    <p class="text-h4 font-weight-bold mb-6" style="font-family: 'Comic Sans MS', cursive;">User Information</p>
                     
-                    <div class="text-left">
-                      <h3 class="text-h6 mb-2">信用评分</h3>
-                      <p class="text-caption text-medium-emphasis">
-                        {{ creditScoreRemark }}
-                      </p>
+                    <v-divider class="my-4"></v-divider>
+                    
+                    <v-list lines="two" density="comfortable" class="text-left">
+                      <v-list-item prepend-icon="mdi-account" title="用户名">
+                        <template v-slot:append>
+                          <span class="text-body-1">{{ user.name }}</span>
+                        </template>
+                      </v-list-item>
+                      
+                      <v-list-item prepend-icon="mdi-identifier" title="用户ID">
+                        <template v-slot:append>
+                          <span class="text-body-1">{{ user.userID }}</span>
+                        </template>
+                      </v-list-item>
+                      
+                      <v-list-item prepend-icon="mdi-card-account-details" title="学号">
+                        <template v-slot:append>
+                          <span class="text-body-1">{{ user.studentId }}</span>
+                        </template>
+                      </v-list-item>
+                      
+                      <v-list-item prepend-icon="mdi-email" title="邮箱">
+                        <template v-slot:append>
+                          <span class="text-body-1">{{ user.email }}</span>
+                          <v-chip :color="user.emailVerified ? 'success' : 'warning'" size="small" class="ml-2">
+                            {{ user.emailVerified ? '已认证' : '未认证' }}
+                          </v-chip>
+                        </template>
+                      </v-list-item>
+                      
+                      <v-list-item prepend-icon="mdi-phone" title="电话">
+                        <template v-slot:append>
+                          <span class="text-body-1">{{ user.phone }}</span>
+                        </template>
+                      </v-list-item>
+                    </v-list>
+                  </div>
+                  
+                  <div class="credit-score-container mt-6">
+                    <div class="d-flex justify-center align-center">
+                      <v-progress-circular
+                        :model-value="user.creditScore"
+                        :color="creditScoreColor"
+                        :size="120"
+                        :width="12"
+                        class="mr-4"
+                      >
+                        <span class="text-h5 font-weight-bold">{{ user.creditScore }}</span>
+                      </v-progress-circular>
+                      
+                      <div class="text-left">
+                        <h3 class="text-h6 mb-2">信用评分</h3>
+                        <p class="text-caption text-medium-emphasis">
+                          {{ creditScoreRemark }}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </v-card-text>
-              
-              <v-card-actions class="justify-center pb-6">
-                <v-btn color="indigo" variant="tonal" class="mr-4" @click="openEditDialog">
-                  <v-icon start>mdi-pencil</v-icon>
-                  编辑资料
-                </v-btn>
-                <v-btn color="blue" variant="tonal" @click="handleEmailVerification">
-                  <v-icon start>mdi-email-check</v-icon>
-                  邮箱认证
-                </v-btn>
-              </v-card-actions>
-            </v-card>
-          </v-col>
-        </v-row>
-      </v-container>
+                </v-card-text>
+                
+                <v-card-actions class="justify-center pb-6">
+                  <v-btn color="indigo" variant="tonal" class="mr-4" @click="openEditDialog">
+                    <v-icon start>mdi-pencil</v-icon>
+                    编辑资料
+                  </v-btn>
+                  <v-btn color="blue" variant="tonal" @click="handleEmailVerification">
+                    <v-icon start>mdi-email-check</v-icon>
+                    邮箱认证
+                  </v-btn>
+                </v-card-actions>
+              </v-card>
+            </v-col>
+          </v-row>
+        </v-container>
 
-      <!-- Edit Profile Dialog -->
-      <v-dialog v-model="editDialog" max-width="600">
-        <v-card>
-          <v-card-title class="text-h5">编辑个人资料</v-card-title>
-          <v-card-text>
-            <v-form ref="editForm" @submit.prevent="saveChanges">
-              <v-text-field
-                v-model="editableUser.name"
-                label="用户名"
-                prepend-icon="mdi-account"
-                :rules="[requiredRule]"
-                required
-              ></v-text-field>
-              
-              <v-text-field
-                v-model="editableUser.email"
-                label="邮箱"
-                prepend-icon="mdi-email"
-                :rules="[requiredRule, emailRule]"
-                required
-              ></v-text-field>
-              
-              <v-text-field
-                v-model="editableUser.phone"
-                label="电话"
-                prepend-icon="mdi-phone"
-                :rules="[requiredRule, phoneRule]"
-                required
-              ></v-text-field>
-            </v-form>
-          </v-card-text>
-          <v-card-actions>
-            <v-spacer></v-spacer>
-            <v-btn color="secondary" @click="editDialog = false">取消</v-btn>
-            <v-btn color="primary" @click="saveChanges">保存</v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
+        <!-- Edit Profile Dialog -->
+        <v-dialog v-model="editDialog" max-width="600">
+          <v-card>
+            <v-card-title class="text-h5">编辑个人资料</v-card-title>
+            <v-card-text>
+              <v-form ref="editForm" @submit.prevent="saveChanges">
+                <v-text-field
+                  v-model="editableUser.name"
+                  label="用户名"
+                  prepend-icon="mdi-account"
+                  :rules="[requiredRule]"
+                  required
+                ></v-text-field>
+                
+                <v-text-field
+                  v-model="editableUser.email"
+                  label="邮箱"
+                  prepend-icon="mdi-email"
+                  :rules="[requiredRule, emailRule]"
+                  required
+                ></v-text-field>
+                
+                <v-text-field
+                  v-model="editableUser.phone"
+                  label="电话"
+                  prepend-icon="mdi-phone"
+                  :rules="[requiredRule, phoneRule]"
+                  required
+                ></v-text-field>
+              </v-form>
+            </v-card-text>
+            <v-card-actions>
+              <v-spacer></v-spacer>
+              <v-btn color="secondary" @click="editDialog = false">取消</v-btn>
+              <v-btn color="primary" @click="saveChanges">保存</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
 
-      <!-- Email Verification Dialog -->
-      <v-dialog v-model="showVerificationDialog" max-width="500">
-        <v-card>
-          <v-card-title class="text-h5">邮箱认证</v-card-title>
-          <v-card-text>
-            <p>我们将发送一封验证邮件到 {{ user.email }}</p>
-            <p>请检查您的邮箱并点击邮件中的验证链接完成认证。</p>
-          </v-card-text>
-          <v-card-actions>
-            <v-spacer></v-spacer>
-            <v-btn color="primary" @click="sendVerificationEmail">发送验证邮件</v-btn>
-            <v-btn color="secondary" @click="showVerificationDialog = false">取消</v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
+        <!-- Email Verification Dialog -->
+        <v-dialog v-model="showVerificationDialog" max-width="500">
+          <v-card>
+            <v-card-title class="text-h5">邮箱认证</v-card-title>
+            <v-card-text>
+              <p>我们将发送一封验证邮件到 {{ user.email }}</p>
+              <p>请检查您的邮箱并点击邮件中的验证链接完成认证。</p>
+            </v-card-text>
+            <v-card-actions>
+              <v-spacer></v-spacer>
+              <v-btn color="primary" @click="sendVerificationEmail">发送验证邮件</v-btn>
+              <v-btn color="secondary" @click="showVerificationDialog = false">取消</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
 
-      <!-- Snackbar for messages -->
-      <v-snackbar v-model="showSnackbar" :timeout="2000" :color="snackbarColor">
-        {{ snackbarMessage }}
-      </v-snackbar>
+        <!-- Snackbar for messages -->
+        <v-snackbar v-model="showSnackbar" :timeout="2000" :color="snackbarColor">
+          {{ snackbarMessage }}
+        </v-snackbar>
+      </template>
     </div>
   </v-app>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import type { VForm } from 'vuetify/components'
+import { authApi } from '@/services/api'
 
 interface User {
   name: string
@@ -199,13 +215,14 @@ interface User {
   emailVerified: boolean
 }
 
+// 初始化为空用户
 const user = ref<User>({
-  name: '张晓明',
-  userID: 'USER123456',
-  studentId: '2023101234',
-  email: 'zhangxm@university.edu',
-  phone: '13800138000',
-  creditScore: 85,
+  name: '',
+  userID: '',
+  studentId: '',
+  email: '',
+  phone: '',
+  creditScore: 0,
   emailVerified: false
 })
 
@@ -216,6 +233,7 @@ const showVerificationDialog = ref(false)
 const showSnackbar = ref(false)
 const snackbarMessage = ref('')
 const snackbarColor = ref('success')
+const isLoading = ref(true)
 
 // Validation rules
 const requiredRule = (v: string) => !!v || '此项为必填项'
@@ -236,6 +254,37 @@ const creditScoreRemark = computed(() => {
   return '待提高 - 请注意信用行为'
 })
 
+// 在组件挂载时获取用户数据
+onMounted(async () => {
+  try {
+    // 假设我们从本地存储获取当前用户名
+    const username = localStorage.getItem('username') || ''
+    
+    // 调用API获取用户信息
+    const response = await authApi.getUser(username)
+    
+    if (response.success && response.data) {
+      // 将API返回的数据映射到本地user对象
+      user.value = {
+        name: response.data.fullName || response.data.username || '',
+        userID: response.data.userId.toString(),
+        studentId: response.data.studentId || '',
+        email: response.data.email || '',
+        phone: response.data.phone || '',
+        creditScore: response.data.creditScore || 0,
+        emailVerified: response.data.emailVerified || false
+      }
+    } else {
+      showSnackbarMessage(response.message || '获取用户信息失败', 'error')
+    }
+  } catch (error) {
+    console.error('获取用户信息出错:', error)
+    showSnackbarMessage('获取用户信息时出错', 'error')
+  } finally {
+    isLoading.value = false
+  }
+})
+
 const openEditDialog = () => {
   editableUser.value = {...user.value}
   editDialog.value = true
@@ -248,13 +297,25 @@ const saveChanges = async () => {
   
   if (!valid) return
 
-  if (editableUser.value.email !== user.value.email) {
-    editableUser.value.emailVerified = false
-  }
+  try {
+    // 这里应该调用更新用户信息的API
+    // 假设我们有一个 updateUser API 方法
+    // const response = await authApi.updateUser(editableUser.value)
+    
+    // 模拟API调用
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    if (editableUser.value.email !== user.value.email) {
+      editableUser.value.emailVerified = false
+    }
 
-  user.value = {...editableUser.value}
-  editDialog.value = false
-  showSnackbarMessage('资料更新成功', 'success')
+    user.value = {...editableUser.value}
+    editDialog.value = false
+    showSnackbarMessage('资料更新成功', 'success')
+  } catch (error) {
+    console.error('更新用户信息出错:', error)
+    showSnackbarMessage('更新用户信息失败', 'error')
+  }
 }
 
 const handleEmailVerification = () => {
@@ -265,23 +326,25 @@ const handleEmailVerification = () => {
   }
 }
 
-const sendVerificationEmail = () => {
-  console.log(`Sending verification email to ${user.value.email}`)
-  
-  setTimeout(() => {
+const sendVerificationEmail = async () => {
+  try {
+    console.log(`Sending verification email to ${user.value.email}`)
+    
+    // 这里应该调用发送验证邮件的API
+    // 例如: await authApi.sendVerificationEmail(user.value.email)
+    
+    // 模拟API调用
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
     showVerificationDialog.value = false
     showSnackbarMessage('验证邮件已发送，请检查您的邮箱', 'info')
     
-    setTimeout(() => {
-      user.value.emailVerified = true
-      showSnackbarMessage('邮箱认证成功', 'success')
-    }, 3000)
-  }, 1000)
-}
-
-const handleLogout = () => {
-  console.log('退出按钮被点击')
-  // router.push('/login')
+    // 这里可以添加检查邮箱验证状态的逻辑
+    // 或者让用户手动刷新验证状态
+  } catch (error) {
+    console.error('发送验证邮件出错:', error)
+    showSnackbarMessage('发送验证邮件失败', 'error')
+  }
 }
 
 const showSnackbarMessage = (message: string, color: string) => {

@@ -3,7 +3,7 @@
     <!-- 导航栏 -->
     <v-app-bar color="#BBDEFB" height="72" dark>
       <span class="title" style="font-size: 24px; margin-left: 30px;margin-right: 30px;">Campus Secondhand</span>
-      <v-btn icon color="indigo" to="/userdetailview" class="mx-2">
+      <v-btn icon color="indigo" @click="goToUserDetail" class="mx-2">
         <v-icon size="40">mdi-account-circle</v-icon>
       </v-btn>
       <v-btn icon @click="goToCart" class="mx-2">
@@ -16,19 +16,39 @@
       <!-- 搜索框 -->
       <v-text-field :loading="loading" append-inner-icon="mdi-magnify" density="compact" label="Search" variant="solo"
         hide-details single-line @click:append-inner="onClick" style="margin-left: 100px;"></v-text-field>
- <v-btn
-    color="primary"
-    class="mx-2"
-    to="/order"
-    prepend-icon="mdi-file-document-outline"
-  >
-    我的订单
-  </v-btn>
+      <v-btn
+        color="primary"
+        class="mx-2"
+        to="/order"
+        prepend-icon="mdi-file-document-outline"
+      >
+        我的订单
+      </v-btn>
 
       <v-spacer></v-spacer>
     </v-app-bar>
 
     <v-divider></v-divider>
+
+    <!-- 认证警告提示 -->
+    <v-snackbar
+      v-model="showAuthWarning"
+      :timeout="3000"
+      color="error"
+      top
+    >
+      {{ authWarningMessage }}
+      <template v-slot:action="{ attrs }">
+        <v-btn
+          text
+          v-bind="attrs"
+          @click="showAuthWarning = false"
+        >
+          关闭
+        </v-btn>
+      </template>
+    </v-snackbar>
+
     <!-- 页面主体内容 -->
     <v-main style="margin-top: 30px;" >
       <div class="d-flex flex-row">
@@ -154,10 +174,23 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+const showAuthWarning = ref(false)
+const authWarningMessage = ref('')
+const isLoading = ref(false)
+const isLoggedIn = ref(false) // 添加登录状态
+const loading = ref(false)
+
+// 检查登录状态
+onMounted(() => {
+  // 这里应该从localStorage或store中检查实际的登录状态
+  // 模拟检查
+  const token = localStorage.getItem('token')
+  isLoggedIn.value = !!token
+})
 
 // 分类数据
 const categories = ref([
@@ -187,13 +220,47 @@ const userInfo = ref({
   role: '普通用户'
 })
 
-
 // 模拟购物车商品数量
 const cartItemsCount = ref(3)
 
-// 点击购物车图标时的跳转方法(还需要根据实际路由调整)
+// 跳转到用户详情页
+const goToUserDetail = async () => {
+  if (!isLoggedIn.value) {
+    showAuthWarning.value = true
+    authWarningMessage.value = '请先登录后再查看个人信息'
+    return
+  }
+  
+  isLoading.value = true
+  try {
+    // 这里应该是实际的API调用
+    // const response = await authApi.getUser('current')
+    // 模拟API响应
+    const response = { success: true }
+    
+    if (response.success) {
+      router.push('/userdetailview')
+    } else {
+      showAuthWarning.value = true
+      authWarningMessage.value = response.message || '获取用户信息失败'
+    }
+  } catch (error) {
+    console.error('获取用户信息失败:', error)
+    showAuthWarning.value = true
+    authWarningMessage.value = '登录状态验证失败，请重新登录'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// 点击购物车图标时的跳转方法
 const goToCart = () => {
-  //router.push({ name: 'Cart' }) // 跳转到名为'Cart'的路由
+  if (!isLoggedIn.value) {
+    showAuthWarning.value = true
+    authWarningMessage.value = '请先登录后再查看购物车'
+    return
+  }
+  router.push('/cart')
 }
 
 // 跳转到登录页面
@@ -203,9 +270,8 @@ const goToLogin = () => {
 
 // 跳转到商品详情页
 const goToProductDetail = (id) => {
-  //router.push({ name: 'productDetail', params: { id } })
+  router.push({ name: 'productDetail', params: { id } })
 }
-
 
 // 模拟促销商品数据
 const products = ref([
@@ -231,7 +297,6 @@ const hotProducts = ref([
   { id: 7, name: '商品7', imageUrl: 'https://picsum.photos/150/200?random=7' },
   { id: 8, name: '商品8', imageUrl: 'https://picsum.photos/150/200?random=8' },
   { id: 9, name: '商品9', imageUrl: 'https://picsum.photos/150/200?random=9' },
-  // 可按需添加更多商品
 ])
 
 // 轮播图数据
@@ -252,6 +317,4 @@ const carouselImages = ref([
     subtitle: '极限竞速，极限挑战'
   }
 ])
-
-const loading = ref(false)
 </script>
