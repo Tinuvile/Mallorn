@@ -5,6 +5,7 @@ import LoginView from '@/views/LoginView.vue'
 import UserDetailView from '@/views/UserDetailView.vue'
 import Welcome from '@/views/Welcome.vue'
 import OrderView from '@/views/order.vue'
+import GoodsDetails from '@/views/GoodsDetails.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -42,6 +43,12 @@ const router = createRouter({
       name: 'order',
       component: OrderView,
     },
+    {
+    path: '/goods/:id',  // 动态路由参数:商品ID
+    name: 'goodsDetails',
+    component: GoodsDetails,
+    props: true  // 允许将路由参数作为props传递
+    }
   ],
 })
 

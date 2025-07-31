@@ -67,13 +67,15 @@
                 <v-btn
                   class="custom-btn"
                   height="48"
+                  @click="handleLogin"
                   style="background: #acd6ee; color: #fff; border-radius: 24px; margin-bottom: 10px; margin-top: 10px;"
                 >
-                  登录
+                 {{ loading ? '登录中...' : '登录' }}
                 </v-btn>
                 <v-btn
                   class="custom-btn"
                   height="48"
+                  @click="router.push('/')"
                   style="background: #e7e7e7; color: #757575; border-radius: 24px;margin-bottom: 10px; margin-top: 10px;"
                 >
                   返回
@@ -95,7 +97,7 @@
                 <span class="star">*</span>
                 <div class="form-main">
                   <v-text-field
-                    v-model="registerForm.studentId"
+                    v-model="registerForm.student_id"
                     :rules="rules"
                     hide-details="auto"
                     label="学号"
@@ -172,7 +174,7 @@
                 <span class="star">*</span>
                 <div class="form-main">
                   <v-text-field
-                    v-model="registerForm.confirmPassword"
+                    v-model="registerForm.confirm_password"
                     :rules="rules"
                     hide-details="auto"
                     label="确认密码"
@@ -188,13 +190,22 @@
                     class="ma-2"
                     color="#ff4e6d"
                     justify-content="center"
+                    ading="validatingStudent"
+                    @click="validateStudentIdentity"
                   >
-                    验证学生身份
+                    {{validatingStudent ? '验证中...' : '验证学生身份' }}
+                    
                     <v-icon
                       icon="mdi-checkbox-marked-circle"
                       end
                     ></v-icon>
                   </v-btn>
+                   <span v-if="studentValidated" style="color: green; margin-left: 10px">
+            ✓ 学生身份验证成功
+          </span>
+          <span v-else-if="studentValidationFailed" style="color: red; margin-left: 10px">
+            ✗ 学生身份验证失败
+          </span>
                 </div>
               </div>
               <div class="v-btn-row">
@@ -202,12 +213,15 @@
                   class="custom-btn"
                   height="48"
                   style="background: #ff4e6d; color: #fff; border-radius: 24px;"
+                  :loading="registerLoading" 
+                  @click="handleRegister"
                 >
-                  注册
+                   {{ registerLoading ? '注册中...' : '注册' }}
                 </v-btn>
                 <v-btn
                   class="custom-btn"
                   height="48"
+                  @click="handleCloseRegister"
                   style="background: #e7e7e7; color: #757575; border-radius: 24px;"
                 >
                   返回
@@ -238,30 +252,201 @@
   </div>
 </template>
 
-<script setup>
-import { ref } from 'vue'
+<script setup lang="ts">
+import { ref, reactive } from 'vue'
 import lottieData from '../assets/animation1.json'
 console.log('lottieData:', lottieData)
 
 import lottieData2 from '../assets/talk.json'
 console.log('lottieData2:', lottieData2)
+import { useRouter } from 'vue-router'
+import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
+import { User, Lock } from '@element-plus/icons-vue'
+import { useUserStore } from '@/stores/user'
+import type { RegisterData } from '@/services/api'
+
+const router = useRouter()
+const userStore = useUserStore()
+
+const loading = ref(false)
+const registerLoading = ref(false)
+const showRegister = ref(false)
+const validatingStudent = ref(false)
+const studentValidated = ref(false)
+const studentValidationFailed = ref(false)
+
+const loginFormRef = ref<FormInstance>()
+const registerFormRef = ref<FormInstance>()
 
 const isLogin = ref(false)
 const loginValue = ref('')
 const password = ref('')
-const registerForm = ref({
-  studentId: '',
-  name: '',
-  email: '',
-  username: '',
-  phone: '',
-  password: '',
-  confirmPassword: ''
-})
+
 const rules = [
-  v => !!v || '必填',
-  v => (v && v.length >= 2) || '至少2个字符'
+  (v: any) => !!v || '必填',
+  (v: any) => (v && v.length >= 2) || '至少2个字符'
 ]
+// 登录表单
+  const loginForm = reactive({
+    username: '',
+    password: '',
+    remember_me: false,
+  })
+
+  // 注册表单
+  const registerForm = reactive<RegisterData>({
+    student_id: '',
+    name: '',
+    email: '',
+    password: '',
+    confirm_password: '',
+    username: '',
+    phone: '',
+  })
+
+  // 登录表单验证规则
+  const loginRules: FormRules = {
+    username: [
+      { required: true, message: '请输入用户名或邮箱', trigger: 'blur' },
+      { min: 3, max: 100, message: '用户名或邮箱长度在 3 到 100 个字符', trigger: 'blur' },
+    ],
+    password: [
+      { required: true, message: '请输入密码', trigger: 'blur' },
+      { min: 6, message: '密码长度不能少于 6 个字符', trigger: 'blur' },
+    ],
+  }
+
+  // 注册表单验证规则
+  const registerRules: FormRules = {
+    student_id: [
+      { required: true, message: '请输入学号', trigger: 'blur' },
+      { max: 20, message: '学号长度不能超过20字符', trigger: 'blur' },
+    ],
+    name: [
+      { required: true, message: '请输入姓名', trigger: 'blur' },
+      { max: 100, message: '姓名长度不能超过100字符', trigger: 'blur' },
+    ],
+    email: [
+      { required: true, message: '请输入邮箱', trigger: 'blur' },
+      { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' },
+      { max: 100, message: '邮箱长度不能超过100字符', trigger: 'blur' },
+    ],
+    username: [{ max: 50, message: '用户名长度不能超过50字符', trigger: 'blur' }],
+    phone: [
+      {
+        pattern: /^1[3-9]\d{9}$/,
+        message: '请输入正确的手机号格式',
+        trigger: 'blur',
+      },
+      { max: 20, message: '手机号长度不能超过20字符', trigger: 'blur' },
+    ],
+    password: [
+      { required: true, message: '请输入密码', trigger: 'blur' },
+      { min: 6, max: 100, message: '密码长度必须在6-100字符之间', trigger: 'blur' },
+    ],
+    confirm_password: [
+      { required: true, message: '请确认密码', trigger: 'blur' },
+      {
+        validator: (rule: any, value: any, callback: any) => {
+          if (value !== registerForm.password) {
+            callback(new Error('两次输入的密码不一致'))
+          } else {
+            callback()
+          }
+        },
+        trigger: 'blur',
+      },
+    ],
+  }
+
+  // 验证学生身份
+  const validateStudentIdentity = async () => {
+    if (!registerForm.student_id || !registerForm.name) {
+      ElMessage.warning('请先填写学号和姓名')
+      return
+    }
+
+    validatingStudent.value = true
+    studentValidated.value = false
+    studentValidationFailed.value = false
+
+    try {
+      const result = await userStore.validateStudent(registerForm.student_id, registerForm.name)
+
+      if (result.success && result.isValid) {
+        studentValidated.value = true
+        ElMessage.success('学生身份验证成功')
+      } else {
+        studentValidationFailed.value = true
+        ElMessage.error(result.message || '学生身份验证失败')
+      }
+    } catch {
+      studentValidationFailed.value = true
+      ElMessage.error('验证过程中发生错误')
+    } finally {
+      validatingStudent.value = false
+    }
+  }
+
+  // 处理登录
+  const handleLogin = async () => {
+    loading.value = true
+    try {
+      const result = await userStore.login({
+        username: loginValue.value,
+        password: password.value,
+        remember_me: false,
+      })
+
+      if (result.success) {
+        ElMessage.success(result.message)
+        router.push('/')
+      } else {
+        ElMessage.error(result.message)
+      }
+    } catch (error) {
+      ElMessage.error('登录失败，请重试')
+    } finally {
+      loading.value = false
+    }
+  }  // 处理注册
+  const handleRegister = async () => {
+    registerLoading.value = true
+    try {
+      const result = await userStore.register(registerForm)
+      if (result.success) {
+        ElMessage.success(result.message)
+        resetRegisterForm()
+      } else {
+        ElMessage.error(result.message)
+      }
+    } catch (error) {
+      ElMessage.error('注册失败，请重试')
+    } finally {
+      registerLoading.value = false
+    }
+  }
+
+  // 关闭注册对话框
+  const handleCloseRegister = () => {
+    resetRegisterForm()
+    router.push('/')
+  }
+
+  // 重置注册表单
+  const resetRegisterForm = () => {
+    Object.assign(registerForm, {
+      student_id: '',
+      name: '',
+      email: '',
+      password: '',
+      confirm_password: '',
+      username: '',
+      phone: '',
+    })
+    studentValidated.value = false
+    studentValidationFailed.value = false
+  }
 
 // 切换到登录页面
 const switchToLogin = () => {
@@ -481,7 +666,6 @@ html {
   font-size: 20px;
   color: #999;
   margin: 50px 50px 50px 50px;
-  margin-color: #000000;
 }
 
 .login-link {
