@@ -44,7 +44,7 @@
         </v-btn>
       </template>
     </v-snackbar>
-    
+
     <v-divider></v-divider>
     <!-- 页面主体内容 -->
     <v-main style="margin-top: 30px;" >
@@ -184,14 +184,16 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
+const userStore = useUserStore()
 const showAuthWarning = ref(false)
 const authWarningMessage = ref('')
 const isLoading = ref(false)
-const isLoggedIn = ref(false) // 添加登录状态
+const isLoggedIn = computed(() => userStore.isLoggedIn) // 添加登录状态
 
 
 // 分类数据
@@ -233,29 +235,27 @@ const goToCart = () => {
 
 //点击用户图标的跳转
 const goToUserDetail = async () => {
-  if (!isLoggedIn.value) {
+  if (!userStore.isLoggedIn) {
     showAuthWarning.value = true
     authWarningMessage.value = '请先登录后再查看个人信息'
     return
   }
-  
+
   isLoading.value = true
   try {
-    // 这里应该是实际的API调用
-    // const response = await authApi.getUser('current')
-    // 模拟API响应
-    const response = { success: true }
+    // 调用 Store 的 fetchUserInfo 方法获取最新用户数据
+    const result = await userStore.fetchUserInfo(userStore.user?.username || '')
     
-    if (response.success) {
+    if (result.success) {
       router.push('/userdetailview')
     } else {
       showAuthWarning.value = true
-      authWarningMessage.value = response.message || '获取用户信息失败'
+      authWarningMessage.value = result.message || '获取用户信息失败'
     }
   } catch (error) {
     console.error('获取用户信息失败:', error)
     showAuthWarning.value = true
-    authWarningMessage.value = '登录状态验证失败，请重新登录'
+    authWarningMessage.value = '请求失败，请重试'
   } finally {
     isLoading.value = false
   }

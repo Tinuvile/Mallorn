@@ -14,7 +14,7 @@
         </span>
         <span class="title">Campus Secondhand</span>
       </header>
-                     
+
       <!-- 退出按钮 -->
       <v-btn 
         fab
@@ -38,15 +38,15 @@
         ></v-progress-circular>
       </v-overlay>
 
-      <!-- 只在非加载状态显示内容 -->
-      <template v-if="!isLoading">
-        <!-- Decorative background images on the right -->
+      <!-- 主内容区 -->
+      <template v-if="!isLoading && userStore.user">
+        <!-- 背景装饰图 -->
         <div class="decorative-bg">
           <img src="https://grace-l-hub.oss-cn-shanghai.aliyuncs.com/OIP-C%281%29%281%29.png" class="top-image" alt="Decorative image">
           <img src="https://grace-l-hub.oss-cn-shanghai.aliyuncs.com/OIP-C%282%29%281%29.png" class="bottom-image" alt="Decorative image">
         </div>
         
-        <!-- Main content container - 调整了位置 -->
+        <!-- 用户信息卡片 -->
         <v-container class="content-wrapper py-2">
           <v-row class="row-wrapper">
             <v-col cols="12" md="8" lg="6" class="col-wrapper">
@@ -59,56 +59,60 @@
                 
                 <v-card-text class="text-center px-6 pb-0">
                   <div class="user-info-column">
-                    <p class="text-h4 font-weight-bold mb-6" style="font-family: 'Comic Sans MS', cursive;">User Information</p>
-                    
+                    <p class="text-h4 font-weight-bold mb-6">个人信息</p>
                     <v-divider class="my-4"></v-divider>
                     
                     <v-list lines="two" density="comfortable" class="text-left">
                       <v-list-item prepend-icon="mdi-account" title="用户名">
                         <template v-slot:append>
-                          <span class="text-body-1">{{ user.name }}</span>
+                          <span class="text-body-1">{{ userStore.user.username }}</span>
                         </template>
                       </v-list-item>
                       
                       <v-list-item prepend-icon="mdi-identifier" title="用户ID">
                         <template v-slot:append>
-                          <span class="text-body-1">{{ user.userID }}</span>
+                          <span class="text-body-1">{{ userStore.user.userId }}</span>
                         </template>
                       </v-list-item>
                       
                       <v-list-item prepend-icon="mdi-card-account-details" title="学号">
                         <template v-slot:append>
-                          <span class="text-body-1">{{ user.studentId }}</span>
+                          <span class="text-body-1">{{ userStore.user.studentId || '未填写' }}</span>
                         </template>
                       </v-list-item>
                       
                       <v-list-item prepend-icon="mdi-email" title="邮箱">
                         <template v-slot:append>
-                          <span class="text-body-1">{{ user.email }}</span>
-                          <v-chip :color="user.emailVerified ? 'success' : 'warning'" size="small" class="ml-2">
-                            {{ user.emailVerified ? '已认证' : '未认证' }}
+                          <span class="text-body-1">{{ userStore.user.email }}</span>
+                          <v-chip 
+                            :color="userStore.user.emailVerified ? 'success' : 'warning'" 
+                            size="small" 
+                            class="ml-2"
+                          >
+                            {{ userStore.user.emailVerified ? '已认证' : '未认证' }}
                           </v-chip>
                         </template>
                       </v-list-item>
                       
                       <v-list-item prepend-icon="mdi-phone" title="电话">
                         <template v-slot:append>
-                          <span class="text-body-1">{{ user.phone }}</span>
+                          <span class="text-body-1">{{ userStore.user.phone || '未填写' }}</span>
                         </template>
                       </v-list-item>
                     </v-list>
                   </div>
                   
-                  <div class="credit-score-container mt-6">
+                  <!-- 信用评分 -->
+                  <div class="credit-score-container mt-6" v-if="userStore.user.creditScore !== undefined">
                     <div class="d-flex justify-center align-center">
                       <v-progress-circular
-                        :model-value="user.creditScore"
+                        :model-value="userStore.user.creditScore"
                         :color="creditScoreColor"
                         :size="120"
                         :width="12"
                         class="mr-4"
                       >
-                        <span class="text-h5 font-weight-bold">{{ user.creditScore }}</span>
+                        <span class="text-h5 font-weight-bold">{{ userStore.user.creditScore }}</span>
                       </v-progress-circular>
                       
                       <div class="text-left">
@@ -121,14 +125,25 @@
                   </div>
                 </v-card-text>
                 
+                <!-- 操作按钮 -->
                 <v-card-actions class="justify-center pb-6">
-                  <v-btn color="indigo" variant="tonal" class="mr-4" @click="openEditDialog">
+                  <v-btn 
+                    color="indigo" 
+                    variant="tonal" 
+                    class="mr-4" 
+                    @click="openEditDialog"
+                  >
                     <v-icon start>mdi-pencil</v-icon>
                     编辑资料
                   </v-btn>
-                  <v-btn color="blue" variant="tonal" @click="handleEmailVerification">
+                  <v-btn 
+                    color="blue" 
+                    variant="tonal" 
+                    @click="handleEmailVerification"
+                    :disabled="!userStore.user.email"
+                  >
                     <v-icon start>mdi-email-check</v-icon>
-                    邮箱认证
+                    {{ userStore.user.emailVerified ? '重新验证' : '邮箱认证' }}
                   </v-btn>
                 </v-card-actions>
               </v-card>
@@ -136,14 +151,14 @@
           </v-row>
         </v-container>
 
-        <!-- Edit Profile Dialog -->
-        <v-dialog v-model="editDialog" max-width="600">
+        <!-- 编辑资料对话框 -->
+        <v-dialog v-model="editDialog" max-width="600" persistent>
           <v-card>
             <v-card-title class="text-h5">编辑个人资料</v-card-title>
             <v-card-text>
-              <v-form ref="editForm" @submit.prevent="saveChanges">
+              <v-form ref="editForm">
                 <v-text-field
-                  v-model="editableUser.name"
+                  v-model="editableUser.username"
                   label="用户名"
                   prepend-icon="mdi-account"
                   :rules="[requiredRule]"
@@ -162,38 +177,47 @@
                   v-model="editableUser.phone"
                   label="电话"
                   prepend-icon="mdi-phone"
-                  :rules="[requiredRule, phoneRule]"
-                  required
+                  :rules="[phoneRule]"
                 ></v-text-field>
               </v-form>
             </v-card-text>
             <v-card-actions>
               <v-spacer></v-spacer>
               <v-btn color="secondary" @click="editDialog = false">取消</v-btn>
-              <v-btn color="primary" @click="saveChanges">保存</v-btn>
+              <v-btn color="primary" @click="saveChanges" :loading="savingChanges">保存</v-btn>
             </v-card-actions>
           </v-card>
         </v-dialog>
 
-        <!-- Email Verification Dialog -->
+        <!-- 邮箱验证对话框 -->
         <v-dialog v-model="showVerificationDialog" max-width="500">
           <v-card>
             <v-card-title class="text-h5">邮箱认证</v-card-title>
             <v-card-text>
-              <p>我们将发送一封验证邮件到 {{ user.email }}</p>
-              <p>请检查您的邮箱并点击邮件中的验证链接完成认证。</p>
+              <p>我们将发送验证邮件到：</p>
+              <p class="text-h6 text-primary">{{ userStore.user.email }}</p>
+              <p class="mt-2">请检查您的邮箱并点击验证链接完成认证</p>
             </v-card-text>
             <v-card-actions>
               <v-spacer></v-spacer>
-              <v-btn color="primary" @click="sendVerificationEmail">发送验证邮件</v-btn>
               <v-btn color="secondary" @click="showVerificationDialog = false">取消</v-btn>
+              <v-btn 
+                color="primary" 
+                @click="sendVerificationEmail"
+                :loading="sendingEmail"
+              >
+                发送验证邮件
+              </v-btn>
             </v-card-actions>
           </v-card>
         </v-dialog>
 
-        <!-- Snackbar for messages -->
-        <v-snackbar v-model="showSnackbar" :timeout="2000" :color="snackbarColor">
+        <!-- 全局消息提示 -->
+        <v-snackbar v-model="showSnackbar" :timeout="3000" :color="snackbarColor">
           {{ snackbarMessage }}
+          <template v-slot:actions>
+            <v-btn variant="text" @click="showSnackbar = false">关闭</v-btn>
+          </template>
         </v-snackbar>
       </template>
     </div>
@@ -203,90 +227,84 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
 import type { VForm } from 'vuetify/components'
-import { authApi } from '@/services/api'
+import { useUserStore } from '@/stores/user'
 
-interface User {
-  name: string
-  userID: string
-  studentId: string
-  email: string
-  phone: string
-  creditScore: number
-  emailVerified: boolean
-}
+const userStore = useUserStore()
 
-// 初始化为空用户
-const user = ref<User>({
-  name: '',
-  userID: '',
-  studentId: '',
-  email: '',
-  phone: '',
-  creditScore: 0,
-  emailVerified: false
-})
-
+// 状态管理
+const isLoading = ref(true)
 const editDialog = ref(false)
-const editableUser = ref<User>({...user.value})
-const editForm = ref<VForm | null>(null)
 const showVerificationDialog = ref(false)
 const showSnackbar = ref(false)
 const snackbarMessage = ref('')
 const snackbarColor = ref('success')
-const isLoading = ref(true)
+const sendingEmail = ref(false)
+const savingChanges = ref(false)
 
-// Validation rules
-const requiredRule = (v: string) => !!v || '此项为必填项'
+// 表单引用
+const editForm = ref<VForm | null>(null)
+
+// 可编辑用户数据
+const editableUser = ref({
+  username: '',
+  email: '',
+  phone: ''
+})
+
+// 验证规则
+const requiredRule = (v: string) => !!v || '必填项'
 const emailRule = (v: string) => /.+@.+\..+/.test(v) || '请输入有效的邮箱地址'
-const phoneRule = (v: string) => /^1[3-9]\d{9}$/.test(v) || '请输入有效的手机号码'
+const phoneRule = (v: string) => !v || /^1[3-9]\d{9}$/.test(v) || '请输入有效的手机号码'
 
+// 计算属性
 const creditScoreColor = computed(() => {
-  if (user.value.creditScore >= 90) return 'success'
-  if (user.value.creditScore >= 70) return 'info'
-  if (user.value.creditScore >= 50) return 'warning'
+  const score = userStore.user?.creditScore || 0
+  if (score >= 90) return 'success'
+  if (score >= 70) return 'info'
+  if (score >= 50) return 'warning'
   return 'error'
 })
 
 const creditScoreRemark = computed(() => {
-  if (user.value.creditScore >= 90) return '优秀 - 您的信用状况非常好'
-  if (user.value.creditScore >= 70) return '良好 - 继续保持'
-  if (user.value.creditScore >= 50) return '一般 - 有提升空间'
+  const score = userStore.user?.creditScore || 0
+  if (score >= 90) return '优秀 - 信用状况非常好'
+  if (score >= 70) return '良好 - 继续保持'
+  if (score >= 50) return '一般 - 有提升空间'
   return '待提高 - 请注意信用行为'
 })
 
-// 在组件挂载时获取用户数据
+// 生命周期钩子
 onMounted(async () => {
   try {
-    // 假设我们从本地存储获取当前用户名
-    const username = localStorage.getItem('username') || ''
-    
-    // 调用API获取用户信息
-    const response = await authApi.getUser(username)
-    
-    if (response.success && response.data) {
-      // 将API返回的数据映射到本地user对象
-      user.value = {
-        name: response.data.fullName || response.data.username || '',
-        userID: response.data.userId.toString(),
-        studentId: response.data.studentId || '',
-        email: response.data.email || '',
-        phone: response.data.phone || '',
-        creditScore: response.data.creditScore || 0,
-        emailVerified: response.data.emailVerified || false
+    // 如果store中没有用户数据，尝试获取
+    if (!userStore.user) {
+      await userStore.fetchUserInfo('current')
+    }
+    // 初始化可编辑数据
+    if (userStore.user) {
+      editableUser.value = {
+        username: userStore.user.username,
+        email: userStore.user.email,
+        phone: userStore.user.phone || ''
       }
-    } else {
-      showSnackbarMessage(response.message || '获取用户信息失败', 'error')
     }
   } catch (error) {
-    console.error('获取用户信息出错:', error)
-    showSnackbarMessage('获取用户信息时出错', 'error')
+    showMessage('加载用户信息失败', 'error')
+    console.error('加载用户信息失败:', error)
   } finally {
     isLoading.value = false
   }
 })
 
+// 方法定义
 const openEditDialog = () => {
-  editableUser.value = {...user.value}
+  if (userStore.user) {
+    editableUser.value = {
+      username: userStore.user.username,
+      email: userStore.user.email,
+      phone: userStore.user.phone || ''
+    }
+  }
   editDialog.value = true
 }
 
@@ -294,60 +312,63 @@ const saveChanges = async () => {
   if (!editForm.value) return
   
   const { valid } = await editForm.value.validate()
-  
   if (!valid) return
 
+  savingChanges.value = true
   try {
-    // 这里应该调用更新用户信息的API
-    // 假设我们有一个 updateUser API 方法
-    // const response = await authApi.updateUser(editableUser.value)
-    
+    // 这里应该调用API更新用户信息
     // 模拟API调用
     await new Promise(resolve => setTimeout(resolve, 1000))
     
-    if (editableUser.value.email !== user.value.email) {
-      editableUser.value.emailVerified = false
+    // 更新store中的数据
+    if (userStore.user) {
+      userStore.user = {
+        ...userStore.user,
+        username: editableUser.value.username,
+        email: editableUser.value.email,
+        phone: editableUser.value.phone,
+        emailVerified: editableUser.value.email !== userStore.user.email 
+          ? false 
+          : userStore.user.emailVerified
+      }
     }
-
-    user.value = {...editableUser.value}
+    
     editDialog.value = false
-    showSnackbarMessage('资料更新成功', 'success')
+    showMessage('资料更新成功', 'success')
   } catch (error) {
-    console.error('更新用户信息出错:', error)
-    showSnackbarMessage('更新用户信息失败', 'error')
+    console.error('更新失败:', error)
+    showMessage('更新用户信息失败', 'error')
+  } finally {
+    savingChanges.value = false
   }
 }
 
 const handleEmailVerification = () => {
-  if (user.value.emailVerified) {
-    showSnackbarMessage('邮箱已认证', 'success')
-  } else {
-    showVerificationDialog.value = true
+  if (!userStore.user?.email) {
+    showMessage('请先设置有效的邮箱地址', 'warning')
+    return
   }
+  showVerificationDialog.value = true
 }
 
 const sendVerificationEmail = async () => {
+  sendingEmail.value = true
   try {
-    console.log(`Sending verification email to ${user.value.email}`)
-    
-    // 这里应该调用发送验证邮件的API
-    // 例如: await authApi.sendVerificationEmail(user.value.email)
-    
+    // 这里应该调用API发送验证邮件
     // 模拟API调用
     await new Promise(resolve => setTimeout(resolve, 1000))
     
     showVerificationDialog.value = false
-    showSnackbarMessage('验证邮件已发送，请检查您的邮箱', 'info')
-    
-    // 这里可以添加检查邮箱验证状态的逻辑
-    // 或者让用户手动刷新验证状态
+    showMessage('验证邮件已发送，请检查您的邮箱', 'success')
   } catch (error) {
-    console.error('发送验证邮件出错:', error)
-    showSnackbarMessage('发送验证邮件失败', 'error')
+    console.error('发送失败:', error)
+    showMessage('发送验证邮件失败', 'error')
+  } finally {
+    sendingEmail.value = false
   }
 }
 
-const showSnackbarMessage = (message: string, color: string) => {
+const showMessage = (message: string, color: string) => {
   snackbarMessage.value = message
   snackbarColor.value = color
   showSnackbar.value = true
@@ -355,6 +376,7 @@ const showSnackbarMessage = (message: string, color: string) => {
 </script>
 
 <style scoped>
+/* 导航栏样式 */
 .navbar {
   position: fixed;
   top: 0;
@@ -381,7 +403,7 @@ const showSnackbarMessage = (message: string, color: string) => {
   color: #333;
 }
 
-/* 优化的退出按钮样式 */
+/* 退出按钮样式 */
 .logout-btn {
   position: fixed;
   top: 75px;
@@ -392,80 +414,30 @@ const showSnackbarMessage = (message: string, color: string) => {
 }
 
 .logout-btn:hover {
-  transform: scale(1.1);
+  transform: scale(1.05);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
-.logout-btn::before {
-  content: '';
-  position: absolute;
-  top: -4px;
-  left: -4px;
-  right: -4px;
-  bottom: -4px;
-  border-radius: 50%;
-  border: 2px solid rgba(239, 83, 80, 0.3);
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% {
-    transform: scale(0.95);
-    opacity: 0.7;
-  }
-  70% {
-    transform: scale(1.1);
-    opacity: 0.3;
-  }
-  100% {
-    transform: scale(0.95);
-    opacity: 0.7;
-  }
-}
-
+/* 主容器样式 */
 .profile-container {
   position: relative;
   min-height: 100vh;
-  background: linear-gradient(135deg, 
-    #ffd6e0 0%,    /* 淡粉色 */
-    #c8f0ff 100%   /* 淡蓝色 */
-  );
-  background-attachment: fixed;
-  overflow: hidden;
-  padding-top: 60px; /* Space for navbar */
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  padding-top: 60px;
 }
 
-/* 调整内容容器位置 */
+/* 内容区域样式 */
 .content-wrapper {
   position: relative;
   z-index: 2;
-  height: auto;
-  min-height: calc(100vh - 60px);
-  display: flex;
-  align-items: flex-start; /* 使内容向上对齐 */
-  padding-top: 10px; /* 减少顶部间距 */
+  padding-top: 20px;
 }
 
-.row-wrapper {
-  width: 100%;
-  margin-top: 0;
-}
-
-.col-wrapper {
-  display: flex;
-  justify-content: center;
-  padding-top: 0; /* 移除顶部内边距 */
-}
-
-/* 调整卡片位置 */
 .user-profile-card {
-  margin-top: 10px;
   border-radius: 16px;
   overflow: hidden;
-  transition: transform 0.3s ease;
   background-color: rgba(255, 255, 255, 0.9);
-  max-width: 1000px;
-  width: 100%;
+  backdrop-filter: blur(5px);
 }
 
 .profile-avatar {
@@ -478,90 +450,44 @@ const showSnackbarMessage = (message: string, color: string) => {
   background-color: rgba(255, 255, 255, 0.7);
   border-radius: 12px;
   padding: 16px;
+  margin-top: 24px;
 }
 
-.user-info-column {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.v-list {
-  width: 100%;
-  max-width: 500px;
-}
-
+/* 背景装饰图样式 */
 .decorative-bg {
   position: absolute;
   top: 50%;
   right: 5%;
   width: 40%;
-  height: 80%;
   transform: translateY(-50%);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 0px;
   z-index: 1;
+  opacity: 0.8;
 }
 
 .decorative-bg img {
-  max-width: 80%;
+  width: 100%;
   height: auto;
   object-fit: contain;
-  opacity: 1;
-  transition: opacity 0.3s ease;
 }
 
-.top-image {
-  opacity: 1; 
-  width: 500px;
-  height: auto;
-  margin-bottom: 3px !important; 
-}
-
-.bottom-image {
-  opacity: 1; 
-  width: 500px;
-  height: auto;
-  margin-top: 3px !important;   
-}
-
-/* 响应式调整 */
+/* 响应式设计 */
 @media (max-width: 960px) {
   .content-wrapper {
-    padding-top: 5px;
+    padding-top: 10px;
   }
   
-  .col-wrapper {
-    padding-top: 0;
+  .decorative-bg {
+    display: none;
   }
   
   .user-profile-card {
-    margin-top: 5px;
+    margin-top: 20px;
   }
   
   .logout-btn {
     top: 70px;
     left: 15px;
     size: 48px;
-  }
-  
-  .decorative-bg {
-    width: 100%;
-    opacity: 0.08;
-  }
-  
-  .decorative-bg img {
-    max-width: 60%;
-    opacity: 1;
-  }
-  
-  .top-image,
-  .bottom-image {
-    width: 100%;
-    max-width: 300px;
   }
 }
 </style>
