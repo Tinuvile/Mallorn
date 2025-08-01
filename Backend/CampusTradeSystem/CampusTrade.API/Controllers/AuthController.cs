@@ -169,6 +169,7 @@ public class AuthController : ControllerBase
                 fullName = user.FullName,
                 phone = user.Phone,
                 studentId = user.StudentId,
+                emailVerified = user.EmailVerified,
                 creditScore = user.CreditScore,
                 createdAt = user.CreatedAt,
                 student = user.Student != null ? new
