@@ -307,6 +307,43 @@ namespace CampusTrade.API.Controllers
         }
 
         /// <summary>
+        /// 使用虚拟账户支付订单
+        /// </summary>
+        /// <param name="orderId">订单ID</param>
+        /// <returns>支付结果</returns>
+        [HttpPost("{orderId}/pay")]
+        public async Task<ActionResult<PaymentResult>> PayOrder(int orderId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _orderService.PayOrderWithVirtualAccountAsync(orderId, userId);
+                
+                if (result.Success)
+                {
+                    _logger.LogInformation("用户 {UserId} 支付订单 {OrderId} 成功，金额 {Amount}", 
+                        userId, orderId, result.Amount);
+                    return Ok(result);
+                }
+                else
+                {
+                    _logger.LogWarning("用户 {UserId} 支付订单 {OrderId} 失败：{Message}", 
+                        userId, orderId, result.Message);
+                    return BadRequest(result);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "支付订单时发生错误，订单ID: {OrderId}", orderId);
+                return StatusCode(500, new PaymentResult 
+                { 
+                    Success = false, 
+                    Message = "支付失败，请稍后重试" 
+                });
+            }
+        }
+
+        /// <summary>
         /// 取消订单
         /// </summary>
         /// <param name="orderId">订单ID</param>

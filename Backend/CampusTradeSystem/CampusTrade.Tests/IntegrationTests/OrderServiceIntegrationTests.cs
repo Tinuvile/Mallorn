@@ -36,18 +36,20 @@ namespace CampusTrade.Tests.IntegrationTests
             var mockProductRepository = new Mock<IRepository<Product>>();
             var mockUserRepository = new Mock<IRepository<User>>();
             var mockAbstractOrderRepository = new Mock<IRepository<AbstractOrder>>();
+            var mockVirtualAccountRepository = new Mock<IVirtualAccountsRepository>();
             var mockUnitOfWork = new Mock<IUnitOfWork>();
             _mockLogger = new Mock<ILogger<OrderService>>();
 
             // 配置Mock的基本行为
             SetupMockRepositories(mockOrderRepository, mockProductRepository, mockUserRepository, 
-                                mockAbstractOrderRepository, mockUnitOfWork);
+                                mockAbstractOrderRepository, mockVirtualAccountRepository, mockUnitOfWork);
 
             _orderService = new OrderService(
                 mockOrderRepository.Object,
                 mockProductRepository.Object,
                 mockUserRepository.Object,
                 mockAbstractOrderRepository.Object,
+                mockVirtualAccountRepository.Object,
                 mockUnitOfWork.Object,
                 _mockLogger.Object
             );
@@ -58,6 +60,7 @@ namespace CampusTrade.Tests.IntegrationTests
             Mock<IRepository<Product>> mockProductRepository,
             Mock<IRepository<User>> mockUserRepository,
             Mock<IRepository<AbstractOrder>> mockAbstractOrderRepository,
+            Mock<IVirtualAccountsRepository> mockVirtualAccountRepository,
             Mock<IUnitOfWork> mockUnitOfWork)
         {
             // 配置Product Repository
@@ -124,6 +127,19 @@ namespace CampusTrade.Tests.IntegrationTests
 
             mockUnitOfWork.Setup(x => x.RollbackTransactionAsync())
                 .Returns(Task.CompletedTask);
+
+            // 配置Virtual Account Repository (基本设置)
+            mockVirtualAccountRepository.Setup(x => x.HasSufficientBalanceAsync(It.IsAny<int>(), It.IsAny<decimal>()))
+                .ReturnsAsync(true);
+
+            mockVirtualAccountRepository.Setup(x => x.GetBalanceAsync(It.IsAny<int>()))
+                .ReturnsAsync(1000.00m);
+
+            mockVirtualAccountRepository.Setup(x => x.DebitAsync(It.IsAny<int>(), It.IsAny<decimal>(), It.IsAny<string>()))
+                .ReturnsAsync(true);
+
+            mockVirtualAccountRepository.Setup(x => x.CreditAsync(It.IsAny<int>(), It.IsAny<decimal>(), It.IsAny<string>()))
+                .ReturnsAsync(true);
         }
 
         [Fact]

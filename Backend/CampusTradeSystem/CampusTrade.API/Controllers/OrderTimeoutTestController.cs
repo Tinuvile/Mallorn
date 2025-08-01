@@ -5,6 +5,7 @@ using CampusTrade.API.Models.DTOs;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Data;
 using Microsoft.EntityFrameworkCore;
+using CampusTrade.API.Repositories.Interfaces;
 
 namespace CampusTrade.API.Controllers
 {
@@ -19,15 +20,18 @@ namespace CampusTrade.API.Controllers
         private readonly IOrderService _orderService;
         private readonly CampusTradeDbContext _context;
         private readonly ILogger<OrderTimeoutTestController> _logger;
+        private readonly IUnitOfWork _unitOfWork;
 
         public OrderTimeoutTestController(
             IOrderService orderService,
             CampusTradeDbContext context,
-            ILogger<OrderTimeoutTestController> logger)
+            ILogger<OrderTimeoutTestController> logger,
+            IUnitOfWork unitOfWork)
         {
             _orderService = orderService;
             _context = context;
             _logger = logger;
+            _unitOfWork = unitOfWork;
         }
 
         /// <summary>
@@ -380,18 +384,13 @@ namespace CampusTrade.API.Controllers
 
         private async Task<int> CreateTestOrderWithCustomExpiry(int buyerId, int sellerId, int productId, DateTime expireTime)
         {
-            // 创建抽象订单
-            var abstractOrder = new AbstractOrder
-            {
-                OrderType = AbstractOrder.OrderTypes.Normal
-            };
-            _context.AbstractOrders.Add(abstractOrder);
-            await _context.SaveChangesAsync();
+            // 获取下一个订单ID - 让触发器处理abstract_orders
+            var nextOrderId = await GetNextOrderIdAsync();
 
-            // 创建订单
+            // 直接创建订单，触发器会自动处理abstract_orders
             var order = new Order
             {
-                OrderId = abstractOrder.AbstractOrderId,
+                OrderId = nextOrderId,
                 BuyerId = buyerId,
                 SellerId = sellerId,
                 ProductId = productId,
@@ -406,6 +405,18 @@ namespace CampusTrade.API.Controllers
             await _context.SaveChangesAsync();
 
             return order.OrderId;
+        }
+
+        /// <summary>
+        /// 获取下一个订单ID
+        /// </summary>
+        private async Task<int> GetNextOrderIdAsync()
+        {
+            using var command = _context.Database.GetDbConnection().CreateCommand();
+            command.CommandText = "SELECT ABSTRACT_ORDER_SEQ.NEXTVAL FROM DUAL";
+            await _context.Database.OpenConnectionAsync();
+            var result = await command.ExecuteScalarAsync();
+            return Convert.ToInt32(result);
         }
 
         private async Task<int> GetExpiredOrderCount()

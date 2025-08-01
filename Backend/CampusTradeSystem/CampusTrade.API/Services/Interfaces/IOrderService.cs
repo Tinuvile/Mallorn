@@ -106,6 +106,14 @@ namespace CampusTrade.API.Services.Interfaces
         /// <param name="reason">取消原因</param>
         /// <returns>是否操作成功</returns>
         Task<bool> CancelOrderAsync(int orderId, int userId, string? reason = null);
+
+        /// <summary>
+        /// 使用虚拟账户支付订单
+        /// </summary>
+        /// <param name="orderId">订单ID</param>
+        /// <param name="userId">买家用户ID</param>
+        /// <returns>支付结果</returns>
+        Task<PaymentResult> PayOrderWithVirtualAccountAsync(int orderId, int userId);
         #endregion
 
         #region 订单超时管理

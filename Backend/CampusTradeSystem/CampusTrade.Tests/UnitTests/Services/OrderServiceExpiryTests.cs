@@ -17,6 +17,7 @@ namespace CampusTrade.Tests.UnitTests.Services
         private readonly Mock<IRepository<Product>> _mockProductRepository;
         private readonly Mock<IRepository<User>> _mockUserRepository;
         private readonly Mock<IRepository<AbstractOrder>> _mockAbstractOrderRepository;
+        private readonly Mock<IVirtualAccountsRepository> _mockVirtualAccountRepository;
         private readonly Mock<IUnitOfWork> _mockUnitOfWork;
         private readonly Mock<ILogger<OrderService>> _mockLogger;
         private readonly OrderService _orderService;
@@ -27,6 +28,7 @@ namespace CampusTrade.Tests.UnitTests.Services
             _mockProductRepository = new Mock<IRepository<Product>>();
             _mockUserRepository = new Mock<IRepository<User>>();
             _mockAbstractOrderRepository = new Mock<IRepository<AbstractOrder>>();
+            _mockVirtualAccountRepository = new Mock<IVirtualAccountsRepository>();
             _mockUnitOfWork = new Mock<IUnitOfWork>();
             _mockLogger = new Mock<ILogger<OrderService>>();
 
@@ -38,6 +40,7 @@ namespace CampusTrade.Tests.UnitTests.Services
                 _mockProductRepository.Object,
                 _mockUserRepository.Object,
                 _mockAbstractOrderRepository.Object,
+                _mockVirtualAccountRepository.Object,
                 _mockUnitOfWork.Object,
                 _mockLogger.Object
             );

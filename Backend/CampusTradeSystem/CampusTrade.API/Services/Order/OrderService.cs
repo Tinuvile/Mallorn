@@ -3,6 +3,7 @@ using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Interfaces;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 
 namespace CampusTrade.API.Services.Order
 {
@@ -15,6 +16,7 @@ namespace CampusTrade.API.Services.Order
         private readonly IRepository<Product> _productRepository;
         private readonly IRepository<User> _userRepository;
         private readonly IRepository<AbstractOrder> _abstractOrderRepository;
+        private readonly IVirtualAccountsRepository _virtualAccountRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<OrderService> _logger;
 
@@ -26,6 +28,7 @@ namespace CampusTrade.API.Services.Order
             IRepository<Product> productRepository,
             IRepository<User> userRepository,
             IRepository<AbstractOrder> abstractOrderRepository,
+            IVirtualAccountsRepository virtualAccountRepository,
             IUnitOfWork unitOfWork,
             ILogger<OrderService> logger)
         {
@@ -33,6 +36,7 @@ namespace CampusTrade.API.Services.Order
             _productRepository = productRepository;
             _userRepository = userRepository;
             _abstractOrderRepository = abstractOrderRepository;
+            _virtualAccountRepository = virtualAccountRepository;
             _unitOfWork = unitOfWork;
             _logger = logger;
         }
@@ -67,18 +71,13 @@ namespace CampusTrade.API.Services.Order
             {
                 await _unitOfWork.BeginTransactionAsync();
 
-                // 3. 创建抽象订单
-                var abstractOrder = new AbstractOrder
-                {
-                    OrderType = AbstractOrder.OrderTypes.Normal
-                };
-                await _abstractOrderRepository.AddAsync(abstractOrder);
-                await _unitOfWork.SaveChangesAsync(); // 保存以获取ID
+                // 3. 获取下一个订单ID
+                var nextOrderId = await GetNextOrderIdAsync();
 
-                // 4. 创建订单
+                // 4. 直接创建订单，触发器会自动处理abstract_orders
                 var order = new Models.Entities.Order
                 {
-                    OrderId = abstractOrder.AbstractOrderId, // 使用相同的ID
+                    OrderId = nextOrderId,
                     BuyerId = userId,
                     SellerId = product.UserId,
                     ProductId = request.ProductId,
@@ -375,11 +374,74 @@ namespace CampusTrade.API.Services.Order
 
         public async Task<bool> CompleteOrderAsync(int orderId, int userId)
         {
-            return await UpdateOrderStatusAsync(orderId, userId, new UpdateOrderStatusRequest
+            var order = await _orderRepository.GetOrderWithDetailsAsync(orderId);
+            if (order == null)
             {
-                Status = Models.Entities.Order.OrderStatus.Completed,
-                Remarks = "订单完成"
-            });
+                _logger.LogWarning("完成订单：订单不存在，订单ID: {OrderId}", orderId);
+                return false;
+            }
+
+            // 检查权限（买家或卖家都可以完成订单）
+            if (order.BuyerId != userId && order.SellerId != userId)
+            {
+                _logger.LogWarning("完成订单：无权限操作订单 {OrderId}，用户 {UserId}", orderId, userId);
+                return false;
+            }
+
+            if (order.Status != Models.Entities.Order.OrderStatus.Delivered)
+            {
+                _logger.LogWarning("完成订单：订单状态不正确，订单 {OrderId}，当前状态 {Status}", 
+                    orderId, order.Status);
+                return false;
+            }
+
+            var transferAmount = order.FinalPrice ?? order.TotalAmount ?? 0;
+            if (transferAmount <= 0)
+            {
+                _logger.LogWarning("完成订单：金额异常，订单 {OrderId}，金额 {Amount}", orderId, transferAmount);
+                return false;
+            }
+
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                // 1. 将资金转给卖家
+                var creditSuccess = await _virtualAccountRepository.CreditAsync(order.SellerId, transferAmount, 
+                    $"订单收款 {orderId} - 商品: {order.Product?.Title}");
+
+                if (!creditSuccess)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    _logger.LogError("完成订单：给卖家转账失败，订单 {OrderId}", orderId);
+                    return false;
+                }
+
+                // 2. 更新订单状态为已完成
+                var statusUpdateSuccess = await _orderRepository.UpdateOrderStatusAsync(orderId, 
+                    Models.Entities.Order.OrderStatus.Completed);
+
+                if (!statusUpdateSuccess)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    _logger.LogError("完成订单：更新订单状态失败，订单 {OrderId}", orderId);
+                    return false;
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                _logger.LogInformation("订单 {OrderId} 完成并转账成功，卖家 {SellerId} 收到 {Amount}",
+                    orderId, order.SellerId, transferAmount);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "完成订单失败，订单ID: {OrderId}", orderId);
+                return false;
+            }
         }
 
         public async Task<bool> CancelOrderAsync(int orderId, int userId, string? reason = null)
@@ -485,6 +547,136 @@ namespace CampusTrade.API.Services.Order
         }
         #endregion
 
+        #region 订单支付
+        public async Task<PaymentResult> PayOrderWithVirtualAccountAsync(int orderId, int userId)
+        {
+            _logger.LogInformation("用户 {UserId} 开始支付订单 {OrderId}", userId, orderId);
+
+            var order = await _orderRepository.GetOrderWithDetailsAsync(orderId);
+            if (order == null)
+            {
+                return new PaymentResult
+                {
+                    Success = false,
+                    Message = "订单不存在"
+                };
+            }
+
+            if (order.BuyerId != userId)
+            {
+                return new PaymentResult
+                {
+                    Success = false,
+                    Message = "无权限支付此订单"
+                };
+            }
+
+            if (order.Status != Models.Entities.Order.OrderStatus.PendingPayment)
+            {
+                return new PaymentResult
+                {
+                    Success = false,
+                    Message = $"订单状态不允许支付，当前状态：{order.Status}"
+                };
+            }
+
+            // 检查订单是否已过期
+            if (order.ExpireTime.HasValue && order.ExpireTime.Value < DateTime.UtcNow)
+            {
+                return new PaymentResult
+                {
+                    Success = false,
+                    Message = "订单已过期"
+                };
+            }
+
+            var paymentAmount = order.FinalPrice ?? order.TotalAmount ?? 0;
+            if (paymentAmount <= 0)
+            {
+                return new PaymentResult
+                {
+                    Success = false,
+                    Message = "订单金额异常"
+                };
+            }
+
+            // 检查虚拟账户余额
+            var hasBalance = await _virtualAccountRepository.HasSufficientBalanceAsync(userId, paymentAmount);
+            if (!hasBalance)
+            {
+                var currentBalance = await _virtualAccountRepository.GetBalanceAsync(userId);
+                return new PaymentResult
+                {
+                    Success = false,
+                    Message = "余额不足，请先充值",
+                    RemainingBalance = currentBalance
+                };
+            }
+
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                // 1. 扣除买家余额
+                var debitSuccess = await _virtualAccountRepository.DebitAsync(userId, paymentAmount, 
+                    $"支付订单 {orderId} - 商品: {order.Product?.Title}");
+
+                if (!debitSuccess)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return new PaymentResult
+                    {
+                        Success = false,
+                        Message = "扣款失败，请重试"
+                    };
+                }
+
+                // 2. 更新订单状态为已付款
+                var statusUpdateSuccess = await _orderRepository.UpdateOrderStatusAsync(orderId, 
+                    Models.Entities.Order.OrderStatus.Paid);
+
+                if (!statusUpdateSuccess)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return new PaymentResult
+                    {
+                        Success = false,
+                        Message = "更新订单状态失败"
+                    };
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                var remainingBalance = await _virtualAccountRepository.GetBalanceAsync(userId);
+
+                _logger.LogInformation("订单 {OrderId} 支付成功，用户 {UserId}，金额 {Amount}，余额 {Balance}",
+                    orderId, userId, paymentAmount, remainingBalance);
+
+                return new PaymentResult
+                {
+                    Success = true,
+                    Message = "支付成功",
+                    Amount = paymentAmount,
+                    RemainingBalance = remainingBalance,
+                    PaymentTime = DateTime.UtcNow,
+                    TransactionId = $"PAY_{orderId}_{DateTime.UtcNow:yyyyMMddHHmmss}"
+                };
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "订单 {OrderId} 支付失败，用户 {UserId}", orderId, userId);
+                
+                return new PaymentResult
+                {
+                    Success = false,
+                    Message = "支付过程中发生错误，请重试"
+                };
+            }
+        }
+        #endregion
+
         #region 订单验证
         public bool IsValidStatusTransition(string currentStatus, string newStatus, string userRole)
         {
@@ -536,6 +728,25 @@ namespace CampusTrade.API.Services.Order
         {
             var order = await _orderRepository.GetByPrimaryKeyAsync(orderId);
             return order != null && (order.BuyerId == userId || order.SellerId == userId);
+        }
+
+        /// <summary>
+        /// 获取下一个订单ID
+        /// </summary>
+        private async Task<int> GetNextOrderIdAsync()
+        {
+            // 使用原生SQL查询获取序列值
+            var sql = "SELECT ABSTRACT_ORDER_SEQ.NEXTVAL AS Value FROM DUAL";
+            var results = await _unitOfWork.ExecuteQueryAsync<SequenceValue>(sql);
+            return Convert.ToInt32(results.First().Value);
+        }
+
+        /// <summary>
+        /// 序列值包装类
+        /// </summary>
+        private class SequenceValue
+        {
+            public decimal Value { get; set; }
         }
         #endregion
     }

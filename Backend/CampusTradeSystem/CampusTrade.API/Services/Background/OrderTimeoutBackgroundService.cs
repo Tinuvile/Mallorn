@@ -13,9 +13,9 @@ namespace CampusTrade.API.Services.Background
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<OrderTimeoutBackgroundService> _logger;
-        
-        // 检查间隔（5分钟）
-        private static readonly TimeSpan CheckInterval = TimeSpan.FromMinutes(5);
+
+        // 检查间隔（1分钟）
+        private static readonly TimeSpan CheckInterval = TimeSpan.FromMinutes(1);
 
         public OrderTimeoutBackgroundService(
             IServiceScopeFactory scopeFactory, 

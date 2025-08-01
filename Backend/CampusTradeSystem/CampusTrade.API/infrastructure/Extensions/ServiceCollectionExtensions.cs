@@ -5,6 +5,7 @@ using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Auth;
 using CampusTrade.API.Services.Background;
 using CampusTrade.API.Services.File;
+using CampusTrade.API.Services.Order;
 using CampusTrade.API.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
@@ -104,6 +105,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<IVirtualAccountsRepository, VirtualAccountsRepository>();
+        services.AddScoped<IRechargeRecordsRepository, RechargeRecordsRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         return services;
     }
@@ -204,7 +207,8 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddOrderServices(this IServiceCollection services)
     {
-        services.AddScoped<IOrderService, CampusTrade.API.Services.Order.OrderService>();
+        services.AddScoped<IOrderService, OrderService>();
+        services.AddScoped<IRechargeService, RechargeService>();
         return services;
     }
 }

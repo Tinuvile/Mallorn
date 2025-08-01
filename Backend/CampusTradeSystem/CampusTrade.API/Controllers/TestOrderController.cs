@@ -330,18 +330,13 @@ namespace CampusTrade.API.Controllers
         private async Task<object> CreateTestOrderWithExpireTimeAsync(
             int buyerId, int sellerId, int productId, DateTime expireTime, string remarks)
         {
-            // 先创建抽象订单
-            var abstractOrder = new AbstractOrder
-            {
-                OrderType = AbstractOrder.OrderTypes.Normal
-            };
-            _context.AbstractOrders.Add(abstractOrder);
-            await _context.SaveChangesAsync();
+            // 获取下一个订单ID
+            var nextOrderId = await GetNextOrderIdAsync();
 
-            // 创建订单
+            // 直接创建订单，触发器会自动处理abstract_orders
             var order = new Order
             {
-                OrderId = abstractOrder.AbstractOrderId,
+                OrderId = nextOrderId,
                 BuyerId = buyerId,
                 SellerId = sellerId,
                 ProductId = productId,
@@ -363,6 +358,18 @@ namespace CampusTrade.API.Controllers
                 IsExpired = expireTime < DateTime.Now,
                 Remarks = remarks
             };
+        }
+
+        /// <summary>
+        /// 获取下一个订单ID
+        /// </summary>
+        private async Task<int> GetNextOrderIdAsync()
+        {
+            using var command = _context.Database.GetDbConnection().CreateCommand();
+            command.CommandText = "SELECT ABSTRACT_ORDER_SEQ.NEXTVAL FROM DUAL";
+            await _context.Database.OpenConnectionAsync();
+            var result = await command.ExecuteScalarAsync();
+            return Convert.ToInt32(result);
         }
 
         /// <summary>
