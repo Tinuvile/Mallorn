@@ -163,7 +163,7 @@ SELECT 'Database cleanup completed - all tables, sequences, and triggers removed
 -- ================================================================
 CREATE SEQUENCE USER_SEQ START WITH 1 INCREMENT BY 1 NOCACHE;
 CREATE SEQUENCE PRODUCT_SEQ START WITH 1 INCREMENT BY 1 NOCACHE;
-CREATE SEQUENCE ORDER_SEQ START WITH 1 INCREMENT BY 1 NOCACHE;
+CREATE SEQUENCE ABSTRACT_ORDER_SEQ START WITH 1 INCREMENT BY 1 NOCACHE;
 CREATE SEQUENCE CATEGORY_SEQ START WITH 1 INCREMENT BY 1 NOCACHE;
 
 -- ================================================================
@@ -532,6 +532,17 @@ CREATE OR REPLACE TRIGGER trg_products_id
 BEGIN
     IF :NEW.product_id IS NULL THEN
         :NEW.product_id := PRODUCT_SEQ.NEXTVAL;
+    END IF;
+END;
+/
+
+-- 抽象订单ID自增触发器
+CREATE OR REPLACE TRIGGER trg_abstract_orders_id
+    BEFORE INSERT ON abstract_orders
+    FOR EACH ROW
+BEGIN
+    IF :NEW.abstract_order_id IS NULL THEN
+        :NEW.abstract_order_id := ABSTRACT_ORDER_SEQ.NEXTVAL;
     END IF;
 END;
 /
