@@ -165,6 +165,13 @@ try
     builder.Services.AddScoped<ISystemConfigCacheService, SystemConfigCacheService>();
     builder.Services.AddScoped<IUserCacheService, UserCacheService>();
 
+    //注册交易服务
+    builder.Services.AddTradeServices();
+
+
+
+
+
 
     var app = builder.Build();
 

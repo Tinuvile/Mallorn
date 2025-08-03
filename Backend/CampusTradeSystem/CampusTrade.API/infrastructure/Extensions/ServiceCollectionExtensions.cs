@@ -232,3 +232,18 @@ public class FileStorageOptionsValidator : IValidateOptions<FileStorageOptions>
         return ValidateOptionsResult.Success;
     }
 }
+
+/// <summary>
+/// 添加议价与换物相关服务
+/// </summary>
+public static IServiceCollection AddTradeServices(this IServiceCollection services)
+{
+    services.AddScoped<IBargainService, BargainService>();
+    services.AddScoped<IExchangeService, ExchangeService>();
+
+    services.AddScoped<IBargainRepository, BargainRepository>();
+    services.AddScoped<IExchangeRepository, ExchangeRepository>();
+
+    return services;
+}
+
