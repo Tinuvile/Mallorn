@@ -49,7 +49,8 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<bool> IsProductExistsAsync(string title, int userId)
         {
-            return await _dbSet.AnyAsync(p => p.Title == title && p.UserId == userId);
+            var count = await _dbSet.CountAsync(p => p.Title == title && p.UserId == userId);
+            return count > 0;
         }
         /// <summary>
         /// 获取商品总数
