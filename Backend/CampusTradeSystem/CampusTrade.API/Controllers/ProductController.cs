@@ -1,10 +1,10 @@
-using CampusTrade.API.Models.DTOs.Product;
+using System.Security.Claims;
 using CampusTrade.API.Models.DTOs.Common;
-using CampusTrade.API.Services.Product;
+using CampusTrade.API.Models.DTOs.Product;
 using CampusTrade.API.Services.File;
+using CampusTrade.API.Services.Product;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace CampusTrade.API.Controllers;
 

@@ -1,5 +1,5 @@
-using CampusTrade.API.Models.DTOs.Product;
 using CampusTrade.API.Models.DTOs.Common;
+using CampusTrade.API.Models.DTOs.Product;
 using CampusTrade.API.Models.Entities;
 
 namespace CampusTrade.API.Services.Product;
