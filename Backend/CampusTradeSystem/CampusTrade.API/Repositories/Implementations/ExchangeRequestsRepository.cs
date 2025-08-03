@@ -83,7 +83,8 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<bool> HasPendingExchangeAsync(int productId)
         {
-            return await _context.ExchangeRequests.AnyAsync(e => (e.OfferProductId == productId || e.RequestProductId == productId) && e.Status == "等待回应");
+            var count = await _context.ExchangeRequests.CountAsync(e => (e.OfferProductId == productId || e.RequestProductId == productId) && e.Status == "等待回应");
+            return count > 0;
         }
         /// <summary>
         /// 获取最近N天的换物请求
