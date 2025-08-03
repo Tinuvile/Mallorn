@@ -149,6 +149,9 @@ try
     // 添加订单服务
     builder.Services.AddOrderServices();
 
+    // 添加商品服务
+    builder.Services.AddProductServices();
+
     // 配置 CORS
     builder.Services.AddCorsPolicy(builder.Configuration);
 

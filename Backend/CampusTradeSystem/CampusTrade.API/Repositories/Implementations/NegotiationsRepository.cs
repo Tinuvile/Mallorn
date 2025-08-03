@@ -127,8 +127,9 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<bool> HasActiveNegotiationAsync(int orderId)
         {
-            return await _context.Negotiations
-                .AnyAsync(n => n.OrderId == orderId && (n.Status == "等待回应" || n.Status == "反报价"));
+            var count = await _context.Negotiations
+                .CountAsync(n => n.OrderId == orderId && (n.Status == "等待回应" || n.Status == "反报价"));
+            return count > 0;
         }
         #endregion
 

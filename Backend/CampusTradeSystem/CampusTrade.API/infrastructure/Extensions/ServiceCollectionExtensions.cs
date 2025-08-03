@@ -211,6 +211,14 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRechargeService, RechargeService>();
         return services;
     }
+  
+    /// 添加商品相关服务
+    /// </summary>
+    public static IServiceCollection AddProductServices(this IServiceCollection services)
+    {
+        services.AddScoped<Services.Product.IProductService, Services.Product.ProductService>();
+        return services;
+    }
 }
 
 /// <summary>
