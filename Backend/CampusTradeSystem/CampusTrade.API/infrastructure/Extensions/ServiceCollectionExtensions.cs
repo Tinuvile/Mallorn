@@ -193,6 +193,15 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IValidateOptions<FileStorageOptions>, FileStorageOptionsValidator>();
         return services;
     }
+
+    /// <summary>
+    /// 添加商品相关服务
+    /// </summary>
+    public static IServiceCollection AddProductServices(this IServiceCollection services)
+    {
+        services.AddScoped<Services.Product.IProductService, Services.Product.ProductService>();
+        return services;
+    }
 }
 
 /// <summary>
