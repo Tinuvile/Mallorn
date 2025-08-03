@@ -1,4 +1,5 @@
 using CampusTrade.API.Data;
+using CampusTrade.API.Models.DTOs;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -21,6 +22,7 @@ namespace CampusTrade.API.Repositories.Implementations
         {
             return await _dbSet.Where(o => o.BuyerId == buyerId).Include(o => o.Product).Include(o => o.Seller).Include(o => o.Negotiations).OrderByDescending(o => o.CreateTime).ToListAsync();
         }
+
         /// <summary>
         /// 根据卖家ID获取订单集合
         /// </summary>
@@ -28,6 +30,7 @@ namespace CampusTrade.API.Repositories.Implementations
         {
             return await _dbSet.Where(o => o.SellerId == sellerId).Include(o => o.Product).Include(o => o.Buyer).Include(o => o.Negotiations).OrderByDescending(o => o.CreateTime).ToListAsync();
         }
+
         /// <summary>
         /// 根据商品ID获取订单集合
         /// </summary>
@@ -35,6 +38,7 @@ namespace CampusTrade.API.Repositories.Implementations
         {
             return await _dbSet.Where(o => o.ProductId == productId).Include(o => o.Buyer).Include(o => o.Seller).Include(o => o.Negotiations).OrderByDescending(o => o.CreateTime).ToListAsync();
         }
+
         /// <summary>
         /// 获取订单总数
         /// </summary>
@@ -42,6 +46,7 @@ namespace CampusTrade.API.Repositories.Implementations
         {
             return await _dbSet.CountAsync();
         }
+
         /// <summary>
         /// 分页多条件查询订单
         /// </summary>
@@ -64,6 +69,7 @@ namespace CampusTrade.API.Repositories.Implementations
             var orders = await query.Include(o => o.Product).Include(o => o.Buyer).Include(o => o.Seller).OrderByDescending(o => o.CreateTime).Skip((pageIndex - 1) * pageSize).Take(pageSize).ToListAsync();
             return (orders, totalCount);
         }
+
         /// <summary>
         /// 获取订单详情（包含所有关联信息）
         /// </summary>
@@ -77,6 +83,7 @@ namespace CampusTrade.API.Repositories.Implementations
                 .Include(o => o.AbstractOrder).ThenInclude(ao => ao!.Reports)
                 .FirstOrDefaultAsync(o => o.OrderId == orderId);
         }
+
         /// <summary>
         /// 获取过期的订单
         /// </summary>
@@ -84,6 +91,7 @@ namespace CampusTrade.API.Repositories.Implementations
         {
             return await _dbSet.Where(o => o.ExpireTime.HasValue && o.ExpireTime.Value < DateTime.Now && o.Status == Order.OrderStatus.PendingPayment).Include(o => o.Product).Include(o => o.Buyer).ToListAsync();
         }
+
         /// <summary>
         /// 获取用户的订单统计（买家/卖家分组）
         /// </summary>
@@ -96,6 +104,7 @@ namespace CampusTrade.API.Repositories.Implementations
             foreach (var item in sellerStats) result[item.Key] = item.Value;
             return result;
         }
+
         /// <summary>
         /// 获取订单总金额统计
         /// </summary>
@@ -107,16 +116,41 @@ namespace CampusTrade.API.Repositories.Implementations
             if (endDate.HasValue) query = query.Where(o => o.CreateTime <= endDate.Value);
             return await query.Where(o => o.TotalAmount.HasValue).SumAsync(o => o.TotalAmount!.Value);
         }
+
         /// <summary>
         /// 获取热门商品（根据订单数量）
         /// </summary>
-        public async Task<IEnumerable<(int ProductId, string ProductTitle, int OrderCount)>> GetPopularProductsAsync(int count)
+        public async Task<List<PopularProductDto>> GetPopularProductsAsync(int count)
         {
             return await _dbSet.Include(o => o.Product)
-            .GroupBy(o => new { o.ProductId, o.Product!.Title })
-            .Select(g => new { g.Key.ProductId, g.Key.Title, Count = g.Count() })
-            .OrderByDescending(x => x.Count).Take(count).Select(x => new ValueTuple<int, string, int>(x.ProductId, x.Title, x.Count))
-            .ToListAsync();
+                .GroupBy(o => new { o.ProductId, o.Product!.Title })
+                .Select(g => new PopularProductDto
+                {
+                    ProductId = g.Key.ProductId,
+                    ProductTitle = g.Key.Title,
+                    OrderCount = g.Count()
+                })
+                .OrderByDescending(x => x.OrderCount)
+                .Take(count)
+                .ToListAsync();
+        }
+
+        /// <summary>
+        /// 获取月度交易数据
+        /// </summary>
+        public async Task<List<MonthlyTransactionDto>> GetMonthlyTransactionsAsync(int year)
+        {
+            return await _dbSet
+                .Where(o => o.CreateTime.Year == year && o.Status == "交易完成")
+                .GroupBy(o => new { o.CreateTime.Year, o.CreateTime.Month })
+                .Select(g => new MonthlyTransactionDto
+                {
+                    Month = $"{g.Key.Year}-{g.Key.Month:D2}",
+                    OrderCount = g.Count(),
+                    TotalAmount = g.Sum(o => o.TotalAmount ?? 0)
+                })
+                .OrderBy(g => g.Month)
+                .ToListAsync();
         }
         #endregion
 

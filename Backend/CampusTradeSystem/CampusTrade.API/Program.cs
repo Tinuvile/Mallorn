@@ -4,6 +4,7 @@ using CampusTrade.API.Data;
 using CampusTrade.API.Infrastructure.Extensions;
 using CampusTrade.API.Infrastructure.Middleware;
 using CampusTrade.API.Options;
+using CampusTrade.API.Services.Auth;
 using CampusTrade.API.Services.Background;
 using CampusTrade.API.Services.Cache;
 using CampusTrade.API.Services.Interfaces;
@@ -159,11 +160,14 @@ try
     // 注册后台服务
     builder.Services.AddHostedService<CacheRefreshBackgroundService>();
 
-    // 注册缓存服务（确保这些已存在）
+    // 注册缓存服务
     builder.Services.AddScoped<ICategoryCacheService, CategoryCacheService>();
     builder.Services.AddScoped<IProductCacheService, ProductCacheService>();
     builder.Services.AddScoped<ISystemConfigCacheService, SystemConfigCacheService>();
     builder.Services.AddScoped<IUserCacheService, UserCacheService>();
+
+    // 注册邮箱验证服务
+    builder.Services.AddScoped<EmailVerificationService>();
 
 
     var app = builder.Build();

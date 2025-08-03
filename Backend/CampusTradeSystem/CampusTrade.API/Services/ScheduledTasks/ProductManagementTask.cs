@@ -12,7 +12,7 @@ namespace CampusTrade.API.Services.ScheduledTasks
     {
         private readonly IServiceScopeFactory _scopeFactory;
 
-        // 注入IServiceScopeFactory
+        // 注入 IServiceScopeFactory 而非直接注入 DbContext
         public ProductManagementTask(ILogger<ProductManagementTask> logger, IServiceScopeFactory scopeFactory) : base(logger)
         {
             _scopeFactory = scopeFactory;

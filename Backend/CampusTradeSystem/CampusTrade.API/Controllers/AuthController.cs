@@ -1,11 +1,15 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using CampusTrade.API.Data;
+using CampusTrade.API.Infrastructure.Utils;
 using CampusTrade.API.Models.DTOs.Auth;
 using CampusTrade.API.Models.DTOs.Common;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Services.Auth;
+using CampusTrade.API.Services.Email;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace CampusTrade.API.Controllers;
 
@@ -14,11 +18,17 @@ namespace CampusTrade.API.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly EmailService _emailService;
+    private readonly EmailVerificationService _verificationService;
+    private readonly CampusTradeDbContext _context;
     private readonly ILogger<AuthController> _logger;
 
-    public AuthController(IAuthService authService, ILogger<AuthController> logger)
+    public AuthController(IAuthService authService, EmailService emailService, EmailVerificationService verificationService, CampusTradeDbContext context, ILogger<AuthController> logger)
     {
         _authService = authService;
+        _emailService = emailService;
+        _verificationService = verificationService;
+        _context = context;
         _logger = logger;
     }
 
@@ -39,6 +49,7 @@ public class AuthController : ControllerBase
         {
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
             var userAgent = HttpContext.Request.Headers.UserAgent.ToString();
+            var deviceType = DeviceDetector.GetDeviceType(userAgent); // 解析设备类型
 
             var tokenResponse = await _authService.LoginWithTokenAsync(loginRequest, ipAddress, userAgent);
 
@@ -46,6 +57,52 @@ public class AuthController : ControllerBase
             {
                 return Unauthorized(ApiResponse.CreateError("用户名或密码错误", "LOGIN_FAILED"));
             }
+
+            // 获取用户上次登录信息（从User实体）
+            var user = await _authService.GetUserByUsernameAsync(loginRequest.Username);
+            var lastLoginIp = user?.LastLoginIp;
+            var lastLoginTime = user?.LastLoginAt;
+
+            // 检测异常登录风险
+            var riskLevel = LoginLogs.RiskLevels.Low;
+            if (lastLoginIp != null && lastLoginIp != ipAddress)
+            {
+                // IP地址变更：中风险
+                riskLevel = LoginLogs.RiskLevels.Medium;
+                _logger.LogWarning("异常登录检测：用户 {Username} 登录IP变更，旧IP: {LastIp}，新IP: {NewIp}",
+                    loginRequest.Username, lastLoginIp, ipAddress);
+            }
+            if (lastLoginTime.HasValue && DateTime.Now - lastLoginTime.Value < TimeSpan.FromMinutes(5)
+                && lastLoginIp != ipAddress)
+            {
+                // 短时间内不同IP登录：高风险
+                riskLevel = LoginLogs.RiskLevels.High;
+                _logger.LogError("高危登录告警：用户 {Username} 5分钟内不同IP登录，旧IP: {LastIp}，新IP: {NewIp}",
+                    loginRequest.Username, lastLoginIp, ipAddress);
+
+                // 发送邮件/SMS通知用户
+                if (riskLevel == LoginLogs.RiskLevels.High)
+                {
+                    var warningMsg = $"检测到异常登录：{DateTime.Now:yyyy-MM-dd HH:mm}，IP: {ipAddress}，设备: {deviceType}。如非本人操作，请及时修改密码。";
+                    await _emailService.SendEmailAsync(
+                        recipientEmail: user.Email,
+                        subject: "校园交易平台 - 异常登录告警",
+                        body: warningMsg
+                    );
+                }
+            }
+
+            // 创建登录日志
+            var loginLog = new LoginLogs
+            {
+                UserId = tokenResponse.UserId,
+                IpAddress = ipAddress,
+                LogTime = DateTime.Now,
+                DeviceType = deviceType,
+                RiskLevel = riskLevel
+            };
+            await _context.LoginLogs.AddAsync(loginLog); // 注入CampusTradeDbContext
+            await _context.SaveChangesAsync();
 
             return Ok(ApiResponse<TokenResponse>.CreateSuccess(tokenResponse, "登录成功"));
         }
@@ -244,7 +301,53 @@ public class AuthController : ControllerBase
             return StatusCode(500, ApiResponse.CreateError("退出所有设备时发生内部错误", "INTERNAL_ERROR"));
         }
     }
+
+    /// <summary>
+    /// 发送邮箱验证码
+    /// </summary>
+    [HttpPost("send-verification-code")]
+    public async Task<IActionResult> SendVerificationCode([FromBody] SendCodeDto dto)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest("无效的请求参数");
+
+        var result = await _verificationService.SendVerificationCodeAsync(dto.UserId, dto.Email);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    /// <summary>
+    /// 验证邮箱验证码
+    /// </summary>
+    [HttpPost("verify-code")]
+    public async Task<IActionResult> VerifyCode([FromBody] VerifyCodeDto dto)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest("无效的请求参数");
+
+        var result = await _verificationService.VerifyCodeAsync(dto.UserId, dto.Code);
+        return result.Valid ? Ok(result) : BadRequest(result);
+    }
+
+    /// <summary>
+    /// 处理邮箱验证链接（用户点击链接后调用）
+    /// </summary>
+    [HttpGet("verify-email")]
+    public async Task<IActionResult> VerifyEmail([FromQuery] string token)
+    {
+        if (string.IsNullOrEmpty(token))
+            return BadRequest("验证令牌不能为空");
+
+        var result = await _verificationService.VerifyTokenAsync(token);
+        if (result.Valid)
+        {
+            // 验证成功，重定向到前端成功页面
+            return Redirect("https://your-domain.com/email-verified");
+        }
+        // 验证失败，重定向到前端失败页面
+        return Redirect("https://your-domain.com/email-verify-failed");
+    }
 }
+
 
 /// <summary>
 /// 退出登录请求DTO
@@ -277,4 +380,23 @@ public class StudentValidationDto
     [Required(ErrorMessage = "姓名不能为空")]
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// 发送验证码DTO
+/// </summary>
+public class SendCodeDto
+{
+    public int UserId { get; set; }
+    public string Email { get; set; } = string.Empty;
+}
+
+
+/// <summary>
+/// 确认验证码DTO
+/// </summary>
+public class VerifyCodeDto
+{
+    public int UserId { get; set; }
+    public string Code { get; set; } = string.Empty;
 }
