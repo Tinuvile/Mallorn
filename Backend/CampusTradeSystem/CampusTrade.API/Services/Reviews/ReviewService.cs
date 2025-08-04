@@ -1,6 +1,6 @@
+using CampusTrade.API.Data;
 using CampusTrade.API.Models.DTOs.Review;
 using CampusTrade.API.Models.Entities;
-using CampusTrade.API.Data;
 using Microsoft.EntityFrameworkCore;
 using ReviewEntity = CampusTrade.API.Models.Entities.Review;
 
@@ -143,7 +143,7 @@ namespace CampusTrade.API.Services.Review
 
             var reviewerName = (review.IsAnonymous == 1 || user == null)
                 ? "匿名用户"
-                : user. Username;
+                : user.Username;
 
             // 第三步：构造 ReviewDto 返回
             return new ReviewDto

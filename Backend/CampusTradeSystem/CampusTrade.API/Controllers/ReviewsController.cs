@@ -1,7 +1,7 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 using CampusTrade.API.Models.DTOs.Review;
 using CampusTrade.API.Services.Review;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace CampusTrade.API.Controllers
 {
