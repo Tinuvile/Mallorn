@@ -237,7 +237,8 @@ namespace CampusTrade.Tests.UnitTests.Repositories
 
             public async Task SeedOrderTestDataAsync()
             {
-                if (!await _context.Orders.AnyAsync())
+                var orderCount = await _context.Orders.CountAsync();
+                if (orderCount == 0)
                 {
                     // 添加测试用户
                     var buyer = new User { StudentId = "BUYER001", Username = "buyer" };
@@ -259,7 +260,8 @@ namespace CampusTrade.Tests.UnitTests.Repositories
 
             public async Task SeedVirtualAccountDataAsync()
             {
-                if (!await _context.VirtualAccounts.AnyAsync())
+                var accountCount = await _context.VirtualAccounts.CountAsync();
+                if (accountCount == 0)
                 {
                     var accounts = new List<VirtualAccount>
                     {
@@ -274,7 +276,8 @@ namespace CampusTrade.Tests.UnitTests.Repositories
             public async Task SeedProductDataAsync()
             {
                 // 添加测试数据
-                if (!await _context.Products.AnyAsync())
+                var productCount = await _context.Products.CountAsync();
+                if (productCount == 0)
                 {
                     var category = new Category { Name = "测试分类" };
                     _context.Categories.Add(category);

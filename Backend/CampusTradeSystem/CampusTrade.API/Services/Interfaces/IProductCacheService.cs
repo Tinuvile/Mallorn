@@ -71,3 +71,4 @@ namespace CampusTrade.API.Services.Interfaces
         Task RefreshAllActiveProductsAsync();
     }
 }
+
