@@ -1,11 +1,9 @@
 using CampusTrade.API.Data;
 using CampusTrade.API.Models.DTOs.Review;
 using CampusTrade.API.Models.Entities;
-using Microsoft.EntityFrameworkCore;
 using ReviewEntity = CampusTrade.API.Models.Entities.Review;
-
 namespace CampusTrade.API.Services.Review
-{
+{  
     public class ReviewService : IReviewService
     {
         private readonly CampusTradeDbContext _context;
