@@ -107,6 +107,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IVirtualAccountsRepository, VirtualAccountsRepository>();
         services.AddScoped<IRechargeRecordsRepository, RechargeRecordsRepository>();
+        services.AddScoped<IReportsRepository, ReportsRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         return services;
     }
@@ -128,6 +129,15 @@ public static class ServiceCollectionExtensions
         // 添加内存缓存（用于Token黑名单）
         services.AddMemoryCache();
         services.AddHttpContextAccessor();
+        return services;
+    }
+
+    /// <summary>
+    /// 添加举报相关服务
+    /// </summary>
+    public static IServiceCollection AddReportServices(this IServiceCollection services)
+    {
+        services.AddScoped<Services.Interfaces.IReportService, Services.Report.ReportService>();
         return services;
     }
 
