@@ -143,8 +143,17 @@ try
     // 添加认证相关服务
     builder.Services.AddAuthenticationServices();
 
+    // 添加举报相关服务
+    builder.Services.AddReportServices();
+
     // 添加文件管理服务
     builder.Services.AddFileManagementServices(builder.Configuration);
+
+    // 添加订单服务
+    builder.Services.AddOrderServices();
+
+    // 添加商品服务
+    builder.Services.AddProductServices();
 
     // 配置 CORS
     builder.Services.AddCorsPolicy(builder.Configuration);

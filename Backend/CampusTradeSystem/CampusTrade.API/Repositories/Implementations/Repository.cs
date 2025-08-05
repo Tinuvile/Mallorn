@@ -40,7 +40,8 @@ namespace CampusTrade.API.Repositories.Implementations
 
         public virtual async Task<bool> AnyAsync(Expression<Func<T, bool>> predicate)
         {
-            return await _dbSet.AnyAsync(predicate);
+            var count = await _dbSet.CountAsync(predicate);
+            return count > 0;
         }
 
         public virtual async Task<int> CountAsync(Expression<Func<T, bool>>? predicate = null)
