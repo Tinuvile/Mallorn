@@ -1,4 +1,4 @@
-using CampusTrade.API.Models.DTOs;
+using CampusTrade.API.Models.DTOs.Payment;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Interfaces;
@@ -35,7 +35,7 @@ namespace CampusTrade.API.Services.Order
 
         public async Task<RechargeResponse> CreateRechargeAsync(int userId, CreateRechargeRequest request)
         {
-            _logger.LogInformation("开始创建充值订单，用户ID: {UserId}, 金额: {Amount}, 方式: {Method}", 
+            _logger.LogInformation("开始创建充值订单，用户ID: {UserId}, 金额: {Amount}, 方式: {Method}",
                 userId, request.Amount, request.Method);
 
             // 验证充值金额
@@ -109,14 +109,14 @@ namespace CampusTrade.API.Services.Order
             var recharge = await _rechargeRepository.GetByPrimaryKeyAsync(rechargeId);
             if (recharge == null || recharge.UserId != userId)
             {
-                _logger.LogWarning("模拟充值：找不到充值记录或用户不匹配，充值记录 {RechargeId}，用户 {UserId}", 
+                _logger.LogWarning("模拟充值：找不到充值记录或用户不匹配，充值记录 {RechargeId}，用户 {UserId}",
                     rechargeId, userId);
                 return false;
             }
 
             if (recharge.Status != "处理中")
             {
-                _logger.LogWarning("模拟充值：充值记录 {RechargeId} 状态不是处理中，当前状态：{Status}", 
+                _logger.LogWarning("模拟充值：充值记录 {RechargeId} 状态不是处理中，当前状态：{Status}",
                     rechargeId, recharge.Status);
                 return false;
             }
@@ -126,7 +126,7 @@ namespace CampusTrade.API.Services.Order
                 await _unitOfWork.BeginTransactionAsync();
 
                 // 增加虚拟账户余额
-                await _virtualAccountRepository.CreditAsync(userId, recharge.Amount, 
+                await _virtualAccountRepository.CreditAsync(userId, recharge.Amount,
                     $"模拟充值 - {rechargeId}");
 
                 // 更新充值记录状态

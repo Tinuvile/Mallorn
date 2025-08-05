@@ -6,6 +6,7 @@ using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Data;
 using Microsoft.EntityFrameworkCore;
 using CampusTrade.API.Repositories.Interfaces;
+using CampusTrade.API.Infrastructure.Extensions;
 
 namespace CampusTrade.API.Controllers
 {
@@ -49,11 +50,11 @@ namespace CampusTrade.API.Controllers
                 for (int i = 0; i < request.ImmediateExpiryCount; i++)
                 {
                     var orderId = await CreateTestOrderWithCustomExpiry(
-                        request.BuyerId + i, 
-                        request.SellerId, 
+                        request.BuyerId + i,
+                        request.SellerId,
                         request.ProductId,
                         baseTime.AddMinutes(1));
-                    
+
                     results.Add(new BatchOrderResult
                     {
                         OrderId = orderId,
@@ -66,11 +67,11 @@ namespace CampusTrade.API.Controllers
                 for (int i = 0; i < request.ShortTermExpiryCount; i++)
                 {
                     var orderId = await CreateTestOrderWithCustomExpiry(
-                        request.BuyerId + request.ImmediateExpiryCount + i, 
-                        request.SellerId, 
+                        request.BuyerId + request.ImmediateExpiryCount + i,
+                        request.SellerId,
                         request.ProductId,
                         baseTime.AddMinutes(3));
-                    
+
                     results.Add(new BatchOrderResult
                     {
                         OrderId = orderId,
@@ -83,11 +84,11 @@ namespace CampusTrade.API.Controllers
                 for (int i = 0; i < request.MediumTermExpiryCount; i++)
                 {
                     var orderId = await CreateTestOrderWithCustomExpiry(
-                        request.BuyerId + request.ImmediateExpiryCount + request.ShortTermExpiryCount + i, 
-                        request.SellerId, 
+                        request.BuyerId + request.ImmediateExpiryCount + request.ShortTermExpiryCount + i,
+                        request.SellerId,
                         request.ProductId,
                         baseTime.AddMinutes(10));
-                    
+
                     results.Add(new BatchOrderResult
                     {
                         OrderId = orderId,
@@ -101,10 +102,10 @@ namespace CampusTrade.API.Controllers
                 {
                     var orderId = await CreateTestOrderWithCustomExpiry(
                         request.BuyerId + request.ImmediateExpiryCount + request.ShortTermExpiryCount + request.MediumTermExpiryCount + i,
-                        request.SellerId, 
+                        request.SellerId,
                         request.ProductId,
                         baseTime.AddMinutes(-5)); // 5分钟前就过期了
-                    
+
                     results.Add(new BatchOrderResult
                     {
                         OrderId = orderId,
@@ -139,7 +140,7 @@ namespace CampusTrade.API.Controllers
             {
                 var results = new List<BatchOrderResult>();
                 var baseTime = DateTime.Now;
-                
+
                 // 创建一个持续的订单流，每个订单都有不同的过期时间
                 for (int i = 0; i < request.TotalOrders; i++)
                 {
@@ -197,7 +198,7 @@ namespace CampusTrade.API.Controllers
             try
             {
                 var currentTime = DateTime.Now;
-                
+
                 // 获取所有待付款订单
                 var pendingOrders = await _context.Orders
                     .Where(o => o.Status == Order.OrderStatus.PendingPayment)
@@ -207,12 +208,12 @@ namespace CampusTrade.API.Controllers
 
                 // 分类统计
                 var expired = pendingOrders.Where(o => o.ExpireTime.HasValue && o.ExpireTime.Value < currentTime).ToList();
-                var expiringSoon = pendingOrders.Where(o => 
-                    o.ExpireTime.HasValue && 
-                    o.ExpireTime.Value >= currentTime && 
+                var expiringSoon = pendingOrders.Where(o =>
+                    o.ExpireTime.HasValue &&
+                    o.ExpireTime.Value >= currentTime &&
                     o.ExpireTime.Value <= currentTime.AddMinutes(5)).ToList();
-                var normal = pendingOrders.Where(o => 
-                    o.ExpireTime.HasValue && 
+                var normal = pendingOrders.Where(o =>
+                    o.ExpireTime.HasValue &&
                     o.ExpireTime.Value > currentTime.AddMinutes(5)).ToList();
 
                 return Ok(new
@@ -295,15 +296,15 @@ namespace CampusTrade.API.Controllers
             try
             {
                 var startTime = DateTime.Now;
-                
+
                 // 测试查询性能
                 var pendingOrders = await _context.Orders
                     .Where(o => o.Status == Order.OrderStatus.PendingPayment)
                     .CountAsync();
 
                 var expiredOrders = await _context.Orders
-                    .Where(o => o.Status == Order.OrderStatus.PendingPayment && 
-                               o.ExpireTime.HasValue && 
+                    .Where(o => o.Status == Order.OrderStatus.PendingPayment &&
+                               o.ExpireTime.HasValue &&
                                o.ExpireTime.Value < DateTime.Now)
                     .CountAsync();
 
@@ -362,7 +363,7 @@ namespace CampusTrade.API.Controllers
 
                 _context.Orders.RemoveRange(testOrders);
                 _context.AbstractOrders.RemoveRange(testAbstractOrders);
-                
+
                 await _context.SaveChangesAsync();
 
                 return Ok(new
@@ -422,8 +423,8 @@ namespace CampusTrade.API.Controllers
         private async Task<int> GetExpiredOrderCount()
         {
             return await _context.Orders
-                .Where(o => o.Status == Order.OrderStatus.PendingPayment && 
-                           o.ExpireTime.HasValue && 
+                .Where(o => o.Status == Order.OrderStatus.PendingPayment &&
+                           o.ExpireTime.HasValue &&
                            o.ExpireTime.Value < DateTime.Now)
                 .CountAsync();
         }

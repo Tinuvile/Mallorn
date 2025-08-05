@@ -1,8 +1,9 @@
-using CampusTrade.API.Models.DTOs;
+using CampusTrade.API.Models.DTOs.Payment;
 using CampusTrade.API.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using CampusTrade.API.Infrastructure.Extensions;
 
 namespace CampusTrade.API.Controllers
 {
@@ -33,13 +34,13 @@ namespace CampusTrade.API.Controllers
         {
             try
             {
-                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var userId = User.GetUserId();
                 if (userId == 0)
                     return Unauthorized("用户身份验证失败");
 
                 var result = await _rechargeService.CreateRechargeAsync(userId, request);
-                
-                _logger.LogInformation("用户 {UserId} 创建充值订单成功，金额 {Amount}，方式 {Method}", 
+
+                _logger.LogInformation("用户 {UserId} 创建充值订单成功，金额 {Amount}，方式 {Method}",
                     userId, request.Amount, request.Method);
 
                 return Ok(result);
@@ -66,12 +67,12 @@ namespace CampusTrade.API.Controllers
         {
             try
             {
-                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var userId = User.GetUserId();
                 if (userId == 0)
                     return Unauthorized("用户身份验证失败");
 
                 var result = await _rechargeService.CompleteSimulationRechargeAsync(rechargeId, userId);
-                
+
                 if (result)
                 {
                     _logger.LogInformation("用户 {UserId} 完成模拟充值 {RechargeId}", userId, rechargeId);
@@ -97,12 +98,12 @@ namespace CampusTrade.API.Controllers
         /// <returns>充值记录列表</returns>
         [HttpGet("records")]
         public async Task<ActionResult<object>> GetUserRechargeRecords(
-            [FromQuery] int pageIndex = 1, 
+            [FromQuery] int pageIndex = 1,
             [FromQuery] int pageSize = 10)
         {
             try
             {
-                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var userId = User.GetUserId();
                 if (userId == 0)
                     return Unauthorized("用户身份验证失败");
 

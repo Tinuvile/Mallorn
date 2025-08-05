@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using CampusTrade.API.Services.Interfaces;
+using CampusTrade.API.Models.DTOs.Order;
+using CampusTrade.API.Models.DTOs.Payment;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Data;
 using Microsoft.EntityFrameworkCore;
@@ -23,7 +25,7 @@ namespace CampusTrade.Tests.UnitTests.Services
                 .Options;
 
             _context = new CampusTradeDbContext(options);
-            
+
             using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
             _logger = loggerFactory.CreateLogger<ContinuousOrderExpiryTests>();
 
@@ -107,7 +109,7 @@ namespace CampusTrade.Tests.UnitTests.Services
 
             // Act - 测量处理时间
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            
+
             var now = DateTime.Now;
             var ordersToCancel = await _context.Orders
                 .Where(o => o.Status == Order.OrderStatus.PendingPayment &&
@@ -125,10 +127,10 @@ namespace CampusTrade.Tests.UnitTests.Services
 
             // Assert
             Assert.Equal(batchSize, processedCount);
-            Assert.True(stopwatch.ElapsedMilliseconds < 5000, 
+            Assert.True(stopwatch.ElapsedMilliseconds < 5000,
                 $"处理 {batchSize} 个过期订单耗时 {stopwatch.ElapsedMilliseconds}ms，应该在5秒内完成");
 
-            _logger.LogInformation("处理 {Count} 个过期订单耗时 {ElapsedMs}ms", 
+            _logger.LogInformation("处理 {Count} 个过期订单耗时 {ElapsedMs}ms",
                 processedCount, stopwatch.ElapsedMilliseconds);
         }
 
@@ -158,7 +160,7 @@ namespace CampusTrade.Tests.UnitTests.Services
 
                 // 2. 处理这批过期订单
                 var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-                
+
                 var now = DateTime.Now;
                 var ordersToCancel = await _context.Orders
                     .Where(o => batchOrders.Contains(o.OrderId) &&
@@ -178,7 +180,7 @@ namespace CampusTrade.Tests.UnitTests.Services
                 totalProcessed += processedInBatch;
                 processingTimes.Add(stopwatch.ElapsedMilliseconds);
 
-                _logger.LogInformation("批次 {Batch}: 处理了 {Count} 个订单，耗时 {ElapsedMs}ms", 
+                _logger.LogInformation("批次 {Batch}: 处理了 {Count} 个订单，耗时 {ElapsedMs}ms",
                     batch + 1, processedInBatch, stopwatch.ElapsedMilliseconds);
 
                 // 3. 模拟间隔时间
@@ -187,14 +189,14 @@ namespace CampusTrade.Tests.UnitTests.Services
 
             // Assert
             Assert.Equal(batchCount * ordersPerBatch, totalProcessed);
-            
+
             // 验证每批处理时间都在合理范围内
             var maxProcessingTime = processingTimes.Max();
             var avgProcessingTime = processingTimes.Average();
-            
-            Assert.True(maxProcessingTime < 2000, 
+
+            Assert.True(maxProcessingTime < 2000,
                 $"单批最大处理时间 {maxProcessingTime}ms 超过预期");
-            Assert.True(avgProcessingTime < 1000, 
+            Assert.True(avgProcessingTime < 1000,
                 $"平均处理时间 {avgProcessingTime}ms 超过预期");
 
             _logger.LogInformation(
@@ -261,9 +263,9 @@ namespace CampusTrade.Tests.UnitTests.Services
             Assert.Equal(normalCount, pendingOrders.Count);
 
             // 验证正确的订单被取消/保留
-            Assert.True(expiredOrders.All(id => cancelledOrders.Contains(id)), 
+            Assert.True(expiredOrders.All(id => cancelledOrders.Contains(id)),
                 "所有过期订单都应该被取消");
-            Assert.True(normalOrders.All(id => pendingOrders.Contains(id)), 
+            Assert.True(normalOrders.All(id => pendingOrders.Contains(id)),
                 "所有正常订单都应该保持待付款状态");
 
             _logger.LogInformation(
@@ -331,9 +333,9 @@ namespace CampusTrade.Tests.UnitTests.Services
             var maxDetectionTime = detectionTimes.Max();
             var avgDetectionTime = detectionTimes.Average();
 
-            Assert.True(maxDetectionTime < 500, 
+            Assert.True(maxDetectionTime < 500,
                 $"单次检测最大耗时 {maxDetectionTime}ms 超过预期");
-            Assert.True(avgDetectionTime < 200, 
+            Assert.True(avgDetectionTime < 200,
                 $"平均检测耗时 {avgDetectionTime}ms 超过预期");
 
             _logger.LogInformation(

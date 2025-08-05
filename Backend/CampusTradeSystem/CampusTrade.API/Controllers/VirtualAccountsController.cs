@@ -1,7 +1,9 @@
 using CampusTrade.API.Repositories.Interfaces;
+using CampusTrade.API.Models.DTOs.VirtualAccount;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using CampusTrade.API.Infrastructure.Extensions;
 
 namespace CampusTrade.API.Controllers
 {
@@ -17,7 +19,7 @@ namespace CampusTrade.API.Controllers
         private readonly ILogger<VirtualAccountsController> _logger;
 
         public VirtualAccountsController(
-            IVirtualAccountsRepository virtualAccountRepository, 
+            IVirtualAccountsRepository virtualAccountRepository,
             ILogger<VirtualAccountsController> logger)
         {
             _virtualAccountRepository = virtualAccountRepository;
@@ -33,7 +35,7 @@ namespace CampusTrade.API.Controllers
         {
             try
             {
-                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var userId = User.GetUserId();
                 if (userId == 0)
                     return Unauthorized("用户身份验证失败");
 
@@ -66,7 +68,7 @@ namespace CampusTrade.API.Controllers
         {
             try
             {
-                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var userId = User.GetUserId();
                 if (userId == 0)
                     return Unauthorized("用户身份验证失败");
 
@@ -104,7 +106,7 @@ namespace CampusTrade.API.Controllers
         {
             try
             {
-                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var userId = User.GetUserId();
                 if (userId == 0)
                     return Unauthorized("用户身份验证失败");
 
@@ -122,7 +124,7 @@ namespace CampusTrade.API.Controllers
                     hasSufficientBalance = hasSufficientBalance
                 };
 
-                _logger.LogInformation("用户 {UserId} 检查余额，需要 {Amount}，当前 {Balance}，充足: {Sufficient}", 
+                _logger.LogInformation("用户 {UserId} 检查余额，需要 {Amount}，当前 {Balance}，充足: {Sufficient}",
                     userId, amount, currentBalance, hasSufficientBalance);
 
                 return Ok(result);

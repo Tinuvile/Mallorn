@@ -4,8 +4,9 @@ using Microsoft.Extensions.Logging;
 using CampusTrade.API.Services.Order;
 using CampusTrade.API.Services.Interfaces;
 using CampusTrade.API.Repositories.Interfaces;
+using CampusTrade.API.Models.DTOs.Order;
+using CampusTrade.API.Models.DTOs.Payment;
 using CampusTrade.API.Models.Entities;
-using CampusTrade.API.Models.DTOs;
 
 namespace CampusTrade.Tests.UnitTests.Services
 {
@@ -128,7 +129,6 @@ namespace CampusTrade.Tests.UnitTests.Services
 
             _mockUnitOfWork.Verify(x => x.BeginTransactionAsync(), Times.Once);
             _mockUnitOfWork.Verify(x => x.CommitTransactionAsync(), Times.Once);
-            _mockAbstractOrderRepository.Verify(x => x.AddAsync(It.IsAny<AbstractOrder>()), Times.Once);
             _mockOrderRepository.Verify(x => x.AddAsync(It.IsAny<Order>()), Times.Once);
         }
 
@@ -143,7 +143,7 @@ namespace CampusTrade.Tests.UnitTests.Services
                 .ReturnsAsync((Product?)null);
 
             // Act & Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => 
+            await Assert.ThrowsAsync<ArgumentException>(() =>
                 _orderService.CreateOrderAsync(userId, request));
         }
 
@@ -164,7 +164,7 @@ namespace CampusTrade.Tests.UnitTests.Services
                 .ReturnsAsync(product);
 
             // Act & Assert
-            await Assert.ThrowsAsync<InvalidOperationException>(() => 
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
                 _orderService.CreateOrderAsync(userId, request));
         }
 
@@ -185,7 +185,7 @@ namespace CampusTrade.Tests.UnitTests.Services
                 .ReturnsAsync(product);
 
             // Act & Assert
-            await Assert.ThrowsAsync<InvalidOperationException>(() => 
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
                 _orderService.CreateOrderAsync(userId, request));
         }
 

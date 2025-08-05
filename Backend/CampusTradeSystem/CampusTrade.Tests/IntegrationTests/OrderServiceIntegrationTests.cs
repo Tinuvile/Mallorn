@@ -6,7 +6,8 @@ using CampusTrade.API.Services.Order;
 using CampusTrade.API.Services.Interfaces;
 using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Models.Entities;
-using CampusTrade.API.Models.DTOs;
+using CampusTrade.API.Models.DTOs.Order;
+using CampusTrade.API.Models.DTOs.Payment;
 using CampusTrade.API.Data;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -41,7 +42,7 @@ namespace CampusTrade.Tests.IntegrationTests
             _mockLogger = new Mock<ILogger<OrderService>>();
 
             // 配置Mock的基本行为
-            SetupMockRepositories(mockOrderRepository, mockProductRepository, mockUserRepository, 
+            SetupMockRepositories(mockOrderRepository, mockProductRepository, mockUserRepository,
                                 mockAbstractOrderRepository, mockVirtualAccountRepository, mockUnitOfWork);
 
             _orderService = new OrderService(
@@ -205,7 +206,7 @@ namespace CampusTrade.Tests.IntegrationTests
             Assert.NotEmpty(categories);
             Assert.NotEmpty(users);
             Assert.NotEmpty(products);
-            
+
             var category = categories.First(c => c.CategoryId == 3001);
             var user = users.First(u => u.UserId == 1001);
             var product = products.First(p => p.ProductId == 2001);
@@ -220,7 +221,7 @@ namespace CampusTrade.Tests.IntegrationTests
         {
             // Arrange
             await SeedTestDataAsync();
-            
+
             // 创建一个测试订单
             var order = new Order
             {
@@ -233,7 +234,7 @@ namespace CampusTrade.Tests.IntegrationTests
                 CreateTime = DateTime.UtcNow,
                 ExpireTime = DateTime.UtcNow.AddMinutes(30)
             };
-            
+
             _context.Orders.Add(order);
             await _context.SaveChangesAsync();
 

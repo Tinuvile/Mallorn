@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using CampusTrade.API.Models.DTOs;
+using CampusTrade.API.Models.DTOs.Order;
+using CampusTrade.API.Models.DTOs.Payment;
 using CampusTrade.API.Services.Interfaces;
 using System.Security.Claims;
+using CampusTrade.API.Infrastructure.Extensions;
 
 namespace CampusTrade.API.Controllers
 {
@@ -24,19 +26,6 @@ namespace CampusTrade.API.Controllers
         }
 
         /// <summary>
-        /// 获取当前用户ID
-        /// </summary>
-        private int GetCurrentUserId()
-        {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-            {
-                throw new UnauthorizedAccessException("用户身份验证失败");
-            }
-            return userId;
-        }
-
-        /// <summary>
         /// 创建订单
         /// </summary>
         /// <param name="request">创建订单请求</param>
@@ -46,7 +35,7 @@ namespace CampusTrade.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var userId = User.GetUserId();
                 var result = await _orderService.CreateOrderAsync(userId, request);
                 return Ok(result);
             }
@@ -75,9 +64,9 @@ namespace CampusTrade.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var userId = User.GetUserId();
                 var result = await _orderService.GetOrderDetailAsync(orderId, userId);
-                
+
                 if (result == null)
                 {
                     return NotFound(new { message = "订单不存在或无权访问" });
@@ -109,9 +98,9 @@ namespace CampusTrade.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var userId = User.GetUserId();
                 var (orders, totalCount) = await _orderService.GetUserOrdersAsync(userId, role, status, pageIndex, pageSize);
-                
+
                 return Ok(new
                 {
                     orders,
@@ -138,7 +127,7 @@ namespace CampusTrade.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var userId = User.GetUserId();
                 var result = await _orderService.GetProductOrdersAsync(productId, userId);
                 return Ok(result);
             }
@@ -158,7 +147,7 @@ namespace CampusTrade.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var userId = User.GetUserId();
                 var result = await _orderService.GetUserOrderStatisticsAsync(userId);
                 return Ok(result);
             }
@@ -180,9 +169,9 @@ namespace CampusTrade.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var userId = User.GetUserId();
                 var success = await _orderService.UpdateOrderStatusAsync(orderId, userId, request);
-                
+
                 if (!success)
                 {
                     return BadRequest(new { message = "状态更新失败，请检查权限或状态转换是否合法" });
@@ -207,9 +196,9 @@ namespace CampusTrade.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var userId = User.GetUserId();
                 var success = await _orderService.ConfirmPaymentAsync(orderId, userId);
-                
+
                 if (!success)
                 {
                     return BadRequest(new { message = "确认付款失败，请检查订单状态或权限" });
@@ -235,9 +224,9 @@ namespace CampusTrade.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var userId = User.GetUserId();
                 var success = await _orderService.ShipOrderAsync(orderId, userId, request?.TrackingInfo);
-                
+
                 if (!success)
                 {
                     return BadRequest(new { message = "发货失败，请检查订单状态或权限" });
@@ -262,9 +251,9 @@ namespace CampusTrade.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var userId = User.GetUserId();
                 var success = await _orderService.ConfirmDeliveryAsync(orderId, userId);
-                
+
                 if (!success)
                 {
                     return BadRequest(new { message = "确认收货失败，请检查订单状态或权限" });
@@ -289,9 +278,9 @@ namespace CampusTrade.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var userId = User.GetUserId();
                 var success = await _orderService.CompleteOrderAsync(orderId, userId);
-                
+
                 if (!success)
                 {
                     return BadRequest(new { message = "完成订单失败，请检查订单状态或权限" });
@@ -316,18 +305,18 @@ namespace CampusTrade.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var userId = User.GetUserId();
                 var result = await _orderService.PayOrderWithVirtualAccountAsync(orderId, userId);
-                
+
                 if (result.Success)
                 {
-                    _logger.LogInformation("用户 {UserId} 支付订单 {OrderId} 成功，金额 {Amount}", 
+                    _logger.LogInformation("用户 {UserId} 支付订单 {OrderId} 成功，金额 {Amount}",
                         userId, orderId, result.Amount);
                     return Ok(result);
                 }
                 else
                 {
-                    _logger.LogWarning("用户 {UserId} 支付订单 {OrderId} 失败：{Message}", 
+                    _logger.LogWarning("用户 {UserId} 支付订单 {OrderId} 失败：{Message}",
                         userId, orderId, result.Message);
                     return BadRequest(result);
                 }
@@ -335,10 +324,10 @@ namespace CampusTrade.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "支付订单时发生错误，订单ID: {OrderId}", orderId);
-                return StatusCode(500, new PaymentResult 
-                { 
-                    Success = false, 
-                    Message = "支付失败，请稍后重试" 
+                return StatusCode(500, new PaymentResult
+                {
+                    Success = false,
+                    Message = "支付失败，请稍后重试"
                 });
             }
         }
@@ -354,9 +343,9 @@ namespace CampusTrade.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var userId = User.GetUserId();
                 var success = await _orderService.CancelOrderAsync(orderId, userId, request?.Reason);
-                
+
                 if (!success)
                 {
                     return BadRequest(new { message = "取消订单失败，请检查订单状态或权限" });
@@ -372,25 +361,5 @@ namespace CampusTrade.API.Controllers
         }
     }
 
-    /// <summary>
-    /// 发货请求DTO
-    /// </summary>
-    public class ShipOrderRequest
-    {
-        /// <summary>
-        /// 物流信息
-        /// </summary>
-        public string? TrackingInfo { get; set; }
-    }
 
-    /// <summary>
-    /// 取消订单请求DTO
-    /// </summary>
-    public class CancelOrderRequest
-    {
-        /// <summary>
-        /// 取消原因
-        /// </summary>
-        public string? Reason { get; set; }
-    }
 }

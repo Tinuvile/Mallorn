@@ -2,8 +2,9 @@ using Moq;
 using CampusTrade.API.Services.Order;
 using CampusTrade.API.Services.Interfaces;
 using CampusTrade.API.Repositories.Interfaces;
+using CampusTrade.API.Models.DTOs.Order;
+using CampusTrade.API.Models.DTOs.Payment;
 using CampusTrade.API.Models.Entities;
-using CampusTrade.API.Models.DTOs;
 using Microsoft.Extensions.Logging;
 
 namespace CampusTrade.Tests.UnitTests.Services
@@ -100,17 +101,17 @@ namespace CampusTrade.Tests.UnitTests.Services
             // Arrange
             var expiredOrders = new List<Order>
             {
-                new Order 
-                { 
-                    OrderId = 1, 
+                new Order
+                {
+                    OrderId = 1,
                     Status = Order.OrderStatus.PendingPayment,
                     ExpireTime = DateTime.Now.AddMinutes(-10),
                     BuyerId = 1001,
                     SellerId = 1002
                 },
-                new Order 
-                { 
-                    OrderId = 2, 
+                new Order
+                {
+                    OrderId = 2,
                     Status = Order.OrderStatus.PendingPayment,
                     ExpireTime = DateTime.Now.AddMinutes(-20),
                     BuyerId = 1003,
@@ -141,7 +142,7 @@ namespace CampusTrade.Tests.UnitTests.Services
 
             // 验证每个过期订单都被更新状态
             _mockOrderRepository.Verify(
-                r => r.UpdateOrderStatusAsync(It.IsAny<int>(), Order.OrderStatus.Cancelled), 
+                r => r.UpdateOrderStatusAsync(It.IsAny<int>(), Order.OrderStatus.Cancelled),
                 Times.Exactly(2));
 
             _mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Once);
@@ -216,7 +217,7 @@ namespace CampusTrade.Tests.UnitTests.Services
 
             // Assert
             Assert.Equal(batchSize, result);
-            Assert.True(stopwatch.ElapsedMilliseconds < 1000, 
+            Assert.True(stopwatch.ElapsedMilliseconds < 1000,
                 $"处理 {batchSize} 个订单耗时 {stopwatch.ElapsedMilliseconds}ms，应该在1秒内完成");
 
             _mockOrderRepository.Verify(r => r.UpdateOrderStatusAsync(It.IsAny<int>(), Order.OrderStatus.Cancelled), Times.Exactly(batchSize));
@@ -308,9 +309,9 @@ namespace CampusTrade.Tests.UnitTests.Services
             // Arrange
             var expiredOrders = new List<Order>
             {
-                new Order 
-                { 
-                    OrderId = 1, 
+                new Order
+                {
+                    OrderId = 1,
                     Status = Order.OrderStatus.PendingPayment,
                     ExpireTime = DateTime.Now.AddMinutes(-10)
                 }
@@ -342,7 +343,7 @@ namespace CampusTrade.Tests.UnitTests.Services
 
             // Assert
             Assert.All(results, result => Assert.True(result >= 0));
-            
+
             // 验证方法被正确调用（可能被调用多次）
             _mockOrderRepository.Verify(r => r.GetExpiredOrdersAsync(), Times.AtLeast(1));
         }

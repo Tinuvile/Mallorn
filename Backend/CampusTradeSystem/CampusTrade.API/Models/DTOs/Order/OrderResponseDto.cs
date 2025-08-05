@@ -1,30 +1,5 @@
-using System.ComponentModel.DataAnnotations;
-
-namespace CampusTrade.API.Models.DTOs
+namespace CampusTrade.API.Models.DTOs.Order
 {
-    /// <summary>
-    /// 创建订单请求DTO
-    /// </summary>
-    public class CreateOrderRequest
-    {
-        /// <summary>
-        /// 商品ID
-        /// </summary>
-        [Required(ErrorMessage = "商品ID不能为空")]
-        public int ProductId { get; set; }
-
-        /// <summary>
-        /// 最终成交价格（用于议价后的订单）
-        /// </summary>
-        public decimal? FinalPrice { get; set; }
-
-        /// <summary>
-        /// 备注信息
-        /// </summary>
-        [StringLength(500, ErrorMessage = "备注信息不能超过500个字符")]
-        public string? Remarks { get; set; }
-    }
-
     /// <summary>
     /// 订单详情响应DTO
     /// </summary>
@@ -98,9 +73,9 @@ namespace CampusTrade.API.Models.DTOs
         /// <summary>
         /// 剩余支付时间（分钟）
         /// </summary>
-        public int? RemainingMinutes 
-        { 
-            get 
+        public int? RemainingMinutes
+        {
+            get
             {
                 if (!ExpireTime.HasValue || Status != "待付款") return null;
                 var remaining = ExpireTime.Value - DateTime.Now;
@@ -161,24 +136,6 @@ namespace CampusTrade.API.Models.DTOs
     }
 
     /// <summary>
-    /// 更新订单状态请求DTO
-    /// </summary>
-    public class UpdateOrderStatusRequest
-    {
-        /// <summary>
-        /// 新状态
-        /// </summary>
-        [Required(ErrorMessage = "状态不能为空")]
-        public string Status { get; set; } = string.Empty;
-
-        /// <summary>
-        /// 状态变更原因或备注
-        /// </summary>
-        [StringLength(500, ErrorMessage = "备注信息不能超过500个字符")]
-        public string? Remarks { get; set; }
-    }
-
-    /// <summary>
     /// 订单统计响应DTO
     /// </summary>
     public class OrderStatisticsResponse
@@ -227,67 +184,5 @@ namespace CampusTrade.API.Models.DTOs
         /// 本月交易金额
         /// </summary>
         public decimal MonthlyAmount { get; set; }
-    }
-
-    /// <summary>
-    /// 用户简要信息DTO
-    /// </summary>
-    public class UserBriefInfo
-    {
-        /// <summary>
-        /// 用户ID
-        /// </summary>
-        public int UserId { get; set; }
-
-        /// <summary>
-        /// 用户名
-        /// </summary>
-        public string Username { get; set; } = string.Empty;
-
-        /// <summary>
-        /// 昵称
-        /// </summary>
-        public string? Nickname { get; set; }
-
-        /// <summary>
-        /// 头像URL
-        /// </summary>
-        public string? AvatarUrl { get; set; }
-
-        /// <summary>
-        /// 信用分数
-        /// </summary>
-        public decimal? CreditScore { get; set; }
-    }
-
-    /// <summary>
-    /// 商品简要信息DTO
-    /// </summary>
-    public class ProductBriefInfo
-    {
-        /// <summary>
-        /// 商品ID
-        /// </summary>
-        public int ProductId { get; set; }
-
-        /// <summary>
-        /// 商品标题
-        /// </summary>
-        public string Title { get; set; } = string.Empty;
-
-        /// <summary>
-        /// 商品价格
-        /// </summary>
-        public decimal Price { get; set; }
-
-        /// <summary>
-        /// 商品主图URL
-        /// </summary>
-        public string? MainImageUrl { get; set; }
-
-        /// <summary>
-        /// 商品状态
-        /// </summary>
-        public string Status { get; set; } = string.Empty;
     }
 }

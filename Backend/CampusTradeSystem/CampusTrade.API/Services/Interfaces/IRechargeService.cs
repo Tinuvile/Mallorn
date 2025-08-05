@@ -1,4 +1,4 @@
-using CampusTrade.API.Models.DTOs;
+using CampusTrade.API.Models.DTOs.Payment;
 
 namespace CampusTrade.API.Services.Interfaces
 {

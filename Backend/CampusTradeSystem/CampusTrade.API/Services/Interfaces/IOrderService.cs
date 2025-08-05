@@ -1,4 +1,5 @@
-using CampusTrade.API.Models.DTOs;
+using CampusTrade.API.Models.DTOs.Order;
+using CampusTrade.API.Models.DTOs.Payment;
 using CampusTrade.API.Models.Entities;
 
 namespace CampusTrade.API.Services.Interfaces
