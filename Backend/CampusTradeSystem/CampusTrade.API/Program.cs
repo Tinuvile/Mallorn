@@ -174,13 +174,23 @@ try
     builder.Services.AddScoped<ISystemConfigCacheService, SystemConfigCacheService>();
     builder.Services.AddScoped<IUserCacheService, UserCacheService>();
 
+    // 注册议价服务
+    builder.Services.AddBargainServices();
+
+    // 注册换物服务
+    builder.Services.AddExchangeServices();
+
+
+
+
+
 
     var app = builder.Build();
 
     // 配置HTTP请求管道
     if (app.Environment.IsDevelopment())
     {
-        // 在开发环境下，先配置Swagger，避免被其他中间件影响
+        // 开发环境下，先配置Swagger，避免被其他中间件影响
         app.UseSwagger();
         app.UseSwaggerUI(c =>
         {

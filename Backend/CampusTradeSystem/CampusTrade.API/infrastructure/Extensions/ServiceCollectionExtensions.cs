@@ -108,6 +108,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IVirtualAccountsRepository, VirtualAccountsRepository>();
         services.AddScoped<IRechargeRecordsRepository, RechargeRecordsRepository>();
         services.AddScoped<IReportsRepository, ReportsRepository>();
+        services.AddScoped<INegotiationsRepository, NegotiationsRepository>();
+        services.AddScoped<IExchangeRequestsRepository, ExchangeRequestsRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         return services;
     }
@@ -227,6 +229,24 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddProductServices(this IServiceCollection services)
     {
         services.AddScoped<Services.Product.IProductService, Services.Product.ProductService>();
+        return services;
+    }
+  
+    /// <summary>
+    /// 添加议价服务
+    /// </summary>
+    public static IServiceCollection AddBargainServices(this IServiceCollection services)
+    {
+        services.AddScoped<Services.Interfaces.IBargainService, Services.Bargain.BargainService>();
+        return services;
+    }
+
+    /// <summary>
+    /// 添加换物服务
+    /// </summary>
+    public static IServiceCollection AddExchangeServices(this IServiceCollection services)
+    {
+        services.AddScoped<Services.Interfaces.IExchangeService, Services.Exchange.ExchangeService>();
         return services;
     }
 }
