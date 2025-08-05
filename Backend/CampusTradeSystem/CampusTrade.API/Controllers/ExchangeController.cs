@@ -1,4 +1,4 @@
-using System.Security.Claims;
+using CampusTrade.API.Infrastructure.Extensions;
 using CampusTrade.API.Models.DTOs.Common;
 using CampusTrade.API.Models.DTOs.Exchange;
 using CampusTrade.API.Services.Interfaces;
@@ -24,17 +24,7 @@ namespace CampusTrade.API.Controllers
             _logger = logger;
         }
 
-        /// <summary>
-        /// 获取当前用户ID
-        /// </summary>
-        private int GetCurrentUserId()
-        {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                           ?? User.FindFirst("userId")?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-                throw new UnauthorizedAccessException("用户身份验证失败");
-            return userId;
-        }
+
 
         /// <summary>
         /// 创建换物请求
@@ -54,7 +44,7 @@ namespace CampusTrade.API.Controllers
                     return BadRequest(ApiResponse.CreateError($"请求参数无效: {errors}"));
                 }
 
-                var userId = GetCurrentUserId();
+                var userId = User.GetUserId();
                 var (success, message, exchangeRequestId) = await _exchangeService.CreateExchangeRequestAsync(exchangeRequest, userId);
 
                 if (success)
@@ -94,7 +84,7 @@ namespace CampusTrade.API.Controllers
                     return BadRequest(ApiResponse.CreateError($"请求参数无效: {errors}"));
                 }
 
-                var userId = GetCurrentUserId();
+                var userId = User.GetUserId();
                 var (success, message) = await _exchangeService.HandleExchangeResponseAsync(exchangeResponse, userId);
 
                 if (success)
@@ -127,7 +117,7 @@ namespace CampusTrade.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var userId = User.GetUserId();
                 var (exchangeRequests, totalCount) = await _exchangeService.GetUserExchangeRequestsAsync(userId, pageIndex, pageSize);
 
                 var result = new
@@ -163,7 +153,7 @@ namespace CampusTrade.API.Controllers
         {
             try
             {
-                var userId = GetCurrentUserId();
+                var userId = User.GetUserId();
                 var exchangeRequest = await _exchangeService.GetExchangeRequestDetailsAsync(exchangeRequestId, userId);
 
                 if (exchangeRequest == null)
