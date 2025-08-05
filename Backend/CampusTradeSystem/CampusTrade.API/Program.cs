@@ -146,6 +146,9 @@ try
     // 添加认证相关服务
     builder.Services.AddAuthenticationServices();
 
+    // 添加业务服务
+    builder.Services.AddBusinessServices();
+
     // 添加文件管理服务
     builder.Services.AddFileManagementServices(builder.Configuration);
 
@@ -162,7 +165,7 @@ try
     // 注册后台服务
     builder.Services.AddHostedService<CacheRefreshBackgroundService>();
 
-    // 注册缓存服务（确保这些已存在）
+    // 注册缓存服务
     builder.Services.AddScoped<ICategoryCacheService, CategoryCacheService>();
     builder.Services.AddScoped<IProductCacheService, ProductCacheService>();
     builder.Services.AddScoped<ISystemConfigCacheService, SystemConfigCacheService>();

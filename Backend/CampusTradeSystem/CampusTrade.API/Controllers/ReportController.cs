@@ -1,8 +1,9 @@
+using CampusTrade.API.Models.DTOs.Common;
+using CampusTrade.API.Models.DTOs.Report;
 using CampusTrade.API.Services.Interfaces;
 using CampusTrade.API.Services.Report;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel.DataAnnotations;
 
 namespace CampusTrade.API.Controllers
 {
@@ -31,7 +32,7 @@ namespace CampusTrade.API.Controllers
         /// <param name="request">举报创建请求</param>
         /// <returns>创建结果</returns>
         [HttpPost]
-        public async Task<IActionResult> CreateReport([FromBody] CreateReportRequest request)
+        public async Task<IActionResult> CreateReport([FromBody] CreateReportDto request)
         {
             try
             {
@@ -39,7 +40,7 @@ namespace CampusTrade.API.Controllers
                 var userIdClaim = User.FindFirst("userId")?.Value;
                 if (!int.TryParse(userIdClaim, out int reporterId))
                 {
-                    return Unauthorized(new { success = false, message = "用户身份验证失败" });
+                    return Unauthorized(ApiResponse.CreateError("用户身份验证失败"));
                 }
 
                 // 转换证据文件信息
@@ -58,31 +59,15 @@ namespace CampusTrade.API.Controllers
 
                 if (result.Success)
                 {
-                    return Ok(new
-                    {
-                        success = true,
-                        message = result.Message,
-                        data = new
-                        {
-                            reportId = result.ReportId
-                        }
-                    });
+                    return Ok(ApiResponse.CreateSuccess(new { reportId = result.ReportId }, result.Message));
                 }
 
-                return BadRequest(new
-                {
-                    success = false,
-                    message = result.Message
-                });
+                return BadRequest(ApiResponse.CreateError(result.Message));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "创建举报时发生异常");
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = "系统异常，请稍后重试"
-                });
+                return StatusCode(500, ApiResponse.CreateError("系统异常，请稍后重试"));
             }
         }
 
@@ -93,10 +78,15 @@ namespace CampusTrade.API.Controllers
         /// <param name="request">证据添加请求</param>
         /// <returns>添加结果</returns>
         [HttpPost("{reportId}/evidence")]
-        public async Task<IActionResult> AddReportEvidence(int reportId, [FromBody] AddEvidenceRequest request)
+        public async Task<IActionResult> AddReportEvidence(int reportId, [FromBody] CreateReportDto request)
         {
             try
             {
+                if (request.EvidenceFiles == null || !request.EvidenceFiles.Any())
+                {
+                    return BadRequest(ApiResponse.CreateError("证据文件不能为空"));
+                }
+
                 // 转换证据文件信息
                 var evidenceFiles = request.EvidenceFiles.Select(ef => new EvidenceFileInfo
                 {
@@ -108,27 +98,15 @@ namespace CampusTrade.API.Controllers
 
                 if (result.Success)
                 {
-                    return Ok(new
-                    {
-                        success = true,
-                        message = result.Message
-                    });
+                    return Ok(ApiResponse.CreateSuccess(result.Message));
                 }
 
-                return BadRequest(new
-                {
-                    success = false,
-                    message = result.Message
-                });
+                return BadRequest(ApiResponse.CreateError(result.Message));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "添加举报证据时发生异常");
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = "系统异常，请稍后重试"
-                });
+                return StatusCode(500, ApiResponse.CreateError("系统异常，请稍后重试"));
             }
         }
 
@@ -155,39 +133,29 @@ namespace CampusTrade.API.Controllers
                 var (reports, totalCount) = await _reportService.GetUserReportsAsync(reporterId, pageIndex, pageSize);
 
                 // 转换为响应模型
-                var reportList = reports.Select(r => new
+                var reportList = reports.Select(r => new ReportListItemDto
                 {
-                    reportId = r.ReportId,
-                    orderId = r.OrderId,
-                    type = r.Type,
-                    priority = r.Priority,
-                    status = r.Status,
-                    description = r.Description,
-                    createTime = r.CreateTime,
-                    // 如果有关联的订单信息
-                    order = r.AbstractOrder != null ? new
-                    {
-                        orderId = r.AbstractOrder.AbstractOrderId,
-                        // 可以根据需要添加更多订单信息
-                    } : null,
-                    evidenceCount = r.Evidences?.Count ?? 0
+                    ReportId = r.ReportId,
+                    OrderId = r.OrderId,
+                    Type = r.Type,
+                    Priority = r.Priority,
+                    Status = r.Status,
+                    Description = r.Description,
+                    CreateTime = r.CreateTime,
+                    EvidenceCount = r.Evidences?.Count ?? 0
                 }).ToList();
 
-                return Ok(new
+                return Ok(ApiResponse.CreateSuccess(new
                 {
-                    success = true,
-                    data = new
+                    reports = reportList,
+                    pagination = new
                     {
-                        reports = reportList,
-                        pagination = new
-                        {
-                            pageIndex,
-                            pageSize,
-                            totalCount,
-                            totalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
-                        }
+                        pageIndex,
+                        pageSize,
+                        totalCount,
+                        totalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
                     }
-                });
+                }));
             }
             catch (Exception ex)
             {
@@ -220,46 +188,33 @@ namespace CampusTrade.API.Controllers
                 var report = await _reportService.GetReportDetailsAsync(reportId, requestUserId);
                 if (report == null)
                 {
-                    return NotFound(new { success = false, message = "举报不存在或无权限访问" });
+                    return NotFound(ApiResponse.CreateError("举报不存在或无权限访问"));
                 }
 
-                var reportDetails = new
+                var reportDetails = new ReportDetailDto
                 {
-                    reportId = report.ReportId,
-                    orderId = report.OrderId,
-                    type = report.Type,
-                    priority = report.Priority,
-                    status = report.Status,
-                    description = report.Description,
-                    createTime = report.CreateTime,
-                    // 举报人信息
-                    reporter = report.Reporter != null ? new
+                    ReportId = report.ReportId,
+                    OrderId = report.OrderId,
+                    Type = report.Type,
+                    Priority = report.Priority,
+                    Status = report.Status,
+                    Description = report.Description,
+                    CreateTime = report.CreateTime,
+                    Reporter = report.Reporter != null ? new ReporterInfoDto
                     {
-                        userId = report.Reporter.UserId,
-                        username = report.Reporter.Username,
-                        // 不返回敏感信息
+                        UserId = report.Reporter.UserId,
+                        Username = report.Reporter.Username
                     } : null,
-                    // 订单信息
-                    order = report.AbstractOrder != null ? new
+                    Evidences = report.Evidences?.Select(e => new EvidenceDto
                     {
-                        orderId = report.AbstractOrder.AbstractOrderId,
-                        // 可以根据需要添加更多订单信息
-                    } : null,
-                    // 证据文件
-                    evidences = report.Evidences?.Select(e => new
-                    {
-                        evidenceId = e.EvidenceId,
-                        fileType = e.FileType,
-                        fileUrl = e.FileUrl,
-                        uploadedAt = e.UploadedAt
-                    }) ?? Enumerable.Empty<object>()
+                        EvidenceId = e.EvidenceId,
+                        FileType = e.FileType,
+                        FileUrl = e.FileUrl,
+                        UploadedAt = e.UploadedAt
+                    }).ToList() ?? new List<EvidenceDto>()
                 };
 
-                return Ok(new
-                {
-                    success = true,
-                    data = reportDetails
-                });
+                return Ok(ApiResponse.CreateSuccess(reportDetails));
             }
             catch (Exception ex)
             {
@@ -292,22 +247,18 @@ namespace CampusTrade.API.Controllers
                 var evidences = await _reportService.GetReportEvidencesAsync(reportId, requestUserId);
                 if (evidences == null)
                 {
-                    return NotFound(new { success = false, message = "举报不存在或无权限访问" });
+                    return NotFound(ApiResponse.CreateError("举报不存在或无权限访问"));
                 }
 
-                var evidenceList = evidences.Select(e => new
+                var evidenceList = evidences.Select(e => new EvidenceDto
                 {
-                    evidenceId = e.EvidenceId,
-                    fileType = e.FileType,
-                    fileUrl = e.FileUrl,
-                    uploadedAt = e.UploadedAt
+                    EvidenceId = e.EvidenceId,
+                    FileType = e.FileType,
+                    FileUrl = e.FileUrl,
+                    UploadedAt = e.UploadedAt
                 }).ToList();
 
-                return Ok(new
-                {
-                    success = true,
-                    data = evidenceList
-                });
+                return Ok(ApiResponse.CreateSuccess(evidenceList));
             }
             catch (Exception ex)
             {
@@ -341,18 +292,10 @@ namespace CampusTrade.API.Controllers
 
                 if (result.Success)
                 {
-                    return Ok(new
-                    {
-                        success = true,
-                        message = result.Message
-                    });
+                    return Ok(ApiResponse.CreateSuccess(result.Message));
                 }
 
-                return BadRequest(new
-                {
-                    success = false,
-                    message = result.Message
-                });
+                return BadRequest(ApiResponse.CreateError(result.Message));
             }
             catch (Exception ex)
             {
@@ -388,49 +331,4 @@ namespace CampusTrade.API.Controllers
             });
         }
     }
-
-    #region 请求模型
-
-    /// <summary>
-    /// 创建举报请求模型
-    /// </summary>
-    public class CreateReportRequest
-    {
-        [Required(ErrorMessage = "订单ID不能为空")]
-        public int OrderId { get; set; }
-
-        [Required(ErrorMessage = "举报类型不能为空")]
-        [StringLength(50, ErrorMessage = "举报类型长度不能超过50个字符")]
-        public string Type { get; set; } = string.Empty;
-
-        [StringLength(2000, ErrorMessage = "举报描述长度不能超过2000个字符")]
-        public string? Description { get; set; }
-
-        public List<EvidenceFileRequest>? EvidenceFiles { get; set; }
-    }
-
-    /// <summary>
-    /// 添加证据请求模型
-    /// </summary>
-    public class AddEvidenceRequest
-    {
-        [Required(ErrorMessage = "证据文件不能为空")]
-        public List<EvidenceFileRequest> EvidenceFiles { get; set; } = new();
-    }
-
-    /// <summary>
-    /// 证据文件请求模型
-    /// </summary>
-    public class EvidenceFileRequest
-    {
-        [Required(ErrorMessage = "文件类型不能为空")]
-        [StringLength(20, ErrorMessage = "文件类型长度不能超过20个字符")]
-        public string FileType { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "文件URL不能为空")]
-        [StringLength(200, ErrorMessage = "文件URL长度不能超过200个字符")]
-        public string FileUrl { get; set; } = string.Empty;
-    }
-
-    #endregion
 }
