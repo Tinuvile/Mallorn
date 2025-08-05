@@ -119,9 +119,6 @@ try
     // 添加Repository层服务
     builder.Services.AddRepositoryServices();
 
-    // 添加业务服务
-    builder.Services.AddBusinessServices();
-
     // 添加日志清理后台服务
     builder.Services.AddHostedService<CampusTrade.API.Services.LogCleanupService>();
 
@@ -146,8 +143,8 @@ try
     // 添加认证相关服务
     builder.Services.AddAuthenticationServices();
 
-    // 添加业务服务
-    builder.Services.AddBusinessServices();
+    // 添加举报相关服务
+    builder.Services.AddReportServices();
 
     // 添加文件管理服务
     builder.Services.AddFileManagementServices(builder.Configuration);

@@ -128,13 +128,11 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// 添加业务服务
+    /// 添加举报相关服务
     /// </summary>
-    public static IServiceCollection AddBusinessServices(this IServiceCollection services)
+    public static IServiceCollection AddReportServices(this IServiceCollection services)
     {
-        // 注册举报服务
         services.AddScoped<Services.Interfaces.IReportService, Services.Report.ReportService>();
-
         return services;
     }
 
