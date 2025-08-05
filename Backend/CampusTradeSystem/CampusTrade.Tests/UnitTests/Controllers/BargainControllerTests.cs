@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using CampusTrade.API.Controllers;
 using CampusTrade.API.Models.DTOs.Bargain;
 using CampusTrade.API.Models.DTOs.Common;
@@ -7,7 +8,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
-using System.Security.Claims;
 using Xunit;
 
 namespace CampusTrade.Tests.UnitTests.Controllers

@@ -1,5 +1,5 @@
-using CampusTrade.API.Models.DTOs.Exchange;
 using CampusTrade.API.Models.DTOs.Common;
+using CampusTrade.API.Models.DTOs.Exchange;
 
 namespace CampusTrade.API.Services.Interfaces
 {

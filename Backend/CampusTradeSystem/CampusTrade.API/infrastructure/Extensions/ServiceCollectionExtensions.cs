@@ -231,7 +231,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<Services.Product.IProductService, Services.Product.ProductService>();
         return services;
     }
-  
+
     /// <summary>
     /// 添加议价服务
     /// </summary>
