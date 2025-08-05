@@ -18,9 +18,9 @@ namespace CampusTrade.API.Services.Interfaces
         /// <param name="evidenceFiles">证据文件URL列表</param>
         /// <returns>创建结果</returns>
         Task<(bool Success, string Message, int? ReportId)> CreateReportAsync(
-            int orderId, 
-            int reporterId, 
-            string type, 
+            int orderId,
+            int reporterId,
+            string type,
             string? description = null,
             List<EvidenceFileInfo>? evidenceFiles = null);
 
@@ -31,7 +31,7 @@ namespace CampusTrade.API.Services.Interfaces
         /// <param name="evidenceFiles">证据文件信息</param>
         /// <returns>添加结果</returns>
         Task<(bool Success, string Message)> AddReportEvidenceAsync(
-            int reportId, 
+            int reportId,
             List<EvidenceFileInfo> evidenceFiles);
 
         /// <summary>
@@ -42,8 +42,8 @@ namespace CampusTrade.API.Services.Interfaces
         /// <param name="pageSize">页大小</param>
         /// <returns>举报列表</returns>
         Task<(IEnumerable<Reports> Reports, int TotalCount)> GetUserReportsAsync(
-            int reporterId, 
-            int pageIndex = 0, 
+            int reporterId,
+            int pageIndex = 0,
             int pageSize = 10);
 
         /// <summary>

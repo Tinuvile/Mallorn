@@ -1,7 +1,10 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
+using System.Threading.Tasks;
 using CampusTrade.API.Controllers;
-using CampusTrade.API.Models.DTOs.Report;
 using CampusTrade.API.Models.DTOs.Common;
+using CampusTrade.API.Models.DTOs.Report;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Services.Interfaces;
 using CampusTrade.API.Services.Report;
@@ -11,9 +14,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Linq;
 
 namespace CampusTrade.Tests.UnitTests.Controllers;
 
