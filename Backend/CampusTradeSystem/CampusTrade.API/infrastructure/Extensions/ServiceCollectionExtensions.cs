@@ -224,6 +224,7 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
     /// 添加商品相关服务
     /// </summary>
     public static IServiceCollection AddProductServices(this IServiceCollection services)

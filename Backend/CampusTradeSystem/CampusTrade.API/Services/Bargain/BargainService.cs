@@ -12,13 +12,13 @@ namespace CampusTrade.API.Services.Bargain
     public class BargainService : IBargainService
     {
         private readonly INegotiationsRepository _negotiationsRepository;
-        private readonly IRepository<Order> _ordersRepository;
+        private readonly IRepository<Models.Entities.Order> _ordersRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<BargainService> _logger;
 
         public BargainService(
             INegotiationsRepository negotiationsRepository,
-            IRepository<Order> ordersRepository,
+            IRepository<Models.Entities.Order> ordersRepository,
             IUnitOfWork unitOfWork,
             ILogger<BargainService> logger)
         {

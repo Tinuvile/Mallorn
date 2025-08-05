@@ -12,13 +12,13 @@ namespace CampusTrade.API.Services.Exchange
     public class ExchangeService : IExchangeService
     {
         private readonly IExchangeRequestsRepository _exchangeRequestsRepository;
-        private readonly IRepository<Product> _productsRepository;
+        private readonly IRepository<Models.Entities.Product> _productsRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<ExchangeService> _logger;
 
         public ExchangeService(
             IExchangeRequestsRepository exchangeRequestsRepository,
-            IRepository<Product> productsRepository,
+            IRepository<Models.Entities.Product> productsRepository,
             IUnitOfWork unitOfWork,
             ILogger<ExchangeService> logger)
         {
@@ -47,7 +47,7 @@ namespace CampusTrade.API.Services.Exchange
                     return (false, "提供的商品不存在或不属于您", null);
                 }
 
-                if (offerProduct.Status != Product.ProductStatus.OnSale)
+                if (offerProduct.Status != Models.Entities.Product.ProductStatus.OnSale)
                 {
                     return (false, "提供的商品状态不允许交换", null);
                 }
@@ -64,7 +64,7 @@ namespace CampusTrade.API.Services.Exchange
                     return (false, "不能请求交换自己的商品", null);
                 }
 
-                if (requestProduct.Status != Product.ProductStatus.OnSale)
+                if (requestProduct.Status != Models.Entities.Product.ProductStatus.OnSale)
                 {
                     return (false, "请求的商品状态不允许交换", null);
                 }
@@ -141,8 +141,8 @@ namespace CampusTrade.API.Services.Exchange
                     if (offerProduct != null && requestProduct != null)
                     {
                         // 标记两个商品为交易中
-                        offerProduct.Status = Product.ProductStatus.InTransaction;
-                        requestProduct.Status = Product.ProductStatus.InTransaction;
+                        offerProduct.Status = Models.Entities.Product.ProductStatus.InTransaction;
+                        requestProduct.Status = Models.Entities.Product.ProductStatus.InTransaction;
 
                         // 标记实体为已修改
                         _productsRepository.Update(offerProduct);
