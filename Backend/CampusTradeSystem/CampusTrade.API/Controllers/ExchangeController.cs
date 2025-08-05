@@ -1,69 +1,188 @@
 using CampusTrade.API.Models.DTOs.Exchange;
-using CampusTrade.API.Services.Exchange;
+using CampusTrade.API.Models.DTOs.Common;
+using CampusTrade.API.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
+using System.Security.Claims;
 
 namespace CampusTrade.API.Controllers
 {
+    /// <summary>
+    /// 换物控制器
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class ExchangeController : ControllerBase
     {
         private readonly IExchangeService _exchangeService;
+        private readonly ILogger<ExchangeController> _logger;
 
-        // 构造函数，通过依赖注入获取 ExchangeService 实例
-        public ExchangeController(IExchangeService exchangeService)
+        public ExchangeController(IExchangeService exchangeService, ILogger<ExchangeController> logger)
         {
             _exchangeService = exchangeService;
+            _logger = logger;
         }
 
         /// <summary>
-        /// 用户发起换物请求
+        /// 获取当前用户ID
         /// </summary>
-        /// <param name="exchangeRequest">换物请求DTO，包含交换商品ID和条件</param>
-        /// <returns>换物请求结果</returns>
+        private int GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                           ?? User.FindFirst("userId")?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+                throw new UnauthorizedAccessException("用户身份验证失败");
+            return userId;
+        }
+
+        /// <summary>
+        /// 创建换物请求
+        /// </summary>
+        /// <param name="exchangeRequest">换物请求DTO</param>
+        /// <returns>创建结果</returns>
         [HttpPost("request")]
         public async Task<IActionResult> CreateExchangeRequest([FromBody] ExchangeRequestDto exchangeRequest)
         {
-            // 检查请求参数是否有效
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest("请求参数无效");
-            }
+                if (!ModelState.IsValid)
+                {
+                    var errors = string.Join("; ", ModelState.Values
+                        .SelectMany(v => v.Errors)
+                        .Select(e => e.ErrorMessage));
+                    return BadRequest(ApiResponse.CreateError($"请求参数无效: {errors}"));
+                }
 
-            // 调用服务层方法处理换物请求
-            var result = await _exchangeService.CreateExchangeRequest(exchangeRequest);
-            if (result != null)
+                var userId = GetCurrentUserId();
+                var (success, message, exchangeRequestId) = await _exchangeService.CreateExchangeRequestAsync(exchangeRequest, userId);
+
+                if (success)
+                {
+                    return Ok(ApiResponse.CreateSuccess(new { exchangeRequestId }, message));
+                }
+
+                return BadRequest(ApiResponse.CreateError(message));
+            }
+            catch (UnauthorizedAccessException ex)
             {
-                return Ok(new { message = "换物请求成功", data = result });
+                _logger.LogWarning("换物请求认证失败: {Message}", ex.Message);
+                return Unauthorized(ApiResponse.CreateError("认证失败"));
             }
-
-            return BadRequest("换物请求失败");
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "创建换物请求时发生错误");
+                return StatusCode(500, ApiResponse.CreateError("系统内部错误"));
+            }
         }
 
         /// <summary>
-        /// 处理换物请求回应
+        /// 处理换物回应
         /// </summary>
-        /// <param name="exchangeId">换物请求ID</param>
-        /// <param name="status">回应状态（接受、拒绝、反报价）</param>
-        /// <returns>换物请求结果</returns>
-        [HttpPost("response/{exchangeId}")]
-        public async Task<IActionResult> HandleExchangeResponse(int exchangeId, [FromBody] string status)
+        /// <param name="exchangeResponse">换物回应DTO</param>
+        /// <returns>处理结果</returns>
+        [HttpPost("response")]
+        public async Task<IActionResult> HandleExchangeResponse([FromBody] ExchangeResponseDto exchangeResponse)
         {
-            // 校验状态参数
-            if (string.IsNullOrEmpty(status))
+            try
             {
-                return BadRequest("状态不能为空");
-            }
+                if (!ModelState.IsValid)
+                {
+                    var errors = string.Join("; ", ModelState.Values
+                        .SelectMany(v => v.Errors)
+                        .Select(e => e.ErrorMessage));
+                    return BadRequest(ApiResponse.CreateError($"请求参数无效: {errors}"));
+                }
 
-            // 调用服务层处理回应
-            var result = await _exchangeService.HandleExchangeResponse(exchangeId, status);
-            if (result)
+                var userId = GetCurrentUserId();
+                var (success, message) = await _exchangeService.HandleExchangeResponseAsync(exchangeResponse, userId);
+
+                if (success)
+                {
+                    return Ok(ApiResponse.CreateSuccess(message));
+                }
+
+                return BadRequest(ApiResponse.CreateError(message));
+            }
+            catch (UnauthorizedAccessException ex)
             {
-                return Ok("换物状态更新成功");
+                _logger.LogWarning("换物回应认证失败: {Message}", ex.Message);
+                return Unauthorized(ApiResponse.CreateError("认证失败"));
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "处理换物回应时发生错误");
+                return StatusCode(500, ApiResponse.CreateError("系统内部错误"));
+            }
+        }
 
-            return BadRequest("换物处理失败");
+        /// <summary>
+        /// 获取我的换物请求记录
+        /// </summary>
+        /// <param name="pageIndex">页码</param>
+        /// <param name="pageSize">页大小</param>
+        /// <returns>换物请求列表</returns>
+        [HttpGet("my-requests")]
+        public async Task<IActionResult> GetMyExchangeRequests([FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var (exchangeRequests, totalCount) = await _exchangeService.GetUserExchangeRequestsAsync(userId, pageIndex, pageSize);
+
+                var result = new
+                {
+                    exchangeRequests,
+                    totalCount,
+                    pageIndex,
+                    pageSize,
+                    totalPages = (int)Math.Ceiling((double)totalCount / pageSize)
+                };
+
+                return Ok(ApiResponse.CreateSuccess(result));
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning("获取换物请求记录认证失败: {Message}", ex.Message);
+                return Unauthorized(ApiResponse.CreateError("认证失败"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取换物请求记录时发生错误");
+                return StatusCode(500, ApiResponse.CreateError("系统内部错误"));
+            }
+        }
+
+        /// <summary>
+        /// 获取换物请求详情
+        /// </summary>
+        /// <param name="exchangeRequestId">换物请求ID</param>
+        /// <returns>换物请求详情</returns>
+        [HttpGet("{exchangeRequestId}")]
+        public async Task<IActionResult> GetExchangeRequestDetails(int exchangeRequestId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var exchangeRequest = await _exchangeService.GetExchangeRequestDetailsAsync(exchangeRequestId, userId);
+
+                if (exchangeRequest == null)
+                {
+                    return NotFound(ApiResponse.CreateError("换物请求不存在或无权限访问"));
+                }
+
+                return Ok(ApiResponse.CreateSuccess(exchangeRequest));
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning("获取换物请求详情认证失败: {Message}", ex.Message);
+                return Unauthorized(ApiResponse.CreateError("认证失败"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取换物请求详情时发生错误，请求ID: {ExchangeRequestId}", exchangeRequestId);
+                return StatusCode(500, ApiResponse.CreateError("系统内部错误"));
+            }
         }
     }
 }

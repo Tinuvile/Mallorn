@@ -102,6 +102,8 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<INegotiationsRepository, NegotiationsRepository>();
+        services.AddScoped<IExchangeRequestsRepository, ExchangeRequestsRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         return services;
     }
@@ -193,6 +195,25 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IValidateOptions<FileStorageOptions>, FileStorageOptionsValidator>();
         return services;
     }
+
+
+    /// <summary>
+    /// 添加议价服务
+    /// </summary>
+    public static IServiceCollection AddBargainServices(this IServiceCollection services)
+    {
+        services.AddScoped<Services.Interfaces.IBargainService, Services.Bargain.BargainService>();
+        return services;
+    }
+
+    /// <summary>
+    /// 添加换物服务
+    /// </summary>
+    public static IServiceCollection AddExchangeServices(this IServiceCollection services)
+    {
+        services.AddScoped<Services.Interfaces.IExchangeService, Services.Exchange.ExchangeService>();
+        return services;
+    }
 }
 
 /// <summary>
@@ -232,18 +253,3 @@ public class FileStorageOptionsValidator : IValidateOptions<FileStorageOptions>
         return ValidateOptionsResult.Success;
     }
 }
-
-/// <summary>
-/// 添加议价与换物相关服务
-/// </summary>
-public static IServiceCollection AddTradeServices(this IServiceCollection services)
-{
-    services.AddScoped<IBargainService, BargainService>();
-    services.AddScoped<IExchangeService, ExchangeService>();
-
-    services.AddScoped<IBargainRepository, BargainRepository>();
-    services.AddScoped<IExchangeRepository, ExchangeRepository>();
-
-    return services;
-}
-

@@ -1,69 +1,188 @@
 using CampusTrade.API.Models.DTOs.Bargain;
-using CampusTrade.API.Services.Bargain;
+using CampusTrade.API.Models.DTOs.Common;
+using CampusTrade.API.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
+using System.Security.Claims;
 
 namespace CampusTrade.API.Controllers
 {
+    /// <summary>
+    /// 议价控制器
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class BargainController : ControllerBase
     {
         private readonly IBargainService _bargainService;
+        private readonly ILogger<BargainController> _logger;
 
-        // 构造函数，通过依赖注入获取 BargainService 实例
-        public BargainController(IBargainService bargainService)
+        public BargainController(IBargainService bargainService, ILogger<BargainController> logger)
         {
             _bargainService = bargainService;
+            _logger = logger;
         }
 
         /// <summary>
-        /// 买家发起议价请求
+        /// 获取当前用户ID
         /// </summary>
-        /// <param name="bargainRequest">议价请求DTO，包含订单ID和议价价格</param>
-        /// <returns>议价结果</returns>
+        private int GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                           ?? User.FindFirst("userId")?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+                throw new UnauthorizedAccessException("用户身份验证失败");
+            return userId;
+        }
+
+        /// <summary>
+        /// 创建议价请求
+        /// </summary>
+        /// <param name="bargainRequest">议价请求DTO</param>
+        /// <returns>创建结果</returns>
         [HttpPost("request")]
         public async Task<IActionResult> CreateBargainRequest([FromBody] BargainRequestDto bargainRequest)
         {
-            // 检查请求参数是否有效
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest("请求参数无效");
-            }
+                if (!ModelState.IsValid)
+                {
+                    var errors = string.Join("; ", ModelState.Values
+                        .SelectMany(v => v.Errors)
+                        .Select(e => e.ErrorMessage));
+                    return BadRequest(ApiResponse.CreateError($"请求参数无效: {errors}"));
+                }
 
-            // 调用服务层方法处理议价请求
-            var result = await _bargainService.CreateBargainRequest(bargainRequest);
-            if (result != null)
+                var userId = GetCurrentUserId();
+                var (success, message, negotiationId) = await _bargainService.CreateBargainRequestAsync(bargainRequest, userId);
+
+                if (success)
+                {
+                    return Ok(ApiResponse.CreateSuccess(new { negotiationId }, message));
+                }
+
+                return BadRequest(ApiResponse.CreateError(message));
+            }
+            catch (UnauthorizedAccessException ex)
             {
-                return Ok(new { message = "议价请求成功", data = result });
+                _logger.LogWarning("议价请求认证失败: {Message}", ex.Message);
+                return Unauthorized(ApiResponse.CreateError("认证失败"));
             }
-
-            return BadRequest("议价请求失败");
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "创建议价请求时发生错误");
+                return StatusCode(500, ApiResponse.CreateError("系统内部错误"));
+            }
         }
 
         /// <summary>
-        /// 卖家处理议价
+        /// 处理议价回应
         /// </summary>
-        /// <param name="negotiationId">议价记录ID</param>
-        /// <param name="status">操作状态（接受、拒绝、反报价）</param>
-        /// <returns>议价状态更新结果</returns>
-        [HttpPost("response/{negotiationId}")]
-        public async Task<IActionResult> HandleBargainResponse(int negotiationId, [FromBody] string status)
+        /// <param name="bargainResponse">议价回应DTO</param>
+        /// <returns>处理结果</returns>
+        [HttpPost("response")]
+        public async Task<IActionResult> HandleBargainResponse([FromBody] BargainResponseDto bargainResponse)
         {
-            // 校验状态参数
-            if (string.IsNullOrEmpty(status))
+            try
             {
-                return BadRequest("状态不能为空");
-            }
+                if (!ModelState.IsValid)
+                {
+                    var errors = string.Join("; ", ModelState.Values
+                        .SelectMany(v => v.Errors)
+                        .Select(e => e.ErrorMessage));
+                    return BadRequest(ApiResponse.CreateError($"请求参数无效: {errors}"));
+                }
 
-            // 调用服务层处理卖家回应
-            var result = await _bargainService.HandleBargainResponse(negotiationId, status);
-            if (result)
+                var userId = GetCurrentUserId();
+                var (success, message) = await _bargainService.HandleBargainResponseAsync(bargainResponse, userId);
+
+                if (success)
+                {
+                    return Ok(ApiResponse.CreateSuccess(message));
+                }
+
+                return BadRequest(ApiResponse.CreateError(message));
+            }
+            catch (UnauthorizedAccessException ex)
             {
-                return Ok("议价状态更新成功");
+                _logger.LogWarning("议价回应认证失败: {Message}", ex.Message);
+                return Unauthorized(ApiResponse.CreateError("认证失败"));
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "处理议价回应时发生错误");
+                return StatusCode(500, ApiResponse.CreateError("系统内部错误"));
+            }
+        }
 
-            return BadRequest("议价处理失败");
+        /// <summary>
+        /// 获取我的议价记录
+        /// </summary>
+        /// <param name="pageIndex">页码</param>
+        /// <param name="pageSize">页大小</param>
+        /// <returns>议价记录列表</returns>
+        [HttpGet("my-negotiations")]
+        public async Task<IActionResult> GetMyNegotiations([FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var (negotiations, totalCount) = await _bargainService.GetUserNegotiationsAsync(userId, pageIndex, pageSize);
+
+                var result = new
+                {
+                    negotiations,
+                    totalCount,
+                    pageIndex,
+                    pageSize,
+                    totalPages = (int)Math.Ceiling((double)totalCount / pageSize)
+                };
+
+                return Ok(ApiResponse.CreateSuccess(result));
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning("获取议价记录认证失败: {Message}", ex.Message);
+                return Unauthorized(ApiResponse.CreateError("认证失败"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取议价记录时发生错误");
+                return StatusCode(500, ApiResponse.CreateError("系统内部错误"));
+            }
+        }
+
+        /// <summary>
+        /// 获取议价详情
+        /// </summary>
+        /// <param name="negotiationId">议价ID</param>
+        /// <returns>议价详情</returns>
+        [HttpGet("{negotiationId}")]
+        public async Task<IActionResult> GetNegotiationDetails(int negotiationId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var negotiation = await _bargainService.GetNegotiationDetailsAsync(negotiationId, userId);
+
+                if (negotiation == null)
+                {
+                    return NotFound(ApiResponse.CreateError("议价记录不存在或无权限访问"));
+                }
+
+                return Ok(ApiResponse.CreateSuccess(negotiation));
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning("获取议价详情认证失败: {Message}", ex.Message);
+                return Unauthorized(ApiResponse.CreateError("认证失败"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取议价详情时发生错误，议价ID: {NegotiationId}", negotiationId);
+                return StatusCode(500, ApiResponse.CreateError("系统内部错误"));
+            }
         }
     }
 }

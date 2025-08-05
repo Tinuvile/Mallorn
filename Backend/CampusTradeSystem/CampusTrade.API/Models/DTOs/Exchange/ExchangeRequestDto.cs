@@ -23,6 +23,7 @@ namespace CampusTrade.API.Models.DTOs.Exchange
         /// 交换条件说明（如：商品状态要求等）
         /// </summary>
         [Required(ErrorMessage = "交换条件不能为空")]
-        public string Terms { get; set; }
+        [StringLength(500, ErrorMessage = "交换条件不能超过500个字符")]
+        public string Terms { get; set; } = string.Empty;
     }
 }

@@ -159,14 +159,17 @@ try
     // 注册后台服务
     builder.Services.AddHostedService<CacheRefreshBackgroundService>();
 
-    // 注册缓存服务（确保这些已存在）
+    // 注册缓存服务
     builder.Services.AddScoped<ICategoryCacheService, CategoryCacheService>();
     builder.Services.AddScoped<IProductCacheService, ProductCacheService>();
     builder.Services.AddScoped<ISystemConfigCacheService, SystemConfigCacheService>();
     builder.Services.AddScoped<IUserCacheService, UserCacheService>();
 
-    //注册交易服务
-    builder.Services.AddTradeServices();
+    // 注册议价服务
+    builder.Services.AddBargainServices();
+
+    // 注册换物服务
+    builder.Services.AddExchangeServices();
 
 
 
@@ -178,7 +181,7 @@ try
     // 配置HTTP请求管道
     if (app.Environment.IsDevelopment())
     {
-        // 在开发环境下，先配置Swagger，避免被其他中间件影响
+        // 开发环境下，先配置Swagger，避免被其他中间件影响
         app.UseSwagger();
         app.UseSwaggerUI(c =>
         {

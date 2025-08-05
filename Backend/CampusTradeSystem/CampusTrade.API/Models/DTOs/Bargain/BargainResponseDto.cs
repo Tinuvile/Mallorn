@@ -18,7 +18,7 @@ namespace CampusTrade.API.Models.DTOs.Bargain
         /// </summary>
         [Required(ErrorMessage = "状态不能为空")]
         [StringLength(20, ErrorMessage = "状态长度不能超过20个字符")]
-        public string Status { get; set; }
+        public string Status { get; set; } = string.Empty;
 
         /// <summary>
         /// 如果卖家反报价，需要提供新报价
