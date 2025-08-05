@@ -1,11 +1,11 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using CampusTrade.API.Services.Interfaces;
+using CampusTrade.API.Data;
 using CampusTrade.API.Models.DTOs.Order;
 using CampusTrade.API.Models.DTOs.Payment;
 using CampusTrade.API.Models.Entities;
-using CampusTrade.API.Data;
+using CampusTrade.API.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace CampusTrade.Tests.UnitTests.Services
 {

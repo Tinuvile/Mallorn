@@ -12,7 +12,7 @@ namespace CampusTrade.API.Services.ScheduledTasks
     {
         private readonly IServiceScopeFactory _scopeFactory;
 
-        public OrderProcessingTask(ILogger<OrderProcessingTask> logger, IServiceScopeFactory scopeFactory) 
+        public OrderProcessingTask(ILogger<OrderProcessingTask> logger, IServiceScopeFactory scopeFactory)
             : base(logger)
         {
             _scopeFactory = scopeFactory;
@@ -29,7 +29,7 @@ namespace CampusTrade.API.Services.ScheduledTasks
             {
                 // 处理过期订单
                 var processedCount = await orderService.ProcessExpiredOrdersAsync();
-                
+
                 if (processedCount > 0)
                 {
                     _logger.LogInformation("定时任务处理了 {Count} 个过期订单", processedCount);

@@ -18,7 +18,7 @@ namespace CampusTrade.API.Services.Background
         private static readonly TimeSpan CheckInterval = TimeSpan.FromMinutes(1);
 
         public OrderTimeoutBackgroundService(
-            IServiceScopeFactory scopeFactory, 
+            IServiceScopeFactory scopeFactory,
             ILogger<OrderTimeoutBackgroundService> logger)
         {
             _scopeFactory = scopeFactory;
@@ -63,7 +63,7 @@ namespace CampusTrade.API.Services.Background
             try
             {
                 var processedCount = await orderService.ProcessExpiredOrdersAsync();
-                
+
                 if (processedCount > 0)
                 {
                     _logger.LogInformation("处理了 {Count} 个过期订单", processedCount);

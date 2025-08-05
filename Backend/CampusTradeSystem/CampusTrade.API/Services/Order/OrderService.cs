@@ -3,8 +3,8 @@ using CampusTrade.API.Models.DTOs.Payment;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Interfaces;
-using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace CampusTrade.API.Services.Order
 {

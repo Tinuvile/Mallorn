@@ -91,9 +91,9 @@ namespace CampusTrade.API.Repositories.Implementations
         {
             var currentTime = DateTime.Now;
             return await _dbSet
-                .Where(o => o.Status == Order.OrderStatus.PendingPayment && 
-                           o.ExpireTime.HasValue && 
-                           o.ExpireTime.Value > currentTime && 
+                .Where(o => o.Status == Order.OrderStatus.PendingPayment &&
+                           o.ExpireTime.HasValue &&
+                           o.ExpireTime.Value > currentTime &&
                            o.ExpireTime.Value <= cutoffTime)
                 .Include(o => o.Product)
                 .Include(o => o.Buyer)

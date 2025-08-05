@@ -78,7 +78,7 @@ namespace CampusTrade.API.Repositories.Implementations
             {
                 // 检查是否已有活动事务，如果有则不创建新事务
                 var hasActiveTransaction = _context.Database.CurrentTransaction != null;
-                
+
                 if (!hasActiveTransaction)
                 {
                     using var transaction = await _context.Database.BeginTransactionAsync();
@@ -129,7 +129,7 @@ namespace CampusTrade.API.Repositories.Implementations
             {
                 // 检查是否已有活动事务，如果有则不创建新事务
                 var hasActiveTransaction = _context.Database.CurrentTransaction != null;
-                
+
                 if (!hasActiveTransaction)
                 {
                     using var transaction = await _context.Database.BeginTransactionAsync();

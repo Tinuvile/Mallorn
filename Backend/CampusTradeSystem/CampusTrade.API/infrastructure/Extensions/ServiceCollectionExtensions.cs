@@ -5,8 +5,8 @@ using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Auth;
 using CampusTrade.API.Services.Background;
 using CampusTrade.API.Services.File;
-using CampusTrade.API.Services.Order;
 using CampusTrade.API.Services.Interfaces;
+using CampusTrade.API.Services.Order;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -193,7 +193,7 @@ public static class ServiceCollectionExtensions
     {
         // 注册通知发送后台服务
         services.AddHostedService<NotificationBackgroundService>();
-        
+
         // 注册订单超时监控后台服务
         services.AddHostedService<OrderTimeoutBackgroundService>();
 
@@ -221,7 +221,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRechargeService, RechargeService>();
         return services;
     }
-  
+
     /// 添加商品相关服务
     /// </summary>
     public static IServiceCollection AddProductServices(this IServiceCollection services)

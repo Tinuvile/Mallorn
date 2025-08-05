@@ -1,11 +1,11 @@
-using Moq;
-using CampusTrade.API.Services.Order;
-using CampusTrade.API.Services.Interfaces;
-using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Models.DTOs.Order;
 using CampusTrade.API.Models.DTOs.Payment;
 using CampusTrade.API.Models.Entities;
+using CampusTrade.API.Repositories.Interfaces;
+using CampusTrade.API.Services.Interfaces;
+using CampusTrade.API.Services.Order;
 using Microsoft.Extensions.Logging;
+using Moq;
 
 namespace CampusTrade.Tests.UnitTests.Services
 {

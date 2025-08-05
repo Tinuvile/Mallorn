@@ -1,15 +1,15 @@
-using Xunit;
-using Moq;
-using Microsoft.Extensions.Logging;
-using Microsoft.EntityFrameworkCore;
-using CampusTrade.API.Services.Order;
-using CampusTrade.API.Services.Interfaces;
-using CampusTrade.API.Repositories.Interfaces;
-using CampusTrade.API.Models.Entities;
+using CampusTrade.API.Data;
 using CampusTrade.API.Models.DTOs.Order;
 using CampusTrade.API.Models.DTOs.Payment;
-using CampusTrade.API.Data;
+using CampusTrade.API.Models.Entities;
+using CampusTrade.API.Repositories.Interfaces;
+using CampusTrade.API.Services.Interfaces;
+using CampusTrade.API.Services.Order;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Moq;
+using Xunit;
 
 namespace CampusTrade.Tests.IntegrationTests
 {

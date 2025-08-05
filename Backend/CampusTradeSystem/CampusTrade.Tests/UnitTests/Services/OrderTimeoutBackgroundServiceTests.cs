@@ -1,12 +1,12 @@
+using CampusTrade.API.Data;
+using CampusTrade.API.Models.Entities;
+using CampusTrade.API.Services.Background;
+using CampusTrade.API.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
-using CampusTrade.API.Services.Background;
-using CampusTrade.API.Services.Interfaces;
-using CampusTrade.API.Models.Entities;
-using CampusTrade.API.Data;
-using Microsoft.EntityFrameworkCore;
 
 namespace CampusTrade.Tests.UnitTests.Services
 {
@@ -105,10 +105,10 @@ namespace CampusTrade.Tests.UnitTests.Services
 
             // Act
             await _backgroundService.StartAsync(shortCancellationTokenSource.Token);
-            
+
             // 等待足够长的时间让后台任务执行
             await Task.Delay(6000, CancellationToken.None); // 等待6秒确保执行
-            
+
             await _backgroundService.StopAsync(CancellationToken.None);
 
             // Assert - 验证ProcessExpiredOrdersAsync被调用
@@ -174,11 +174,11 @@ namespace CampusTrade.Tests.UnitTests.Services
             var services = new ServiceCollection();
             services.AddSingleton(_context);
             services.AddSingleton(_mockLogger.Object);
-            
+
             // 注册所需的服务（这里需要根据实际DI配置调整）
             // services.AddScoped<IOrderService, OrderService>();
             // services.AddScoped<IOrderRepository, OrderRepository>();
-            
+
             _serviceProvider = services.BuildServiceProvider();
 
             // 初始化测试数据
@@ -401,7 +401,7 @@ namespace CampusTrade.Tests.UnitTests.Services
 
             // Assert
             Assert.Equal(totalBatches * batchSize, allCreatedOrders.Count);
-            
+
             // 验证所有订单都被取消
             foreach (var order in allCreatedOrders)
             {
@@ -430,7 +430,7 @@ namespace CampusTrade.Tests.UnitTests.Services
                 await _context.SaveChangesAsync();
 
                 var isExpiring = i < expiringOrdersCount;
-                var expireTime = isExpiring 
+                var expireTime = isExpiring
                     ? DateTime.Now.AddMinutes(10 + i) // 即将过期
                     : DateTime.Now.AddHours(1 + i);   // 正常订单
 
@@ -453,7 +453,7 @@ namespace CampusTrade.Tests.UnitTests.Services
 
             // Act - 测量查询即将过期订单的性能
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            
+
             var expiringOrders = await _context.Orders
                 .Where(o => o.Status == Order.OrderStatus.PendingPayment &&
                            o.ExpireTime.HasValue &&
@@ -465,7 +465,7 @@ namespace CampusTrade.Tests.UnitTests.Services
 
             // Assert
             Assert.Equal(expiringOrdersCount, expiringOrders.Count);
-            Assert.True(stopwatch.ElapsedMilliseconds < 1000, 
+            Assert.True(stopwatch.ElapsedMilliseconds < 1000,
                 $"查询耗时 {stopwatch.ElapsedMilliseconds}ms，应该在1秒内完成");
         }
 

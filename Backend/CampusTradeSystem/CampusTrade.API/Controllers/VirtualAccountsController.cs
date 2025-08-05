@@ -1,9 +1,9 @@
-using CampusTrade.API.Repositories.Interfaces;
-using CampusTrade.API.Models.DTOs.VirtualAccount;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using CampusTrade.API.Infrastructure.Extensions;
+using CampusTrade.API.Models.DTOs.VirtualAccount;
+using CampusTrade.API.Repositories.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace CampusTrade.API.Controllers
 {

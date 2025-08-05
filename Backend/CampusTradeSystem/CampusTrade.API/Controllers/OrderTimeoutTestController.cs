@@ -1,12 +1,12 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
-using CampusTrade.API.Services.Interfaces;
+using CampusTrade.API.Data;
+using CampusTrade.API.Infrastructure.Extensions;
 using CampusTrade.API.Models.DTOs;
 using CampusTrade.API.Models.Entities;
-using CampusTrade.API.Data;
-using Microsoft.EntityFrameworkCore;
 using CampusTrade.API.Repositories.Interfaces;
-using CampusTrade.API.Infrastructure.Extensions;
+using CampusTrade.API.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace CampusTrade.API.Controllers
 {
