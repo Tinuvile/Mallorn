@@ -1,15 +1,16 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
-using CampusTrade.API.Data;
+using CampusTrade.API.Infrastructure.Extensions;
 using CampusTrade.API.Infrastructure.Utils;
 using CampusTrade.API.Models.DTOs.Auth;
 using CampusTrade.API.Models.DTOs.Common;
 using CampusTrade.API.Models.Entities;
+using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Auth;
 using CampusTrade.API.Services.Email;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+
 
 namespace CampusTrade.API.Controllers;
 
@@ -20,15 +21,15 @@ public class AuthController : ControllerBase
     private readonly IAuthService _authService;
     private readonly EmailService _emailService;
     private readonly EmailVerificationService _verificationService;
-    private readonly CampusTradeDbContext _context;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<AuthController> _logger;
 
-    public AuthController(IAuthService authService, EmailService emailService, EmailVerificationService verificationService, CampusTradeDbContext context, ILogger<AuthController> logger)
+    public AuthController(IAuthService authService, EmailService emailService, EmailVerificationService verificationService, IUnitOfWork unitOfWork, ILogger<AuthController> logger)
     {
         _authService = authService;
         _emailService = emailService;
         _verificationService = verificationService;
-        _context = context;
+        _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
@@ -101,8 +102,8 @@ public class AuthController : ControllerBase
                 DeviceType = deviceType,
                 RiskLevel = riskLevel
             };
-            await _context.LoginLogs.AddAsync(loginLog); // 注入CampusTradeDbContext
-            await _context.SaveChangesAsync();
+            await _unitOfWork.LoginLogs.AddAsync(loginLog);
+            await _unitOfWork.SaveChangesAsync();
 
             return Ok(ApiResponse<TokenResponse>.CreateSuccess(tokenResponse, "登录成功"));
         }
@@ -282,11 +283,7 @@ public class AuthController : ControllerBase
     {
         try
         {
-            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(userIdClaim, out var userId))
-            {
-                return Unauthorized(ApiResponse.CreateError("无效的用户身份", "INVALID_USER"));
-            }
+            var userId = User.GetUserId();
 
             var revokedCount = await _authService.LogoutAllDevicesAsync(userId);
 
