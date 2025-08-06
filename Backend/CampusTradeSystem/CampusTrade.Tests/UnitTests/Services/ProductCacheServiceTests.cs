@@ -1,5 +1,7 @@
 using System.Linq.Expressions;
 using CampusTrade.API.Data;
+using CampusTrade.API.Models.DTOs.Order;
+using CampusTrade.API.Models.DTOs.Payment;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Options;
 using CampusTrade.API.Services.Cache;

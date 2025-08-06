@@ -144,8 +144,14 @@ try
     // 添加认证相关服务
     builder.Services.AddAuthenticationServices();
 
+    // 添加举报相关服务
+    builder.Services.AddReportServices();
+
     // 添加文件管理服务
     builder.Services.AddFileManagementServices(builder.Configuration);
+
+    // 添加订单服务
+    builder.Services.AddOrderServices();
 
     // 添加商品服务
     builder.Services.AddProductServices();
@@ -172,13 +178,19 @@ try
     // 注册邮箱验证服务
     builder.Services.AddScoped<EmailVerificationService>();
 
+    // 注册议价服务
+    builder.Services.AddBargainServices();
+
+    // 注册换物服务
+    builder.Services.AddExchangeServices();
+
 
     var app = builder.Build();
 
     // 配置HTTP请求管道
     if (app.Environment.IsDevelopment())
     {
-        // 在开发环境下，先配置Swagger，避免被其他中间件影响
+        // 开发环境下，先配置Swagger，避免被其他中间件影响
         app.UseSwagger();
         app.UseSwaggerUI(c =>
         {
