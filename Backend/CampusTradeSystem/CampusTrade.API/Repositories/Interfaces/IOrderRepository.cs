@@ -82,3 +82,4 @@ namespace CampusTrade.API.Repositories.Interfaces
         #endregion
     }
 }
+

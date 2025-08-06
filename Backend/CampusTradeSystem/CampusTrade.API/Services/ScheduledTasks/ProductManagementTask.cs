@@ -41,3 +41,4 @@ namespace CampusTrade.API.Services.ScheduledTasks
         }
     }
 }
+
