@@ -3,7 +3,9 @@ using CampusTrade.API.Controllers;
 using CampusTrade.API.Models.DTOs.Auth;
 using CampusTrade.API.Models.DTOs.Common;
 using CampusTrade.API.Models.Entities;
+using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Auth;
+using CampusTrade.API.Services.Email;
 using CampusTrade.Tests.Helpers;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
@@ -20,14 +22,20 @@ namespace CampusTrade.Tests.UnitTests.Controllers;
 public class AuthControllerTests : IDisposable
 {
     private readonly Mock<IAuthService> _mockAuthService;
+    private readonly Mock<EmailService> _mockEmailService;
+    private readonly Mock<EmailVerificationService> _mockVerificationService;
+    private readonly Mock<IUnitOfWork> _mockUnitOfWork;
     private readonly Mock<ILogger<AuthController>> _mockLogger;
     private readonly AuthController _authController;
 
     public AuthControllerTests()
     {
         _mockAuthService = new Mock<IAuthService>();
+        _mockEmailService = new Mock<EmailService>(new Mock<Microsoft.Extensions.Configuration.IConfiguration>().Object, new Mock<ILogger<EmailService>>().Object);
+        _mockVerificationService = new Mock<EmailVerificationService>(new Mock<IUnitOfWork>().Object, _mockEmailService.Object, new Mock<Microsoft.Extensions.Options.IOptions<CampusTrade.API.Options.EmailVerificationOptions>>().Object, new Mock<ILogger<EmailVerificationService>>().Object);
+        _mockUnitOfWork = new Mock<IUnitOfWork>();
         _mockLogger = MockHelper.CreateMockLogger<AuthController>();
-        _authController = new AuthController(_mockAuthService.Object, _mockLogger.Object);
+        _authController = new AuthController(_mockAuthService.Object, _mockEmailService.Object, _mockVerificationService.Object, _mockUnitOfWork.Object, _mockLogger.Object);
 
         // 设置基本的HttpContext
         var httpContext = new DefaultHttpContext();

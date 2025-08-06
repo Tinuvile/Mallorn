@@ -21,7 +21,7 @@ namespace CampusTrade.API.Repositories.Implementations
         private IRefreshTokenRepository? _refreshTokenRepository;
         private ICreditHistoryRepository? _creditHistoryRepository;
         private IRepository<LoginLogs>? _loginLogsRepository;
-        private IRepository<EmailVerification>? _emailVerificationRepository;
+        private IEmailVerificationRepository? _emailVerificationRepository;
         private ICategoriesRepository? _categoryRepository;
         private IProductRepository? _productRepository;
         private IRepository<ProductImage>? _productImageRepository;
@@ -51,7 +51,7 @@ namespace CampusTrade.API.Repositories.Implementations
         public IRefreshTokenRepository RefreshTokens => _refreshTokenRepository ??= new RefreshTokenRepository(_context);
         public ICreditHistoryRepository CreditHistory => _creditHistoryRepository ??= new CreditHistoryRepository(_context);
         public IRepository<LoginLogs> LoginLogs => _loginLogsRepository ??= new Repository<LoginLogs>(_context);
-        public IRepository<EmailVerification> EmailVerifications => _emailVerificationRepository ??= new Repository<EmailVerification>(_context);
+        public IEmailVerificationRepository EmailVerifications => _emailVerificationRepository ??= new EmailVerificationRepository(_context);
         public ICategoriesRepository Categories => _categoryRepository ??= new CategoriesRepository(_context);
         public IProductRepository Products => _productRepository ??= new ProductRepository(_context);
         public IRepository<ProductImage> ProductImages => _productImageRepository ??= new Repository<ProductImage>(_context);

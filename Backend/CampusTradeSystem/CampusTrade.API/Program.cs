@@ -4,6 +4,7 @@ using CampusTrade.API.Data;
 using CampusTrade.API.Infrastructure.Extensions;
 using CampusTrade.API.Infrastructure.Middleware;
 using CampusTrade.API.Options;
+using CampusTrade.API.Services.Auth;
 using CampusTrade.API.Services.Background;
 using CampusTrade.API.Services.Cache;
 using CampusTrade.API.Services.Interfaces;
@@ -141,7 +142,7 @@ try
     builder.Services.AddHostedService<NotificationPushTask>();
 
     // 添加认证相关服务
-    builder.Services.AddAuthenticationServices();
+    builder.Services.AddAuthenticationServices(builder.Configuration);
 
     // 添加举报相关服务
     builder.Services.AddReportServices();
@@ -174,15 +175,14 @@ try
     builder.Services.AddScoped<ISystemConfigCacheService, SystemConfigCacheService>();
     builder.Services.AddScoped<IUserCacheService, UserCacheService>();
 
+    // 注册邮箱验证服务
+    builder.Services.AddScoped<EmailVerificationService>();
+
     // 注册议价服务
     builder.Services.AddBargainServices();
 
     // 注册换物服务
     builder.Services.AddExchangeServices();
-
-
-
-
 
 
     var app = builder.Build();
