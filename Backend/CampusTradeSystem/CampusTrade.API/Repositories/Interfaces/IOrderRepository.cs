@@ -49,6 +49,12 @@ namespace CampusTrade.API.Repositories.Interfaces
         /// </summary>
         Task<IEnumerable<Order>> GetExpiredOrdersAsync();
         /// <summary>
+        /// 获取即将过期的订单
+        /// </summary>
+        /// <param name="cutoffTime">截止时间</param>
+        /// <returns>即将过期的订单列表</returns>
+        Task<IEnumerable<Order>> GetExpiringOrdersAsync(DateTime cutoffTime);
+        /// <summary>
         /// 获取用户的订单统计（买家/卖家分组）
         /// </summary>
         Task<Dictionary<string, int>> GetOrderStatisticsByUserAsync(int userId);
@@ -82,3 +88,4 @@ namespace CampusTrade.API.Repositories.Interfaces
         #endregion
     }
 }
+

@@ -170,84 +170,76 @@ try
     builder.Services.AddScoped<IReviewService, ReviewService>();
     var app = builder.Build();
 
-    // 配置HTTP请求管道
     if (app.Environment.IsDevelopment())
     {
-        // 在开发环境下，先配置Swagger，避免被其他中间件影响
+        // 开发环境下，先配置Swagger，避免被其他中间件影响
         app.UseSwagger();
-
         app.UseSwaggerUI(c =>
-{
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Campus Trade API v1.0");
-    c.RoutePrefix = string.Empty; // 可选：设置 Swagger 为根路径
-});
-    }
-    /*
-            app.UseSwaggerUI(c =>
+        {
+            c.SwaggerEndpoint("/swagger/v1/swagger.json", "Campus Trade API v1.0");
+            c.RoutePrefix = string.Empty; // 将Swagger UI设置为根路径
+            c.DocumentTitle = "Campus Trade API Documentation";
+            c.DefaultModelsExpandDepth(-1); // 隐藏模型
+            c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None); // 默认折叠所有操作
+
+            // 自定义HTML模板
+            c.IndexStream = () =>
             {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Campus Trade API v1.0");
-                c.RoutePrefix = string.Empty; // 将Swagger UI设置为根路径
-                c.DocumentTitle = "Campus Trade API Documentation";
-                c.DefaultModelsExpandDepth(-1); // 隐藏模型
-                c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None); // 默认折叠所有操作
-         // 自定义HTML模板
-                c.IndexStream = () =>
-                {
-                    var assembly = System.Reflection.Assembly.GetExecutingAssembly();
-                    return new MemoryStream(System.Text.Encoding.UTF8.GetBytes(@"
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset='UTF-8'>
-         <meta http-equiv='X-UA-Compatible' content='IE=edge'>
-         <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-        <title>Campus Trade API Documentation</title>
-        <link rel='stylesheet' type='text/css' href='./swagger-ui.css' />
-        <style>
-            html { box-sizing: border-box; overflow: -moz-scrollbars-vertical; overflow-y: scroll; }
-            *, *:before, *:after { box-sizing: inherit; }
-            body { margin:0; background: #fafafa; }
-        </style>
-    </head>
-    <body>
-        <div id='swagger-ui'></div>
-         <script>
-             // Polyfill for Object.hasOwn (ES2022) to support older browsers
-             if (!Object.hasOwn) {
-                 Object.hasOwn = function(obj, prop) {
-                     return Object.prototype.hasOwnProperty.call(obj, prop);
-                 };
-             }
-         </script>
-        <script src='./swagger-ui-bundle.js'></script>
-        <script src='./swagger-ui-standalone-preset.js'></script>
-        <script>
-            window.onload = function() {
-                const ui = SwaggerUIBundle({
-                    url: '/swagger/v1/swagger.json',
-                    dom_id: '#swagger-ui',
-                    deepLinking: true,
-                    presets: [
-                        SwaggerUIBundle.presets.apis,
-                        SwaggerUIStandalonePreset
-                    ],
-                    plugins: [
-                        SwaggerUIBundle.plugins.DownloadUrl
-                    ],
-                    layout: 'StandaloneLayout'
-                });
-            }
-        </script>
-    </body>
-    </html>"));
-                };
+                var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+                return new MemoryStream(System.Text.Encoding.UTF8.GetBytes(@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='UTF-8'>
+     <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+     <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Campus Trade API Documentation</title>
+    <link rel='stylesheet' type='text/css' href='./swagger-ui.css' />
+    <style>
+        html { box-sizing: border-box; overflow: -moz-scrollbars-vertical; overflow-y: scroll; }
+        *, *:before, *:after { box-sizing: inherit; }
+        body { margin:0; background: #fafafa; }
+    </style>
+</head>
+<body>
+    <div id='swagger-ui'></div>
+     <script>
+         // Polyfill for Object.hasOwn (ES2022) to support older browsers
+         if (!Object.hasOwn) {
+             Object.hasOwn = function(obj, prop) {
+                 return Object.prototype.hasOwnProperty.call(obj, prop);
+             };
+         }
+     </script>
+    <script src='./swagger-ui-bundle.js'></script>
+    <script src='./swagger-ui-standalone-preset.js'></script>
+    <script>
+        window.onload = function() {
+            const ui = SwaggerUIBundle({
+                url: '/swagger/v1/swagger.json',
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: 'StandaloneLayout'
             });
         }
-        else
-        {
-            app.UseHsts();
-        }
-    */
+    </script>
+</body>
+</html>"));
+            };
+        });
+    }
+    else
+    {
+        app.UseHsts();
+    }
+
     // 使用全局异常处理中间件
     app.UseGlobalExceptionHandler();
 
@@ -319,5 +311,6 @@ finally
 
 // 使Program类可供测试访问
 public partial class Program { }
+
 
 
