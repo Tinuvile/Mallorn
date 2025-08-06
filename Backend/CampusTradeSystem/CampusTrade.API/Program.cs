@@ -144,8 +144,17 @@ try
     // 添加认证相关服务
     builder.Services.AddAuthenticationServices();
 
+    // 添加举报相关服务
+    builder.Services.AddReportServices();
+
     // 添加文件管理服务
     builder.Services.AddFileManagementServices(builder.Configuration);
+
+    // 添加订单服务
+    builder.Services.AddOrderServices();
+
+    // 添加商品服务
+    builder.Services.AddProductServices();
 
     // 配置 CORS
     builder.Services.AddCorsPolicy(builder.Configuration);
@@ -160,20 +169,24 @@ try
     // 注册后台服务
     builder.Services.AddHostedService<CacheRefreshBackgroundService>();
 
-    // 注册缓存服务（确保这些已存在）
+    // 注册缓存服务
     builder.Services.AddScoped<ICategoryCacheService, CategoryCacheService>();
     builder.Services.AddScoped<IProductCacheService, ProductCacheService>();
     builder.Services.AddScoped<ISystemConfigCacheService, SystemConfigCacheService>();
     builder.Services.AddScoped<IUserCacheService, UserCacheService>();
 
-    // 注册评论服务
-    builder.Services.AddScoped<IReviewService, ReviewService>();
+    // 注册议价服务
+    builder.Services.AddBargainServices();
+
+    // 注册换物服务
+    builder.Services.AddExchangeServices();
+
     var app = builder.Build();
 
     // 配置HTTP请求管道
     if (app.Environment.IsDevelopment())
     {
-        // 在开发环境下，先配置Swagger，避免被其他中间件影响
+        // 开发环境下，先配置Swagger，避免被其他中间件影响
         app.UseSwagger();
 
         app.UseSwaggerUI(c =>
