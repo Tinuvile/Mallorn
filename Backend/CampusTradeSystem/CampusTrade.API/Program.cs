@@ -181,6 +181,9 @@ try
     // 注册换物服务
     builder.Services.AddExchangeServices();
 
+    // 注册评价服务
+    builder.Services.AddReviewServices();
+
     var app = builder.Build();
 
     // 配置HTTP请求管道
