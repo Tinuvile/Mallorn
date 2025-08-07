@@ -11,6 +11,15 @@
         </svg>
       </span>
       <span class="title">Campus Secondhand</span>
+      <v-btn
+            color="primary"
+            variant="outlined"
+            prepend-icon="mdi-home"
+            style="position: absolute; right: 50px;"
+            @click="goToHome"
+          >
+            返回主页
+          </v-btn>
     </header>
 
     <!-- 左侧导航栏 -->
@@ -37,18 +46,21 @@
     <!-- 主内容区域 -->
     <v-main class="mt-14">
       <v-container>
-        <h1 class="text-h4 mb-6">{{ pageTitle }}</h1>
+        <div class="d-flex align-center mb-6">
+          <h1 class="text-h4 mr-4">{{ pageTitle }}</h1>
+          
+        </div>
 
         <!-- 订单列表 -->
-        <v-list>
+        <v-list rounded="xl">
           <v-list-item
             v-for="order in filteredOrders"
             :key="order.id"
             @click="showOrderDetails(order)"
             class="mb-4"
           >
-            <v-card width="100%">
-              <v-card-item>
+            <v-card width="100%" rounded="xl">
+              <v-card-item >
                 <v-row>
                   <v-col cols="8">
                     <div class="text-subtitle-1">订单号：{{ order.orderNumber }}</div>
@@ -82,9 +94,9 @@
         </v-list>
 
         <!-- 订单详情对话框 -->
-        <v-dialog v-model="showDialog" max-width="700">
-          <v-card v-if="selectedOrder">
-            <v-card-title class="text-h5">
+        <v-dialog v-model="showDialog" max-width="700" >
+          <v-card v-if="selectedOrder" rounded="xl">
+            <v-card-title class="text-h5 pl-10 pt-10" >
               订单详情
               <v-spacer></v-spacer>
               <v-btn
@@ -145,9 +157,7 @@
                 <v-list-item>
                   <div class="text-body-1">联系电话：{{ selectedOrder.receiverPhone }}</div>
                 </v-list-item>
-                <v-list-item>
-                  <div class="text-body-1">收货地址：{{ selectedOrder.receiverAddress }}</div>
-                </v-list-item>
+               
               </v-list>
             </v-card-text>
 
@@ -161,7 +171,9 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const activeTab = ref('all')
 const showDialog = ref(false)
 const selectedOrder = ref(null)
@@ -224,15 +236,60 @@ const orders = ref([
     orderNumber: 'ORD20240101001',
     orderDate: '2024-01-01 10:00:00',
     status: 'pending',
-    productName: '商品名称1',
-    productDescription: '商品描述1',
-    productImage: '/path/to/image1.jpg',
-    price: 99.99,
+    productName: 'iPhone 14 Pro',
+    productDescription: '全新未拆封，256GB深空黑色',
+    productImage: '/path/to/iphone.jpg',
+    price: 8999.00,
     quantity: 1,
-    totalAmount: 99.99,
+    totalAmount: 8999.00,
     receiverName: '张三',
     receiverPhone: '13800138000',
-    receiverAddress: '北京市海淀区xx街xx号'
+    receiverAddress: '北京市朝阳区望京街道'
+  },
+  {
+    id: 2,
+    orderNumber: 'ORD20240102002',
+    orderDate: '2024-01-02 14:30:00',
+    status: 'processing',
+    productName: 'MacBook Pro 13英寸',
+    productDescription: 'M2芯片，512GB存储，9成新',
+    productImage: '/path/to/macbook.jpg',
+    price: 12999.00,
+    quantity: 1,
+    totalAmount: 12999.00,
+    receiverName: '李四',
+    receiverPhone: '13900139000',
+    receiverAddress: '上海市浦东新区陆家嘴金融区'
+  },
+  {
+    id: 3,
+    orderNumber: 'ORD20240103003',
+    orderDate: '2024-01-03 09:15:00',
+    status: 'shipped',
+    productName: 'AirPods Pro 2代',
+    productDescription: '原装正品，使用3个月',
+    productImage: '/path/to/airpods.jpg',
+    price: 1299.00,
+    quantity: 1,
+    totalAmount: 1299.00,
+    receiverName: '王五',
+    receiverPhone: '13700137000',
+    receiverAddress: '广州市天河区珠江新城'
+  },
+  {
+    id: 4,
+    orderNumber: 'ORD20240104004',
+    orderDate: '2024-01-04 16:45:00',
+    status: 'completed',
+    productName: '小米13 Ultra',
+    productDescription: '徕卡影像，黑色，128GB',
+    productImage: '/path/to/xiaomi.jpg',
+    price: 4599.00,
+    quantity: 1,
+    totalAmount: 4599.00,
+    receiverName: '赵六',
+    receiverPhone: '13600136000',
+    receiverAddress: '深圳市南山区科技园'
   }
 ])
 
@@ -361,6 +418,11 @@ const payOrder = async (orderId) => {
 
 const confirmReceived = async (orderId) => {
   console.log('确认收货操作:', orderId)
+}
+
+// 返回主页
+const goToHome = () => {
+  router.push('/')
 }
 </script>
 
