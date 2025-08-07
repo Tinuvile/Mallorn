@@ -123,8 +123,9 @@ namespace CampusTrade.API.Services.File
             try
             {
                 // 检查商品图片表
-                var productImageExists = await dbContext.ProductImages
-                    .AnyAsync(pi => pi.ImageUrl.Contains(fileName));
+                var productImageCount = await dbContext.ProductImages
+                    .CountAsync(pi => pi.ImageUrl.Contains(fileName));
+                var productImageExists = productImageCount > 0;
 
                 if (productImageExists)
                 {
@@ -132,8 +133,9 @@ namespace CampusTrade.API.Services.File
                 }
 
                 // 检查举报证据表
-                var reportEvidenceExists = await dbContext.ReportEvidences
-                    .AnyAsync(re => re.FileUrl.Contains(fileName));
+                var reportEvidenceCount = await dbContext.ReportEvidences
+                    .CountAsync(re => re.FileUrl.Contains(fileName));
+                var reportEvidenceExists = reportEvidenceCount > 0;
 
                 if (reportEvidenceExists)
                 {

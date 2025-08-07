@@ -186,10 +186,10 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<bool> CanDeleteCategoryAsync(int categoryId)
         {
-            var hasChildren = await _context.Categories.AnyAsync(c => c.ParentId == categoryId);
-            if (hasChildren) return false;
-            var hasProducts = await _context.Products.AnyAsync(p => p.CategoryId == categoryId);
-            return !hasProducts;
+            var childrenCount = await _context.Categories.CountAsync(c => c.ParentId == categoryId);
+            if (childrenCount > 0) return false;
+            var productsCount = await _context.Products.CountAsync(p => p.CategoryId == categoryId);
+            return productsCount == 0;
         }
         #endregion
 
