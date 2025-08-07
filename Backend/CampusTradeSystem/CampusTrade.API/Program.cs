@@ -6,6 +6,7 @@ using CampusTrade.API.Infrastructure.Middleware;
 using CampusTrade.API.Options;
 using CampusTrade.API.Services.Background;
 using CampusTrade.API.Services.Cache;
+using CampusTrade.API.Services.Review;
 using CampusTrade.API.Services.Interfaces;
 using CampusTrade.API.Services.ScheduledTasks;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -180,10 +181,8 @@ try
     // 注册换物服务
     builder.Services.AddExchangeServices();
 
-
-
-
-
+    // 注册评价服务
+    builder.Services.AddReviewServices();
 
     var app = builder.Build();
 
@@ -192,6 +191,14 @@ try
     {
         // 开发环境下，先配置Swagger，避免被其他中间件影响
         app.UseSwagger();
+
+        app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Campus Trade API v1.0");
+    c.RoutePrefix = string.Empty; // 可选：设置 Swagger 为根路径
+});
+    }
+/*
         app.UseSwaggerUI(c =>
         {
             c.SwaggerEndpoint("/swagger/v1/swagger.json", "Campus Trade API v1.0");
@@ -199,8 +206,7 @@ try
             c.DocumentTitle = "Campus Trade API Documentation";
             c.DefaultModelsExpandDepth(-1); // 隐藏模型
             c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None); // 默认折叠所有操作
-
-            // 自定义HTML模板
+     // 自定义HTML模板
             c.IndexStream = () =>
             {
                 var assembly = System.Reflection.Assembly.GetExecutingAssembly();
@@ -257,7 +263,7 @@ try
     {
         app.UseHsts();
     }
-
+*/
     // 使用全局异常处理中间件
     app.UseGlobalExceptionHandler();
 
