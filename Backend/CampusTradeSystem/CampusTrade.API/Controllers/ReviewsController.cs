@@ -24,9 +24,24 @@ namespace CampusTrade.API.Controllers
         [Authorize] // 需要身份验证
         public async Task<IActionResult> CreateReview([FromBody] CreateReviewDto dto)
         {
-            int userId = User.GetUserId();
-            bool result = await _reviewService.CreateReviewAsync(dto, userId);
-            return result ? Ok("评论成功") : BadRequest("评论失败");
+            try
+            {
+                int userId = User.GetUserId();
+                bool result = await _reviewService.CreateReviewAsync(dto, userId);
+                return result ? Ok("评论成功") : BadRequest("评论失败");
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbid(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         /// <summary>
@@ -35,8 +50,15 @@ namespace CampusTrade.API.Controllers
         [HttpGet("item/{itemId}")]
         public async Task<IActionResult> GetReviewsByItemId(int itemId)
         {
-            var reviews = await _reviewService.GetReviewsByItemIdAsync(itemId);
-            return Ok(reviews);
+            try
+            {
+                var reviews = await _reviewService.GetReviewsByItemIdAsync(itemId);
+                return Ok(reviews);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         /// <summary>
@@ -46,9 +68,16 @@ namespace CampusTrade.API.Controllers
         [Authorize]
         public async Task<IActionResult> GetReviewByOrderId(int orderId)
         {
-            int userId = User.GetUserId();
-            var review = await _reviewService.GetReviewByOrderIdAsync(orderId);
-            return review == null ? NotFound("未找到评论") : Ok(review);
+            try
+            {
+                int userId = User.GetUserId();
+                var review = await _reviewService.GetReviewByOrderIdAsync(orderId);
+                return review == null ? NotFound("未找到评论") : Ok(review);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         /// <summary>
@@ -58,9 +87,24 @@ namespace CampusTrade.API.Controllers
         [Authorize]
         public async Task<IActionResult> ReplyToReview([FromBody] ReplyReviewDto dto)
         {
-            int sellerId = User.GetUserId();
-            bool result = await _reviewService.ReplyToReviewAsync(dto, sellerId);
-            return result ? Ok("回复成功") : BadRequest("回复失败");
+            try
+            {
+                int sellerId = User.GetUserId();
+                bool result = await _reviewService.ReplyToReviewAsync(dto, sellerId);
+                return result ? Ok("回复成功") : BadRequest("回复失败");
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbid(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         /// <summary>
@@ -70,9 +114,20 @@ namespace CampusTrade.API.Controllers
         [Authorize]
         public async Task<IActionResult> DeleteReview(int reviewId)
         {
-            int userId = User.GetUserId();
-            bool result = await _reviewService.DeleteReviewAsync(reviewId, userId);
-            return result ? Ok("删除成功") : Forbid("无权限删除或删除失败");
+            try
+            {
+                int userId = User.GetUserId();
+                bool result = await _reviewService.DeleteReviewAsync(reviewId, userId);
+                return result ? Ok("删除成功") : BadRequest("删除失败");
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbid(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
     }
 }
