@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using CampusTrade.API.Models.DTOs.Review;
 using CampusTrade.API.Services.Review;
+using CampusTrade.API.Infrastructure.Extensions;
 
 namespace CampusTrade.API.Controllers
 {
@@ -23,7 +24,7 @@ namespace CampusTrade.API.Controllers
         [Authorize] // 需要身份验证
         public async Task<IActionResult> CreateReview([FromBody] CreateReviewDto dto)
         {
-            int userId = GetCurrentUserId();
+            int userId = User.GetUserId();
             bool result = await _reviewService.CreateReviewAsync(dto, userId);
             return result ? Ok("评论成功") : BadRequest("评论失败");
         }
@@ -45,7 +46,7 @@ namespace CampusTrade.API.Controllers
         [Authorize]
         public async Task<IActionResult> GetReviewByOrderId(int orderId)
         {
-            int userId = GetCurrentUserId();
+            int userId = User.GetUserId();
             var review = await _reviewService.GetReviewByOrderIdAsync(orderId);
             return review == null ? NotFound("未找到评论") : Ok(review);
         }
@@ -57,7 +58,7 @@ namespace CampusTrade.API.Controllers
         [Authorize]
         public async Task<IActionResult> ReplyToReview([FromBody] ReplyReviewDto dto)
         {
-            int sellerId = GetCurrentUserId();
+            int sellerId = User.GetUserId();
             bool result = await _reviewService.ReplyToReviewAsync(dto, sellerId);
             return result ? Ok("回复成功") : BadRequest("回复失败");
         }
@@ -69,17 +70,9 @@ namespace CampusTrade.API.Controllers
         [Authorize]
         public async Task<IActionResult> DeleteReview(int reviewId)
         {
-            int userId = GetCurrentUserId();
+            int userId = User.GetUserId();
             bool result = await _reviewService.DeleteReviewAsync(reviewId, userId);
             return result ? Ok("删除成功") : Forbid("无权限删除或删除失败");
-        }
-
-        /// <summary>
-        /// 获取当前登录用户ID（从 Claims 中提取）
-        /// </summary>
-        private int GetCurrentUserId()
-        {
-            return int.Parse(User.FindFirst("userId")?.Value ?? throw new Exception("未登录"));
         }
     }
 }
