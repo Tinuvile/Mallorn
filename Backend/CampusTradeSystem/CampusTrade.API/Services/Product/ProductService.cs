@@ -934,6 +934,190 @@ public class ProductService : IProductService
 
     #endregion
 
+    #region 统计与分析
+
+    /// <summary>
+    /// 获取商品统计信息
+    /// </summary>
+    public async Task<ApiResponse<ProductStatisticsDto>> GetProductStatisticsAsync()
+    {
+        try
+        {
+            var totalProducts = await _unitOfWork.Products.GetTotalProductsNumberAsync();
+            var totalPrice = await _unitOfWork.Products.GetPagedProductsAsync(1, 1);
+            var averagePrice = totalPrice.Products.Average(p => p.BasePrice);
+
+            var stats = new ProductStatisticsDto
+            {
+                TotalProducts = totalProducts,
+                AveragePrice = averagePrice
+            };
+
+            return ApiResponse<ProductStatisticsDto>.CreateSuccess(stats);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "获取商品统计信息失败");
+            return ApiResponse<ProductStatisticsDto>.CreateError("获取商品统计信息失败，请稍后重试");
+        }
+    }
+
+    /// <summary>
+    /// 获取用户商品统计
+    /// </summary>
+    public async Task<ApiResponse<UserProductStatisticsDto>> GetUserProductStatisticsAsync(int userId)
+    {
+        try
+        {
+            var totalProducts = await _unitOfWork.Products.GetByUserIdAsync(userId);
+            var stats = new UserProductStatisticsDto
+            {
+                TotalProducts = totalProducts.TotalCount
+            };
+
+            return ApiResponse<UserProductStatisticsDto>.CreateSuccess(stats);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "获取用户商品统计失败，UserId: {UserId}", userId);
+            return ApiResponse<UserProductStatisticsDto>.CreateError("获取用户商品统计失败，请稍后重试");
+        }
+    }
+
+    /// <summary>
+    /// 获取分类商品统计
+    /// </summary>
+    public async Task<ApiResponse<CategoryProductStatisticsDto>> GetCategoryProductStatisticsAsync(int categoryId)
+    {
+        try
+        {
+            var totalProducts = await _unitOfWork.Products.GetByCategoryIdAsync(categoryId);
+            var stats = new CategoryProductStatisticsDto
+            {
+                TotalProducts = totalProducts.TotalCount
+            };
+
+            return ApiResponse<CategoryProductStatisticsDto>.CreateSuccess(stats);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "获取分类商品统计失败，CategoryId: {CategoryId}", categoryId);
+            return ApiResponse<CategoryProductStatisticsDto>.CreateError("获取分类商品统计失败，请稍后重试");
+        }
+    }
+
+    #endregion
+
+    #region 批量操作
+
+    /// <summary>
+    /// 批量更新商品状态
+    /// </summary>
+    public async Task<ApiResponse> UpdateProductsStatusAsync(IEnumerable<int> productIds, string status, int userId)
+    {
+        try
+        {
+            await _unitOfWork.Products.UpdateProductsStatusAsync(productIds, status, userId);
+            return ApiResponse.CreateSuccess("批量更新状态成功");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "批量更新商品状态失败，ProductIds: {ProductIds}, Status: {Status}", string.Join(",", productIds), status);
+            return ApiResponse.CreateError("批量更新状态失败，请稍后重试");
+        }
+    }
+
+    /// <summary>
+    /// 批量删除商品
+    /// </summary>
+    public async Task<ApiResponse> DeleteProductsAsync(IEnumerable<int> productIds, int userId)
+    {
+        try
+        {
+            foreach (var productId in productIds)
+            {
+                var product = await _unitOfWork.Products.GetByPrimaryKeyAsync(productId);
+                if (product?.UserId != userId)
+                {
+                    return ApiResponse.CreateError("无权限删除其中一些商品");
+                }
+            }
+
+            foreach (var productId in productIds)
+            {
+                var product = await _unitOfWork.Products.GetByPrimaryKeyAsync(productId);
+                if (product != null)
+                {
+                    product.Status = Models.Entities.Product.ProductStatus.OffShelf;
+                    _unitOfWork.Products.Update(product);
+                }
+            }
+
+            await _unitOfWork.SaveChangesAsync();
+
+            return ApiResponse.CreateSuccess("批量删除商品成功");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "批量删除商品失败，ProductIds: {ProductIds}", string.Join(",", productIds));
+            return ApiResponse.CreateError("批量删除商品失败，请稍后重试");
+        }
+    }
+
+    #endregion
+
+    #region 商品推荐
+
+    /// <summary>
+    /// 获取相似商品推荐
+    /// </summary>
+    public async Task<ApiResponse<List<ProductListDto>>> GetSimilarProductsAsync(int productId, int count)
+    {
+        try
+        {
+            var product = await _unitOfWork.Products.GetByPrimaryKeyAsync(productId);
+            if (product == null)
+            {
+                return ApiResponse<List<ProductListDto>>.CreateError("商品不存在");
+            }
+
+            // 根据某些属性获取相似商品
+            var similarProducts = await _unitOfWork.Products.GetByCategoryIdAsync(product.CategoryId);
+            var productDtos = await ConvertToProductListDtosAsync(similarProducts.Products.Take(count));
+
+            return ApiResponse<List<ProductListDto>>.CreateSuccess(productDtos);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "获取相似商品推荐失败，ProductId: {ProductId}", productId);
+            return ApiResponse<List<ProductListDto>>.CreateError("获取相似商品推荐失败，请稍后重试");
+        }
+    }
+
+    /// <summary>
+    /// 获取用户推荐商品
+    /// </summary>
+    public async Task<ApiResponse<List<ProductListDto>>> GetUserRecommendedProductsAsync(int userId, int count)
+    {
+        try
+        {
+            var userProducts = await _unitOfWork.Products.GetByUserIdAsync(userId);
+            var recommendedProducts = userProducts.Products.Where(p => p.Status == Models.Entities.Product.ProductStatus.OnSale).Take(count);
+            var productDtos = await ConvertToProductListDtosAsync(recommendedProducts);
+
+            return ApiResponse<List<ProductListDto>>.CreateSuccess(productDtos);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "获取用户推荐商品失败，UserId: {UserId}", userId);
+            return ApiResponse<List<ProductListDto>>.CreateError("获取用户推荐商品失败，请稍后重试");
+        }
+    }
+
+    #endregion
+
+
+
     #region 私有辅助方法
 
     /// <summary>

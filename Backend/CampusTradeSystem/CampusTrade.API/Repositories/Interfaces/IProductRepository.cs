@@ -17,26 +17,32 @@ namespace CampusTrade.API.Repositories.Interfaces
         /// 根据用户ID分页获取商品
         /// </summary>
         Task<(IEnumerable<Product> Products, int TotalCount)> GetByUserIdAsync(int userId);
+        
         /// <summary>
         /// 根据分类ID分页获取商品
         /// </summary>
         Task<(IEnumerable<Product> Products, int TotalCount)> GetByCategoryIdAsync(int categoryId);
+        
         /// <summary>
         /// 根据标题模糊查询商品
         /// </summary>
         Task<(IEnumerable<Product> Products, int TotalCount)> GetByTitleAsync(string title);
+        
         /// <summary>
         /// 判断指定用户下商品标题是否存在
         /// </summary>
         Task<bool> IsProductExistsAsync(string title, int userId);
+        
         /// <summary>
         /// 获取商品总数
         /// </summary>
         Task<int> GetTotalProductsNumberAsync();
+        
         /// <summary>
         /// 获取浏览量最高的商品
         /// </summary>
         Task<IEnumerable<Product>> GetTopViewProductsAsync(int count);
+        
         /// <summary>
         /// 分页多条件查询商品
         /// </summary>
@@ -49,10 +55,12 @@ namespace CampusTrade.API.Repositories.Interfaces
             decimal? minPrice = null,
             decimal? maxPrice = null,
             int? userId = null);
+        
         /// <summary>
         /// 获取即将自动下架的商品
         /// </summary>
         Task<IEnumerable<Product>> GetAutoRemoveProductsAsync(DateTime beforeTime);
+        
         /// <summary>
         /// 获取商品图片URL集合
         /// </summary>
@@ -64,6 +72,7 @@ namespace CampusTrade.API.Repositories.Interfaces
         /// 设置商品状态
         /// </summary>
         Task<Product> SetProductStatusAsync(int productId, string status);
+        
         /// <summary>
         /// 更新商品详情
         /// </summary>
@@ -73,10 +82,16 @@ namespace CampusTrade.API.Repositories.Interfaces
             string? description = null,
             decimal? basePrice = null
         );
+        
         /// <summary>
         /// 增加商品浏览量
         /// </summary>
         Task IncreaseViewCountAsync(int productId);
+
+        /// <summary>
+        /// 批量更新商品状态
+        /// </summary>
+        Task<int> UpdateProductsStatusAsync(IEnumerable<int> productIds, string status);
         #endregion
 
         #region 删除操作
@@ -84,6 +99,7 @@ namespace CampusTrade.API.Repositories.Interfaces
         /// 逻辑删除商品（下架）
         /// </summary>
         Task<bool> DeleteProductAsync(int productId);
+        
         /// <summary>
         /// 批量逻辑删除用户的所有商品
         /// </summary>
@@ -95,6 +111,17 @@ namespace CampusTrade.API.Repositories.Interfaces
         /// 查询商品及其订单信息
         /// </summary>
         Task<Product?> GetProductWithOrdersAsync(int productId);
+        #endregion
+
+        #region 统计分析
+        Task<int> GetTotalProductsCountAsync();  // 获取所有商品总数
+        Task<int> GetUserProductCountAsync(int userId);  // 获取用户商品总数
+        Task<int> GetCategoryProductCountAsync(int categoryId);  // 获取分类商品总数
+        #endregion
+
+        #region 商品推荐
+        Task<IEnumerable<Product>> GetSimilarProductsAsync(int productId, int count);  // 获取相似商品
+        Task<IEnumerable<Product>> GetUserRecommendedProductsAsync(int userId, int count);  // 获取用户推荐商品
         #endregion
     }
 }

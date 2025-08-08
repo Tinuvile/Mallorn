@@ -202,4 +202,57 @@ public interface IProductService
     // #region 统计与分析 - 商品统计信息、用户商品统计、分类商品统计
     // #region 批量操作 - 批量更新状态、批量删除
     // #region 商品推荐 - 相似商品推荐、用户推荐商品
+
+
+
+
+     #endregion
+
+    #region 统计与分析 - 商品统计信息、用户商品统计、分类商品统计
+
+    /// <summary>
+    /// 获取商品统计信息
+    /// </summary>
+    Task<ApiResponse<ProductStatisticsDto>> GetProductStatisticsAsync();
+
+    /// <summary>
+    /// 获取用户商品统计
+    /// </summary>
+    Task<ApiResponse<UserProductStatisticsDto>> GetUserProductStatisticsAsync(int userId);
+
+    /// <summary>
+    /// 获取分类商品统计
+    /// </summary>
+    Task<ApiResponse<CategoryProductStatisticsDto>> GetCategoryProductStatisticsAsync(int categoryId);
+
+    #endregion
+
+    #region 批量操作 - 批量更新状态、批量删除
+
+    /// <summary>
+    /// 批量更新商品状态
+    /// </summary>
+    Task<ApiResponse> UpdateProductsStatusAsync(IEnumerable<int> productIds, string status, int userId);
+
+    /// <summary>
+    /// 批量删除商品
+    /// </summary>
+    Task<ApiResponse> DeleteProductsAsync(IEnumerable<int> productIds, int userId);
+
+    #endregion
+
+    #region 商品推荐 - 相似商品推荐、用户推荐商品
+
+    /// <summary>
+    /// 获取相似商品推荐
+    /// </summary>
+    Task<ApiResponse<List<ProductListDto>>> GetSimilarProductsAsync(int productId, int count);
+
+    /// <summary>
+    /// 获取用户的推荐商品
+    /// </summary>
+    Task<ApiResponse<List<ProductListDto>>> GetUserRecommendedProductsAsync(int userId, int count);
+
+    #endregion
+}
 }
