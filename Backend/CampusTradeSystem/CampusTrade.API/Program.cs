@@ -186,6 +186,15 @@ try
 
     var app = builder.Build();
 
+
+
+    //注册标签分类服务
+    builder.Services.AddCategoryServices();
+
+
+
+
+
     // 配置HTTP请求管道
     if (app.Environment.IsDevelopment())
     {

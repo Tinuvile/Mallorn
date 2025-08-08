@@ -299,3 +299,20 @@ public class FileStorageOptionsValidator : IValidateOptions<FileStorageOptions>
         return ValidateOptionsResult.Success;
     }
 }
+
+
+
+/// <summary>
+/// 添加分类相关服务
+/// </summary>
+public static IServiceCollection AddCategoryServices(this IServiceCollection services)
+{
+    // 注册分类缓存服务
+    services.AddScoped<ICategoryCacheService, CategoryCacheService>();
+
+    
+    services.AddScoped<ICategoryService, CategoryService>();
+    services.AddScoped<ICategoriesRepository, CategoriesRepository>();
+
+    return services;
+}

@@ -24,6 +24,7 @@ namespace CampusTrade.API.Repositories.Implementations
             var products = await query.Include(p => p.User).Include(p => p.Category).Include(p => p.ProductImages).OrderByDescending(p => p.PublishTime).ToListAsync();
             return (products, totalCount);
         }
+        
         /// <summary>
         /// 根据分类ID分页获取商品
         /// </summary>
@@ -34,6 +35,7 @@ namespace CampusTrade.API.Repositories.Implementations
             var products = await query.Include(p => p.User).Include(p => p.Category).Include(p => p.ProductImages).OrderByDescending(p => p.PublishTime).ToListAsync();
             return (products, totalCount);
         }
+        
         /// <summary>
         /// 根据标题模糊查询商品
         /// </summary>
@@ -44,6 +46,7 @@ namespace CampusTrade.API.Repositories.Implementations
             var products = await query.Include(p => p.User).Include(p => p.Category).Include(p => p.ProductImages).OrderByDescending(p => p.PublishTime).ToListAsync();
             return (products, totalCount);
         }
+        
         /// <summary>
         /// 判断指定用户下商品标题是否存在
         /// </summary>
@@ -52,6 +55,7 @@ namespace CampusTrade.API.Repositories.Implementations
             var count = await _dbSet.CountAsync(p => p.Title == title && p.UserId == userId);
             return count > 0;
         }
+        
         /// <summary>
         /// 获取商品总数
         /// </summary>
@@ -59,6 +63,7 @@ namespace CampusTrade.API.Repositories.Implementations
         {
             return await _dbSet.CountAsync();
         }
+        
         /// <summary>
         /// 获取浏览量最高的商品
         /// </summary>
@@ -66,6 +71,7 @@ namespace CampusTrade.API.Repositories.Implementations
         {
             return await _dbSet.Where(p => p.Status == Product.ProductStatus.OnSale).Include(p => p.User).Include(p => p.Category).Include(p => p.ProductImages).OrderByDescending(p => p.ViewCount).Take(count).ToListAsync();
         }
+        
         /// <summary>
         /// 分页多条件查询商品
         /// </summary>
@@ -90,6 +96,7 @@ namespace CampusTrade.API.Repositories.Implementations
             var products = await query.Include(p => p.User).Include(p => p.Category).Include(p => p.ProductImages).OrderByDescending(p => p.PublishTime).Skip((pageIndex - 1) * pageSize).Take(pageSize).ToListAsync();
             return (products, totalCount);
         }
+        
         /// <summary>
         /// 获取即将自动下架的商品
         /// </summary>
@@ -97,6 +104,7 @@ namespace CampusTrade.API.Repositories.Implementations
         {
             return await _dbSet.Where(p => p.AutoRemoveTime.HasValue && p.AutoRemoveTime.Value <= beforeTime && p.Status == Product.ProductStatus.OnSale).Include(p => p.User).ToListAsync();
         }
+        
         /// <summary>
         /// 获取商品图片URL集合
         /// </summary>
@@ -118,6 +126,7 @@ namespace CampusTrade.API.Repositories.Implementations
             Update(product);
             return product;
         }
+
         /// <summary>
         /// 更新商品详情
         /// </summary>
@@ -131,12 +140,27 @@ namespace CampusTrade.API.Repositories.Implementations
             Update(product);
             return product;
         }
+
         /// <summary>
         /// 增加商品浏览量
         /// </summary>
         public async Task IncreaseViewCountAsync(int productId)
         {
             await _context.Database.ExecuteSqlRawAsync("UPDATE PRODUCTS SET VIEW_COUNT = VIEW_COUNT + 1 WHERE PRODUCT_ID = {0}", productId);
+        }
+
+        /// <summary>
+        /// 批量更新商品状态
+        /// </summary>
+        public async Task<int> UpdateProductsStatusAsync(IEnumerable<int> productIds, string status)
+        {
+            var products = await _dbSet.Where(p => productIds.Contains(p.ProductId)).ToListAsync();
+            foreach (var product in products)
+            {
+                product.Status = status;
+            }
+            UpdateRange(products);
+            return products.Count;
         }
         #endregion
 
@@ -152,6 +176,7 @@ namespace CampusTrade.API.Repositories.Implementations
             Update(product);
             return true;
         }
+
         /// <summary>
         /// 批量逻辑删除用户的所有商品
         /// </summary>
@@ -171,6 +196,40 @@ namespace CampusTrade.API.Repositories.Implementations
         public async Task<Product?> GetProductWithOrdersAsync(int productId)
         {
             return await _dbSet.Include(p => p.User).Include(p => p.Category).Include(p => p.ProductImages).FirstOrDefaultAsync(p => p.ProductId == productId);
+        }
+        #endregion
+
+
+                #region 商品推荐功能
+        public async Task<IEnumerable<Product>> GetSimilarProductsAsync(int productId, int count)
+        {
+            var product = await _dbSet.FirstOrDefaultAsync(p => p.ProductId == productId);
+            if (product == null) return Enumerable.Empty<Product>();
+
+            return await _dbSet.Where(p => p.CategoryId == product.CategoryId && p.ProductId != productId && p.Status == Product.ProductStatus.OnSale).Take(count).ToListAsync();
+        }
+
+        public async Task<IEnumerable<Product>> GetUserRecommendedProductsAsync(int userId, int count)
+        {
+            var products = await _dbSet.Where(p => p.UserId == userId && p.Status == Product.ProductStatus.OnSale).Take(count).ToListAsync();
+            return products;
+        }
+        #endregion
+
+        #region 统计与分析
+        public async Task<int> GetTotalProductsCountAsync()
+        {
+            return await _dbSet.CountAsync();
+        }
+
+        public async Task<int> GetUserProductCountAsync(int userId)
+        {
+            return await _dbSet.CountAsync(p => p.UserId == userId);
+        }
+
+        public async Task<int> GetCategoryProductCountAsync(int categoryId)
+        {
+            return await _dbSet.CountAsync(p => p.CategoryId == categoryId);
         }
         #endregion
     }
