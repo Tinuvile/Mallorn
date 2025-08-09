@@ -2,8 +2,9 @@
   "dependencies": {
     "@fontsource/inter": "^5.2.6",
     "@fortawesome/fontawesome-free": "^6.7.2",
-    "axios": "^1.11.0",
     "@websitebeaver/vue-magnifier": "^1.1.0",
+    "axios": "^1.11.0",
+    "chart.js": "^4.5.0",
     "vue": "^3.5.18",
     "vue-magnifier": "^1.0.6",
     "vue-router": "^4.5.1",

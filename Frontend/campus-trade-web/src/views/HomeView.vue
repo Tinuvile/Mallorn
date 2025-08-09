@@ -12,19 +12,33 @@
 
       <v-btn class="me-2" color="black" height="40" variant="text" width="100" style="margin-left: 100px;" @click="goToLogin"
         size="large" v-if="!isLoggedIn">登录/注册</v-btn>
-
+     
       <!-- 搜索框 -->
       <v-text-field :loading="loading" append-inner-icon="mdi-magnify" density="compact" label="Search" variant="solo"
         hide-details single-line @click:append-inner="onClick" style="margin-left: 100px;"></v-text-field>
- <v-btn
-    color="primary"
-    class="mx-2"
-    to="/order"
-    prepend-icon="mdi-file-document-outline"
-  >
-    我的订单
-  </v-btn>
-
+      <v-btn
+        color="primary"
+        class="mx-2"
+        to="/order"
+        prepend-icon="mdi-file-document-outline"
+        >
+          我的订单
+        </v-btn>
+         <v-btn
+        class="mx-2"
+        to="/datawatchingview"
+        height="40"
+        variant="text"
+        style="min-width: 40px; padding: 0;"
+      >
+        <v-img
+          src="/images/DataAnalyze.png"
+          alt="数据看板"
+          width="30"
+          height="30"
+          contain
+        />
+      </v-btn>
       <v-spacer></v-spacer>
     </v-app-bar>
     <!-- 错误提示的snackbar -->

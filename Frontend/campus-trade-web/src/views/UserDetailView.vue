@@ -42,8 +42,8 @@
       <template v-if="!isLoading">
         <!-- 背景装饰图 -->
         <div class="decorative-bg">
-          <img src="https://grace-l-hub.oss-cn-shanghai.aliyuncs.com/OIP-C%281%29%281%29.png" class="top-image" alt="Decorative image">
-          <img src="https://grace-l-hub.oss-cn-shanghai.aliyuncs.com/OIP-C%282%29%281%29.png" class="bottom-image" alt="Decorative image">
+          <img src="/images/UserBack1.png" class="top-image" alt="Decorative image">
+          <img src="/images/UserBack2.png" class="bottom-image" alt="Decorative image">
         </div>
         
         <!-- 用户信息卡片 -->
@@ -559,7 +559,7 @@ const showMessage = (message: string, color: string) => {
   width: 40%;
   transform: translateY(-50%);
   z-index: 1;
-  opacity: 0.8;
+  opacity: 1;
 }
 
 .decorative-bg img {
