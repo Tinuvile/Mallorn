@@ -7,6 +7,7 @@ using CampusTrade.API.Services.Background;
 using CampusTrade.API.Services.File;
 using CampusTrade.API.Services.Interfaces;
 using CampusTrade.API.Services.Order;
+using CampusTrade.API.Services.Email;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -133,7 +134,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<Services.Notification.NotifiSenderService>();
 
         // 注册邮件服务
-        services.AddScoped<Services.Notification.EmailService>();
+        services.AddScoped<Services.Email.EmailService>();
 
         // 添加内存缓存（用于Token黑名单）
         services.AddMemoryCache();

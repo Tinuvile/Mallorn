@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using CampusTrade.API.Data;
 using CampusTrade.API.Infrastructure.Utils.Notificate;
 using CampusTrade.API.Models.Entities;
+using CampusTrade.API.Services.Email;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 

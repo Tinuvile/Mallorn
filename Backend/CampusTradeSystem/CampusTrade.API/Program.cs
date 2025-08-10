@@ -135,6 +135,7 @@ try
     // 注册定时任务服务
     builder.Services.AddHostedService<TokenCleanupTask>();
     builder.Services.AddHostedService<LogCleanupTask>();
+    builder.Services.AddHostedService<EmailVerificationCleanupTask>();
     builder.Services.AddHostedService<ProductManagementTask>();
     builder.Services.AddHostedService<OrderProcessingTask>();
     builder.Services.AddHostedService<UserCreditScoreCalculationTask>();

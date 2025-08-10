@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace CampusTrade.API.Services.Notification
+namespace CampusTrade.API.Services.Email
 {
     /// <summary>
     /// 邮件服务 - 负责发送电子邮件通知并管理邮件记录
