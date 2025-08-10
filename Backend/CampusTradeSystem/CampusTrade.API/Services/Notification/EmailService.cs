@@ -283,5 +283,72 @@ namespace CampusTrade.API.Services.Notification
             return (pending, success, failed, total);
         }
 
+        /// <summary>
+        /// 获取指定时间范围内的邮件统计
+        /// </summary>
+        /// <param name="startTime">开始时间</param>
+        /// <param name="endTime">结束时间</param>
+        /// <returns>时间范围内的统计信息</returns>
+        public async Task<(int Pending, int Success, int Failed, int Total, double SuccessRate)> GetEmailStatsAsync(DateTime? startTime, DateTime? endTime)
+        {
+            var query = _context.EmailNotifications.AsQueryable();
+
+            if (startTime.HasValue)
+                query = query.Where(en => en.CreatedAt >= startTime.Value);
+
+            if (endTime.HasValue)
+                query = query.Where(en => en.CreatedAt <= endTime.Value);
+
+            var pending = await query.CountAsync(en => en.SendStatus == EmailNotification.SendStatuses.Pending);
+            var success = await query.CountAsync(en => en.SendStatus == EmailNotification.SendStatuses.Success);
+            var failed = await query.CountAsync(en => en.SendStatus == EmailNotification.SendStatuses.Failed);
+            var total = pending + success + failed;
+            var successRate = total > 0 ? (double)success / total * 100 : 0;
+
+            return (pending, success, failed, total, successRate);
+        }
+
+        /// <summary>
+        /// 获取邮件发送失败原因统计
+        /// </summary>
+        /// <param name="topN">返回前N个失败原因</param>
+        /// <returns>失败原因统计</returns>
+        public async Task<Dictionary<string, int>> GetEmailFailureReasonsAsync(int topN = 10)
+        {
+            var failureReasons = await _context.EmailNotifications
+                .Where(en => en.SendStatus == EmailNotification.SendStatuses.Failed && 
+                           !string.IsNullOrEmpty(en.ErrorMessage))
+                .GroupBy(en => en.ErrorMessage)
+                .Select(g => new { Reason = g.Key, Count = g.Count() })
+                .OrderByDescending(x => x.Count)
+                .Take(topN)
+                .ToDictionaryAsync(x => x.Reason!, x => x.Count);
+
+            return failureReasons;
+        }
+
+        /// <summary>
+        /// 获取每小时邮件发送趋势
+        /// </summary>
+        /// <param name="days">统计天数，默认7天</param>
+        /// <returns>每小时发送趋势</returns>
+        public async Task<Dictionary<int, (int Success, int Failed)>> GetHourlyEmailTrendAsync(int days = 7)
+        {
+            var startTime = DateTime.UtcNow.AddDays(-days);
+            
+            var hourlyData = await _context.EmailNotifications
+                .Where(en => en.CreatedAt >= startTime)
+                .GroupBy(en => en.CreatedAt.Hour)
+                .Select(g => new
+                {
+                    Hour = g.Key,
+                    Success = g.Count(en => en.SendStatus == EmailNotification.SendStatuses.Success),
+                    Failed = g.Count(en => en.SendStatus == EmailNotification.SendStatuses.Failed)
+                })
+                .ToDictionaryAsync(x => x.Hour, x => (x.Success, x.Failed));
+
+            return hourlyData;
+        }
+
     }
 }

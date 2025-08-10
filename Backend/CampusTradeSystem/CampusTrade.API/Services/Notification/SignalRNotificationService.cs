@@ -236,5 +236,72 @@ namespace CampusTrade.API.Services.Notification
 
             return (pending, success, failed, total);
         }
+
+        /// <summary>
+        /// 获取指定时间范围内的SignalR统计
+        /// </summary>
+        /// <param name="startTime">开始时间</param>
+        /// <param name="endTime">结束时间</param>
+        /// <returns>时间范围内的统计信息</returns>
+        public async Task<(int Pending, int Success, int Failed, int Total, double SuccessRate)> GetSignalRStatsAsync(DateTime? startTime, DateTime? endTime)
+        {
+            var query = _context.SignalRNotifications.AsQueryable();
+
+            if (startTime.HasValue)
+                query = query.Where(sr => sr.CreatedAt >= startTime.Value);
+
+            if (endTime.HasValue)
+                query = query.Where(sr => sr.CreatedAt <= endTime.Value);
+
+            var pending = await query.CountAsync(sr => sr.SendStatus == SignalRNotification.SendStatuses.Pending);
+            var success = await query.CountAsync(sr => sr.SendStatus == SignalRNotification.SendStatuses.Success);
+            var failed = await query.CountAsync(sr => sr.SendStatus == SignalRNotification.SendStatuses.Failed);
+            var total = pending + success + failed;
+            var successRate = total > 0 ? (double)success / total * 100 : 0;
+
+            return (pending, success, failed, total, successRate);
+        }
+
+        /// <summary>
+        /// 获取SignalR发送失败原因统计
+        /// </summary>
+        /// <param name="topN">返回前N个失败原因</param>
+        /// <returns>失败原因统计</returns>
+        public async Task<Dictionary<string, int>> GetSignalRFailureReasonsAsync(int topN = 10)
+        {
+            var failureReasons = await _context.SignalRNotifications
+                .Where(sr => sr.SendStatus == SignalRNotification.SendStatuses.Failed && 
+                           !string.IsNullOrEmpty(sr.ErrorMessage))
+                .GroupBy(sr => sr.ErrorMessage)
+                .Select(g => new { Reason = g.Key, Count = g.Count() })
+                .OrderByDescending(x => x.Count)
+                .Take(topN)
+                .ToDictionaryAsync(x => x.Reason!, x => x.Count);
+
+            return failureReasons;
+        }
+
+        /// <summary>
+        /// 获取每小时SignalR发送趋势
+        /// </summary>
+        /// <param name="days">统计天数，默认7天</param>
+        /// <returns>每小时发送趋势</returns>
+        public async Task<Dictionary<int, (int Success, int Failed)>> GetHourlySignalRTrendAsync(int days = 7)
+        {
+            var startTime = DateTime.UtcNow.AddDays(-days);
+            
+            var hourlyData = await _context.SignalRNotifications
+                .Where(sr => sr.CreatedAt >= startTime)
+                .GroupBy(sr => sr.CreatedAt.Hour)
+                .Select(g => new
+                {
+                    Hour = g.Key,
+                    Success = g.Count(sr => sr.SendStatus == SignalRNotification.SendStatuses.Success),
+                    Failed = g.Count(sr => sr.SendStatus == SignalRNotification.SendStatuses.Failed)
+                })
+                .ToDictionaryAsync(x => x.Hour, x => (x.Success, x.Failed));
+
+            return hourlyData;
+        }
     }
 }

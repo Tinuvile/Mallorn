@@ -357,6 +357,86 @@ namespace CampusTrade.API.Services.Notification
         }
 
         /// <summary>
+        /// 获取邮件发送统计信息
+        /// </summary>
+        /// <returns>邮件统计信息</returns>
+        public async Task<(int Pending, int Success, int Failed, int Total)> GetEmailStatsAsync()
+        {
+            return await _emailService.GetEmailStatsAsync();
+        }
+
+        /// <summary>
+        /// 获取SignalR发送统计信息
+        /// </summary>
+        /// <returns>SignalR统计信息</returns>
+        public async Task<(int Pending, int Success, int Failed, int Total)> GetSignalRStatsAsync()
+        {
+            return await _signalRService.GetSignalRStatsAsync();
+        }
+
+        /// <summary>
+        /// 获取指定时间范围内的邮件统计
+        /// </summary>
+        /// <param name="startTime">开始时间</param>
+        /// <param name="endTime">结束时间</param>
+        /// <returns>邮件统计信息</returns>
+        public async Task<(int Pending, int Success, int Failed, int Total, double SuccessRate)> GetEmailStatsAsync(DateTime? startTime, DateTime? endTime)
+        {
+            return await _emailService.GetEmailStatsAsync(startTime, endTime);
+        }
+
+        /// <summary>
+        /// 获取指定时间范围内的SignalR统计
+        /// </summary>
+        /// <param name="startTime">开始时间</param>
+        /// <param name="endTime">结束时间</param>
+        /// <returns>SignalR统计信息</returns>
+        public async Task<(int Pending, int Success, int Failed, int Total, double SuccessRate)> GetSignalRStatsAsync(DateTime? startTime, DateTime? endTime)
+        {
+            return await _signalRService.GetSignalRStatsAsync(startTime, endTime);
+        }
+
+        /// <summary>
+        /// 获取邮件发送失败原因统计
+        /// </summary>
+        /// <param name="topN">返回前N个失败原因</param>
+        /// <returns>失败原因统计</returns>
+        public async Task<Dictionary<string, int>> GetEmailFailureReasonsAsync(int topN = 10)
+        {
+            return await _emailService.GetEmailFailureReasonsAsync(topN);
+        }
+
+        /// <summary>
+        /// 获取SignalR发送失败原因统计
+        /// </summary>
+        /// <param name="topN">返回前N个失败原因</param>
+        /// <returns>失败原因统计</returns>
+        public async Task<Dictionary<string, int>> GetSignalRFailureReasonsAsync(int topN = 10)
+        {
+            return await _signalRService.GetSignalRFailureReasonsAsync(topN);
+        }
+
+        /// <summary>
+        /// 获取邮件每小时发送趋势
+        /// </summary>
+        /// <param name="days">统计天数</param>
+        /// <returns>每小时发送趋势</returns>
+        public async Task<Dictionary<int, (int Success, int Failed)>> GetHourlyEmailTrendAsync(int days = 7)
+        {
+            return await _emailService.GetHourlyEmailTrendAsync(days);
+        }
+
+        /// <summary>
+        /// 获取SignalR每小时发送趋势
+        /// </summary>
+        /// <param name="days">统计天数</param>
+        /// <returns>每小时发送趋势</returns>
+        public async Task<Dictionary<int, (int Success, int Failed)>> GetHourlySignalRTrendAsync(int days = 7)
+        {
+            return await _signalRService.GetHourlySignalRTrendAsync(days);
+        }
+
+        /// <summary>
         /// 获取所有渠道的详细统计信息
         /// </summary>
         /// <returns>详细统计信息</returns>
