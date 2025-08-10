@@ -8,7 +8,7 @@ using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Services.Background;
 using Microsoft.EntityFrameworkCore;
 
-namespace CampusTrade.API.Services.Auth
+namespace CampusTrade.API.Services.Notification
 {
     /// <summary>
     /// 通知服务：负责通知的创建和管理
@@ -62,13 +62,13 @@ namespace CampusTrade.API.Services.Auth
             }
 
             // 5. 创建通知实体
-            var notification = new Notification
+            var notification = new Models.Entities.Notification
             {
                 TemplateId = templateId,
                 RecipientId = recipientId,
                 OrderId = orderId,
                 TemplateParams = paramJson,
-                SendStatus = Notification.SendStatuses.Pending,
+                SendStatus = Models.Entities.Notification.SendStatuses.Pending,
                 RetryCount = 0,
                 CreatedAt = DateTime.Now,
                 LastAttemptTime = DateTime.Now
@@ -93,13 +93,13 @@ namespace CampusTrade.API.Services.Auth
         public async Task<(int Pending, int Success, int Failed)> GetNotificationStatsAsync()
         {
             var pending = await _context.Notifications
-                .CountAsync(n => n.SendStatus == Notification.SendStatuses.Pending);
+                .CountAsync(n => n.SendStatus == Models.Entities.Notification.SendStatuses.Pending);
 
             var success = await _context.Notifications
-                .CountAsync(n => n.SendStatus == Notification.SendStatuses.Success);
+                .CountAsync(n => n.SendStatus == Models.Entities.Notification.SendStatuses.Success);
 
             var failed = await _context.Notifications
-                .CountAsync(n => n.SendStatus == Notification.SendStatuses.Failed);
+                .CountAsync(n => n.SendStatus == Models.Entities.Notification.SendStatuses.Failed);
 
             return (pending, success, failed);
         }
@@ -111,7 +111,7 @@ namespace CampusTrade.API.Services.Auth
         /// <param name="pageSize">页大小</param>
         /// <param name="pageIndex">页索引</param>
         /// <returns>通知列表</returns>
-        public async Task<List<Notification>> GetUserNotificationsAsync(int userId, int pageSize = 10, int pageIndex = 0)
+        public async Task<List<Models.Entities.Notification>> GetUserNotificationsAsync(int userId, int pageSize = 10, int pageIndex = 0)
         {
             return await _context.Notifications
                 .Include(n => n.Template)
