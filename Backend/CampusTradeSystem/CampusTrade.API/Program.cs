@@ -143,7 +143,7 @@ try
     builder.Services.AddHostedService<NotificationPushTask>();
 
     // 添加认证相关服务
-    builder.Services.AddAuthenticationServices();
+    builder.Services.AddAuthenticationServices(builder.Configuration);
 
     // 添加举报相关服务
     builder.Services.AddReportServices();

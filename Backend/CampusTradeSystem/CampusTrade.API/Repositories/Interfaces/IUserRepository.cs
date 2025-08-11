@@ -168,7 +168,8 @@ namespace CampusTrade.API.Repositories.Interfaces
         /// </summary>
         /// <param name="userId">用户ID</param>
         /// <param name="isVerified">是否已验证</param>
-        Task SetEmailVerifiedAsync(int userId, bool isVerified);
+        /// <returns>是否更新成功</returns>
+        Task<bool> SetEmailVerifiedAsync(int userId, bool isVerified);
         /// <summary>
         /// 更新用户邮箱验证令牌
         /// </summary>

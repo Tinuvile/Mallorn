@@ -311,15 +311,16 @@ namespace CampusTrade.API.Repositories.Implementations
         /// <summary>
         /// 设置用户邮箱验证状态
         /// </summary>
-        public async Task SetEmailVerifiedAsync(int userId, bool isVerified)
+        public async Task<bool> SetEmailVerifiedAsync(int userId, bool isVerified)
         {
             var user = await GetByPrimaryKeyAsync(userId);
-            if (user != null)
-            {
-                user.EmailVerified = isVerified ? 1 : 0;
-                user.UpdatedAt = DateTime.UtcNow;
-                Update(user);
-            }
+            if (user == null)
+                return false;
+
+            user.EmailVerified = isVerified ? 1 : 0;
+            user.UpdatedAt = DateTime.UtcNow;
+            Update(user);
+            return true;
         }
 
         /// <summary>
