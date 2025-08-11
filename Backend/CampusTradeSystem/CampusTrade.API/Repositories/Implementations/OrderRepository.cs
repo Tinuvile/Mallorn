@@ -93,6 +93,23 @@ namespace CampusTrade.API.Repositories.Implementations
         }
 
         /// <summary>
+        /// 获取即将过期的订单
+        /// </summary>
+        public async Task<IEnumerable<Order>> GetExpiringOrdersAsync(DateTime cutoffTime)
+        {
+            var currentTime = DateTime.Now;
+            return await _dbSet
+                .Where(o => o.Status == Order.OrderStatus.PendingPayment &&
+                           o.ExpireTime.HasValue &&
+                           o.ExpireTime.Value > currentTime &&
+                           o.ExpireTime.Value <= cutoffTime)
+                .Include(o => o.Product)
+                .Include(o => o.Buyer)
+                .Include(o => o.Seller)
+                .OrderBy(o => o.ExpireTime)
+                .ToListAsync();
+        }
+        /// <summary>
         /// 获取用户的订单统计（买家/卖家分组）
         /// </summary>
         public async Task<Dictionary<string, int>> GetOrderStatisticsByUserAsync(int userId)

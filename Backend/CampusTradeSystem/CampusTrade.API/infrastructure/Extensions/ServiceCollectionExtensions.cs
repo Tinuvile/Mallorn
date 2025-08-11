@@ -5,6 +5,8 @@ using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Auth;
 using CampusTrade.API.Services.Background;
 using CampusTrade.API.Services.File;
+using CampusTrade.API.Services.Interfaces;
+using CampusTrade.API.Services.Order;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -102,6 +104,13 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<IVirtualAccountsRepository, VirtualAccountsRepository>();
+        services.AddScoped<IRechargeRecordsRepository, RechargeRecordsRepository>();
+        services.AddScoped<IReportsRepository, ReportsRepository>();
+        services.AddScoped<INegotiationsRepository, NegotiationsRepository>();
+        services.AddScoped<IExchangeRequestsRepository, ExchangeRequestsRepository>();
+        services.AddScoped<IReviewsRepository, ReviewsRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         return services;
     }
@@ -123,6 +132,15 @@ public static class ServiceCollectionExtensions
         // 添加内存缓存（用于Token黑名单）
         services.AddMemoryCache();
         services.AddHttpContextAccessor();
+        return services;
+    }
+
+    /// <summary>
+    /// 添加举报相关服务
+    /// </summary>
+    public static IServiceCollection AddReportServices(this IServiceCollection services)
+    {
+        services.AddScoped<Services.Interfaces.IReportService, Services.Report.ReportService>();
         return services;
     }
 
@@ -179,6 +197,9 @@ public static class ServiceCollectionExtensions
         // 注册通知发送后台服务
         services.AddHostedService<NotificationBackgroundService>();
 
+        // 注册订单超时监控后台服务
+        services.AddHostedService<OrderTimeoutBackgroundService>();
+
         return services;
     }
 
@@ -195,11 +216,48 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
+    /// 添加订单相关服务
+    /// </summary>
+    public static IServiceCollection AddOrderServices(this IServiceCollection services)
+    {
+        services.AddScoped<IOrderService, OrderService>();
+        services.AddScoped<IRechargeService, RechargeService>();
+        return services;
+    }
+
+    /// <summary>
     /// 添加商品相关服务
     /// </summary>
     public static IServiceCollection AddProductServices(this IServiceCollection services)
     {
         services.AddScoped<Services.Product.IProductService, Services.Product.ProductService>();
+        return services;
+    }
+
+    /// <summary>
+    /// 添加议价服务
+    /// </summary>
+    public static IServiceCollection AddBargainServices(this IServiceCollection services)
+    {
+        services.AddScoped<Services.Interfaces.IBargainService, Services.Bargain.BargainService>();
+        return services;
+    }
+
+    /// <summary>
+    /// 添加换物服务
+    /// </summary>
+    public static IServiceCollection AddExchangeServices(this IServiceCollection services)
+    {
+        services.AddScoped<Services.Interfaces.IExchangeService, Services.Exchange.ExchangeService>();
+        return services;
+    }
+
+    /// <summary>
+    /// 添加评价相关服务
+    /// </summary>
+    public static IServiceCollection AddReviewServices(this IServiceCollection services)
+    {
+        services.AddScoped<Services.Review.IReviewService, Services.Review.ReviewService>();
         return services;
     }
 }
