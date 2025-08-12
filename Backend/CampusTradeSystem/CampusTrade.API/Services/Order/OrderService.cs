@@ -72,13 +72,18 @@ namespace CampusTrade.API.Services.Order
             {
                 await _unitOfWork.BeginTransactionAsync();
 
-                // 3. 获取下一个订单ID
-                var nextOrderId = await GetNextOrderIdAsync();
+                // 3. 创建抽象订单，让Oracle触发器自动分配ID
+                var abstractOrder = new AbstractOrder
+                {
+                    OrderType = AbstractOrder.OrderTypes.Normal
+                };
+                await _abstractOrderRepository.AddAsync(abstractOrder);
+                await _unitOfWork.SaveChangesAsync();
 
-                // 4. 直接创建订单，触发器会自动处理abstract_orders
+                // 4. 创建订单，使用抽象订单的ID
                 var order = new Models.Entities.Order
                 {
-                    OrderId = nextOrderId,
+                    OrderId = abstractOrder.AbstractOrderId,
                     BuyerId = userId,
                     SellerId = product.UserId,
                     ProductId = request.ProductId,
@@ -729,35 +734,6 @@ namespace CampusTrade.API.Services.Order
         {
             var order = await _orderRepository.GetByPrimaryKeyAsync(orderId);
             return order != null && (order.BuyerId == userId || order.SellerId == userId);
-        }
-
-        /// <summary>
-        /// 获取下一个订单ID
-        /// </summary>
-        private async Task<int> GetNextOrderIdAsync()
-        {
-            try
-            {
-                // 使用原生SQL查询获取序列值
-                var sql = "SELECT ABSTRACT_ORDER_SEQ.NEXTVAL AS Value FROM DUAL";
-                var results = await _unitOfWork.ExecuteQueryAsync<SequenceValue>(sql);
-                return Convert.ToInt32(results.First().Value);
-            }
-            catch (Exception)
-            {
-                // 测试环境使用时间戳生成ID
-                var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                var random = new Random().Next(1000, 9999);
-                return Convert.ToInt32(timestamp % 1000000) * 10000 + random;
-            }
-        }
-
-        /// <summary>
-        /// 序列值包装类
-        /// </summary>
-        private class SequenceValue
-        {
-            public decimal Value { get; set; }
         }
         #endregion
     }
