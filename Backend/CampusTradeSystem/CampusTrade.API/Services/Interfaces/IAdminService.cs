@@ -162,6 +162,69 @@ namespace CampusTrade.API.Services.Interfaces
         Task<bool> LogAdminActionAsync(int adminId, string actionType, int? targetId = null, string? detail = null);
         #endregion
 
+        #region 商品管理
+        /// <summary>
+        /// 获取管理员可管理的商品列表
+        /// </summary>
+        /// <param name="adminId">管理员ID</param>
+        /// <param name="queryDto">查询条件</param>
+        /// <returns>商品列表</returns>
+        Task<(IEnumerable<Models.DTOs.Product.ProductListDto> Products, int TotalCount)> GetManagedProductsAsync(
+            int adminId, 
+            AdminProductQueryDto queryDto);
+
+        /// <summary>
+        /// 获取商品详情（管理员视角）
+        /// </summary>
+        /// <param name="adminId">管理员ID</param>
+        /// <param name="productId">商品ID</param>
+        /// <returns>商品详情</returns>
+        Task<AdminProductDetailDto?> GetProductDetailForAdminAsync(int adminId, int productId);
+
+        /// <summary>
+        /// 更新商品信息（管理员操作）
+        /// </summary>
+        /// <param name="adminId">管理员ID</param>
+        /// <param name="productId">商品ID</param>
+        /// <param name="updateDto">更新DTO</param>
+        /// <returns>更新结果</returns>
+        Task<(bool Success, string Message)> UpdateProductAsAdminAsync(int adminId, int productId, AdminUpdateProductDto updateDto);
+
+        /// <summary>
+        /// 删除商品（管理员操作）
+        /// </summary>
+        /// <param name="adminId">管理员ID</param>
+        /// <param name="productId">商品ID</param>
+        /// <param name="reason">删除原因</param>
+        /// <returns>删除结果</returns>
+        Task<(bool Success, string Message)> DeleteProductAsAdminAsync(int adminId, int productId, string? reason = null);
+
+        /// <summary>
+        /// 批量操作商品
+        /// </summary>
+        /// <param name="adminId">管理员ID</param>
+        /// <param name="batchDto">批量操作DTO</param>
+        /// <returns>操作结果</returns>
+        Task<(bool Success, string Message, Dictionary<int, string> FailedProducts)> BatchOperateProductsAsync(
+            int adminId, 
+            BatchProductOperationDto batchDto);
+
+        /// <summary>
+        /// 验证管理员对商品的管理权限
+        /// </summary>
+        /// <param name="adminId">管理员ID</param>
+        /// <param name="productId">商品ID</param>
+        /// <returns>是否有权限</returns>
+        Task<bool> ValidateProductPermissionAsync(int adminId, int productId);
+
+        /// <summary>
+        /// 获取管理员可管理的分类ID列表
+        /// </summary>
+        /// <param name="adminId">管理员ID</param>
+        /// <returns>分类ID列表</returns>
+        Task<List<int>> GetManagedCategoryIdsAsync(int adminId);
+        #endregion
+
         #region 统计信息
         /// <summary>
         /// 获取管理员统计信息

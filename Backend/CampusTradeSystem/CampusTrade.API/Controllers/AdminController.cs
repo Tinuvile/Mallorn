@@ -540,5 +540,257 @@ namespace CampusTrade.API.Controllers
             }
         }
         #endregion
+
+        #region 商品管理
+        /// <summary>
+        /// 获取管理员可管理的商品列表
+        /// </summary>
+        /// <param name="queryDto">查询条件</param>
+        /// <returns>商品列表</returns>
+        [HttpGet("products")]
+        public async Task<IActionResult> GetManagedProducts([FromQuery] AdminProductQueryDto queryDto)
+        {
+            try
+            {
+                // 获取当前用户ID
+                var userId = User.GetUserId();
+                if (userId == 0)
+                    return Unauthorized("用户身份验证失败");
+
+                var operatorAdmin = await _adminService.GetAdminByUserIdAsync(userId);
+                if (operatorAdmin == null)
+                {
+                    return Forbid(ApiResponse.CreateError("只有管理员可以执行此操作").ToString());
+                }
+
+                var result = await _adminService.GetManagedProductsAsync(operatorAdmin.AdminId, queryDto);
+
+                return Ok(ApiResponse.CreateSuccess(new 
+                { 
+                    products = result.Products,
+                    totalCount = result.TotalCount,
+                    pageIndex = queryDto.PageIndex,
+                    pageSize = queryDto.PageSize
+                }, "获取商品列表成功"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取管理员商品列表时发生异常");
+                return StatusCode(500, ApiResponse.CreateError("系统异常，请稍后重试"));
+            }
+        }
+
+        /// <summary>
+        /// 获取商品详情（管理员视角）
+        /// </summary>
+        /// <param name="productId">商品ID</param>
+        /// <returns>商品详情</returns>
+        [HttpGet("products/{productId}")]
+        public async Task<IActionResult> GetProductDetailForAdmin(int productId)
+        {
+            try
+            {
+                // 获取当前用户ID
+                var userId = User.GetUserId();
+                if (userId == 0)
+                    return Unauthorized("用户身份验证失败");
+
+                var operatorAdmin = await _adminService.GetAdminByUserIdAsync(userId);
+                if (operatorAdmin == null)
+                {
+                    return Forbid(ApiResponse.CreateError("只有管理员可以执行此操作").ToString());
+                }
+
+                var result = await _adminService.GetProductDetailForAdminAsync(operatorAdmin.AdminId, productId);
+
+                if (result == null)
+                {
+                    return NotFound(ApiResponse.CreateError("商品不存在或无权限查看"));
+                }
+
+                return Ok(ApiResponse.CreateSuccess(result, "获取商品详情成功"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取商品详情时发生异常");
+                return StatusCode(500, ApiResponse.CreateError("系统异常，请稍后重试"));
+            }
+        }
+
+        /// <summary>
+        /// 更新商品信息（管理员操作）
+        /// </summary>
+        /// <param name="productId">商品ID</param>
+        /// <param name="updateDto">更新请求</param>
+        /// <returns>更新结果</returns>
+        [HttpPut("products/{productId}")]
+        public async Task<IActionResult> UpdateProductAsAdmin(int productId, [FromBody] AdminUpdateProductDto updateDto)
+        {
+            try
+            {
+                // 获取当前用户ID
+                var userId = User.GetUserId();
+                if (userId == 0)
+                    return Unauthorized("用户身份验证失败");
+
+                var operatorAdmin = await _adminService.GetAdminByUserIdAsync(userId);
+                if (operatorAdmin == null)
+                {
+                    return Forbid(ApiResponse.CreateError("只有管理员可以执行此操作").ToString());
+                }
+
+                var result = await _adminService.UpdateProductAsAdminAsync(operatorAdmin.AdminId, productId, updateDto);
+
+                if (result.Success)
+                {
+                    return Ok(ApiResponse.CreateSuccess(result.Message));
+                }
+
+                return BadRequest(ApiResponse.CreateError(result.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "更新商品信息时发生异常");
+                return StatusCode(500, ApiResponse.CreateError("系统异常，请稍后重试"));
+            }
+        }
+
+        /// <summary>
+        /// 删除商品（管理员操作）
+        /// </summary>
+        /// <param name="productId">商品ID</param>
+        /// <param name="reason">删除原因</param>
+        /// <returns>删除结果</returns>
+        [HttpDelete("products/{productId}")]
+        public async Task<IActionResult> DeleteProductAsAdmin(int productId, [FromBody] string? reason = null)
+        {
+            try
+            {
+                // 获取当前用户ID
+                var userId = User.GetUserId();
+                if (userId == 0)
+                    return Unauthorized("用户身份验证失败");
+
+                var operatorAdmin = await _adminService.GetAdminByUserIdAsync(userId);
+                if (operatorAdmin == null)
+                {
+                    return Forbid(ApiResponse.CreateError("只有管理员可以执行此操作").ToString());
+                }
+
+                var result = await _adminService.DeleteProductAsAdminAsync(operatorAdmin.AdminId, productId, reason);
+
+                if (result.Success)
+                {
+                    return Ok(ApiResponse.CreateSuccess(result.Message));
+                }
+
+                return BadRequest(ApiResponse.CreateError(result.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "删除商品时发生异常");
+                return StatusCode(500, ApiResponse.CreateError("系统异常，请稍后重试"));
+            }
+        }
+
+        /// <summary>
+        /// 批量操作商品
+        /// </summary>
+        /// <param name="batchDto">批量操作请求</param>
+        /// <returns>操作结果</returns>
+        [HttpPost("products/batch")]
+        public async Task<IActionResult> BatchOperateProducts([FromBody] BatchProductOperationDto batchDto)
+        {
+            try
+            {
+                // 获取当前用户ID
+                var userId = User.GetUserId();
+                if (userId == 0)
+                    return Unauthorized("用户身份验证失败");
+
+                var operatorAdmin = await _adminService.GetAdminByUserIdAsync(userId);
+                if (operatorAdmin == null)
+                {
+                    return Forbid(ApiResponse.CreateError("只有管理员可以执行此操作").ToString());
+                }
+
+                var result = await _adminService.BatchOperateProductsAsync(operatorAdmin.AdminId, batchDto);
+
+                return Ok(ApiResponse.CreateSuccess(new 
+                { 
+                    message = result.Message,
+                    failedProducts = result.FailedProducts
+                }, result.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "批量操作商品时发生异常");
+                return StatusCode(500, ApiResponse.CreateError("系统异常，请稍后重试"));
+            }
+        }
+
+        /// <summary>
+        /// 验证商品管理权限
+        /// </summary>
+        /// <param name="productId">商品ID</param>
+        /// <returns>权限验证结果</returns>
+        [HttpGet("products/{productId}/permission")]
+        public async Task<IActionResult> ValidateProductPermission(int productId)
+        {
+            try
+            {
+                // 获取当前用户ID
+                var userId = User.GetUserId();
+                if (userId == 0)
+                    return Unauthorized("用户身份验证失败");
+
+                var operatorAdmin = await _adminService.GetAdminByUserIdAsync(userId);
+                if (operatorAdmin == null)
+                {
+                    return Forbid(ApiResponse.CreateError("只有管理员可以执行此操作").ToString());
+                }
+
+                var hasPermission = await _adminService.ValidateProductPermissionAsync(operatorAdmin.AdminId, productId);
+
+                return Ok(ApiResponse.CreateSuccess(new { hasPermission, adminRole = operatorAdmin.Role }));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "验证商品管理权限时发生异常");
+                return StatusCode(500, ApiResponse.CreateError("系统异常，请稍后重试"));
+            }
+        }
+
+        /// <summary>
+        /// 获取管理员可管理的分类列表
+        /// </summary>
+        /// <returns>分类列表</returns>
+        [HttpGet("categories")]
+        public async Task<IActionResult> GetManagedCategories()
+        {
+            try
+            {
+                // 获取当前用户ID
+                var userId = User.GetUserId();
+                if (userId == 0)
+                    return Unauthorized("用户身份验证失败");
+
+                var operatorAdmin = await _adminService.GetAdminByUserIdAsync(userId);
+                if (operatorAdmin == null)
+                {
+                    return Forbid(ApiResponse.CreateError("只有管理员可以执行此操作").ToString());
+                }
+
+                var categoryIds = await _adminService.GetManagedCategoryIdsAsync(operatorAdmin.AdminId);
+
+                return Ok(ApiResponse.CreateSuccess(new { categoryIds, adminRole = operatorAdmin.Role }));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取管理员分类列表时发生异常");
+                return StatusCode(500, ApiResponse.CreateError("系统异常，请稍后重试"));
+            }
+        }
+        #endregion
     }
 }

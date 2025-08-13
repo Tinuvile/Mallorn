@@ -104,6 +104,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IVirtualAccountsRepository, VirtualAccountsRepository>();
         services.AddScoped<IRechargeRecordsRepository, RechargeRecordsRepository>();
