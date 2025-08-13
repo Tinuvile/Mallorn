@@ -39,7 +39,7 @@ namespace CampusTrade.API.Services.Auth
             // 1. 校验接收人是否有效
             var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == recipientId && u.IsActive == 1);
             if (user == null)
-                return (false, "目标用户不存在或已禁用", null);
+                return (false, $"目标用户不存在或已禁用，用户ID: {recipientId}", null);
 
             // 2. 校验模板是否有效
             var template = await _context.NotificationTemplates

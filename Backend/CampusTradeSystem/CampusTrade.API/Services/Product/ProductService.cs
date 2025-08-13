@@ -20,6 +20,7 @@ public class ProductService : IProductService
     private readonly IUserCacheService _userCache;
     private readonly IFileService _fileService;
     private readonly ILogger<ProductService> _logger;
+    private readonly Auth.NotifiService _notificationService;
 
     // 自动下架配置
     private const int DEFAULT_AUTO_REMOVE_DAYS = 20; // 默认20天自动下架
@@ -32,7 +33,8 @@ public class ProductService : IProductService
         ICategoryCacheService categoryCache,
         IUserCacheService userCache,
         IFileService fileService,
-        ILogger<ProductService> logger)
+        ILogger<ProductService> logger,
+        Auth.NotifiService notificationService)
     {
         _unitOfWork = unitOfWork;
         _productCache = productCache;
@@ -40,6 +42,7 @@ public class ProductService : IProductService
         _userCache = userCache;
         _fileService = fileService;
         _logger = logger;
+        _notificationService = notificationService;
     }
 
     #region 商品发布与管理
@@ -104,6 +107,32 @@ public class ProductService : IProductService
 
             // 清除相关缓存
             await _productCache.InvalidateProductsByCategoryAsync(createDto.CategoryId);
+
+            // 发送商品上架成功通知
+            try
+            {
+                // 通知卖家 - 模板ID为9（商品上架成功模板）
+                var notificationParams = new Dictionary<string, object>
+                {
+                    ["productTitle"] = product.Title,
+                    ["productId"] = product.ProductId
+                };
+                
+                await _notificationService.CreateNotificationAsync(
+                    userId, 
+                    9, // 商品上架成功模板ID
+                    notificationParams, 
+                    product.ProductId
+                );
+
+                _logger.LogInformation("商品上架成功通知已发送，商品ID: {ProductId}，用户ID: {UserId}，商品标题: {ProductTitle}", 
+                    product.ProductId, userId, product.Title);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "发送商品上架成功通知失败，商品ID: {ProductId}", product.ProductId);
+                // 注意：通知发送失败不应该影响商品发布结果，所以这里只记录日志
+            }
 
             // 返回商品详情
             var productDetail = await GetProductDetailInternalAsync(product.ProductId, userId);
@@ -245,6 +274,32 @@ public class ProductService : IProductService
             product.Status = Models.Entities.Product.ProductStatus.OffShelf;
             _unitOfWork.Products.Update(product);
             await _unitOfWork.SaveChangesAsync();
+
+            // 发送商品下架通知
+            try
+            {
+                // 通知卖家 - 模板ID为10（商品下架通知模板）
+                var notificationParams = new Dictionary<string, object>
+                {
+                    ["productTitle"] = product.Title,
+                    ["reason"] = "主动删除"
+                };
+                
+                await _notificationService.CreateNotificationAsync(
+                    userId, 
+                    10, // 商品下架通知模板ID
+                    notificationParams, 
+                    productId
+                );
+
+                _logger.LogInformation("商品下架通知已发送，商品ID: {ProductId}，用户ID: {UserId}，商品标题: {ProductTitle}，下架原因: 主动删除", 
+                    productId, userId, product.Title);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "发送商品下架通知失败，商品ID: {ProductId}", productId);
+                // 注意：通知发送失败不应该影响商品下架结果，所以这里只记录日志
+            }
 
             // 清除缓存
             await _productCache.InvalidateProductCacheAsync(productId);
@@ -741,7 +796,39 @@ public class ProductService : IProductService
             // 只获取在售商品
             products = products.Where(p => p.Status == Models.Entities.Product.ProductStatus.OnSale);
 
-            var productDtos = await ConvertToProductListDtosAsync(products);
+            var productsList = products.ToList();
+
+            // 发送商品即将过期通知给所有相关用户
+            foreach (var product in productsList)
+            {
+                try
+                {
+                    // 发送商品即将过期通知 - 模板ID为13（商品即将过期模板）
+                    var expireTimeStr = product.AutoRemoveTime?.ToString("yyyy-MM-dd HH:mm") ?? "未知";
+                    var notificationParams = new Dictionary<string, object>
+                    {
+                        ["productTitle"] = product.Title,
+                        ["expireTime"] = expireTimeStr
+                    };
+                    
+                    await _notificationService.CreateNotificationAsync(
+                        product.UserId, 
+                        13, // 商品即将过期模板ID
+                        notificationParams, 
+                        product.ProductId
+                    );
+
+                    _logger.LogInformation("商品即将过期通知已发送，商品ID: {ProductId}，用户ID: {UserId}，商品标题: {ProductTitle}，过期时间: {ExpireTime}", 
+                        product.ProductId, product.UserId, product.Title, expireTimeStr);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "发送商品即将过期通知失败，商品ID: {ProductId}", product.ProductId);
+                    // 注意：通知发送失败不应该影响查询结果，所以这里只记录日志
+                }
+            }
+
+            var productDtos = await ConvertToProductListDtosAsync(productsList);
             return ApiResponse<List<ProductListDto>>.CreateSuccess(productDtos.ToList());
         }
         catch (Exception ex)
@@ -896,6 +983,32 @@ public class ProductService : IProductService
 
                     _logger.LogInformation("商品自动下架成功，ProductId: {ProductId}, ViewCount: {ViewCount}, OriginalRemoveTime: {OriginalRemoveTime}",
                         product.ProductId, product.ViewCount, product.AutoRemoveTime);
+
+                    // 发送商品下架通知
+                    try
+                    {
+                        // 通知卖家 - 模板ID为10（商品下架通知模板）
+                        var notificationParams = new Dictionary<string, object>
+                        {
+                            ["productTitle"] = product.Title,
+                            ["reason"] = "自动过期下架"
+                        };
+                        
+                        await _notificationService.CreateNotificationAsync(
+                            product.UserId, 
+                            10, // 商品下架通知模板ID
+                            notificationParams, 
+                            product.ProductId
+                        );
+
+                        _logger.LogInformation("商品自动下架通知已发送，商品ID: {ProductId}，用户ID: {UserId}，商品标题: {ProductTitle}，下架原因: 自动过期下架", 
+                            product.ProductId, product.UserId, product.Title);
+                    }
+                    catch (Exception notifyEx)
+                    {
+                        _logger.LogError(notifyEx, "发送商品自动下架通知失败，商品ID: {ProductId}", product.ProductId);
+                        // 注意：通知发送失败不应该影响下架流程，所以这里只记录日志
+                    }
                 }
                 catch (Exception ex)
                 {

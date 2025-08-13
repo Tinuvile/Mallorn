@@ -20,6 +20,7 @@ namespace CampusTrade.API.Services.Order
         private readonly IVirtualAccountsRepository _virtualAccountRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<OrderService> _logger;
+        private readonly Auth.NotifiService _notificationService;
 
         // 订单超时时间（分钟）
         private const int ORDER_TIMEOUT_MINUTES = 30;
@@ -31,7 +32,8 @@ namespace CampusTrade.API.Services.Order
             IRepository<AbstractOrder> abstractOrderRepository,
             IVirtualAccountsRepository virtualAccountRepository,
             IUnitOfWork unitOfWork,
-            ILogger<OrderService> logger)
+            ILogger<OrderService> logger,
+            Auth.NotifiService notificationService)
         {
             _orderRepository = orderRepository;
             _productRepository = productRepository;
@@ -40,6 +42,7 @@ namespace CampusTrade.API.Services.Order
             _virtualAccountRepository = virtualAccountRepository;
             _unitOfWork = unitOfWork;
             _logger = logger;
+            _notificationService = notificationService;
         }
 
         #region 订单创建
@@ -94,6 +97,50 @@ namespace CampusTrade.API.Services.Order
                 await _unitOfWork.CommitTransactionAsync();
 
                 _logger.LogInformation("订单创建成功，订单ID: {OrderId}", order.OrderId);
+
+                // 发送订单创建通知给买家和卖家
+                try
+                {
+                    // 通知买家 - 模板ID为1（订单状态更新模板）
+                    var buyerNotificationParams = new Dictionary<string, object>
+                    {
+                        ["orderId"] = order.OrderId,
+                        ["status"] = "待付款",
+                        ["additionalInfo"] = $"您已成功创建订单，请在 {ORDER_TIMEOUT_MINUTES} 分钟内完成付款。商品金额：￥{order.TotalAmount}"
+                    };
+                    
+                    await _notificationService.CreateNotificationAsync(
+                        order.BuyerId, 
+                        1, // 订单状态更新模板ID
+                        buyerNotificationParams, 
+                        order.OrderId
+                    );
+
+                    // 通知卖家
+                    var sellerNotificationParams = new Dictionary<string, object>
+                    {
+                        ["orderId"] = order.OrderId,
+                        ["status"] = "待付款",
+                        ["additionalInfo"] = $"您有新的订单，买家等待付款。商品金额：￥{order.TotalAmount}"
+                    };
+                    
+                    await _notificationService.CreateNotificationAsync(
+                        order.SellerId, 
+                        1, // 订单状态更新模板ID
+                        sellerNotificationParams, 
+                        order.OrderId
+                    );
+
+                    _logger.LogInformation("订单创建通知已发送，订单ID: {OrderId}，买家ID: {BuyerId}，卖家ID: {SellerId}", 
+                        order.OrderId, order.BuyerId, order.SellerId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "发送订单创建通知失败，订单ID: {OrderId}", order.OrderId);
+                    // 注意：通知发送失败不应该影响订单创建，所以这里只记录日志
+                }
+
+                
 
                 // 5. 返回订单详情
                 return await GetOrderDetailAsync(order.OrderId, userId)
@@ -348,20 +395,135 @@ namespace CampusTrade.API.Services.Order
 
         public async Task<bool> ConfirmPaymentAsync(int orderId, int userId)
         {
-            return await UpdateOrderStatusAsync(orderId, userId, new UpdateOrderStatusRequest
+            // 先获取订单详情以便发送通知
+            var order = await _orderRepository.GetOrderWithDetailsAsync(orderId);
+            if (order == null)
+            {
+                _logger.LogWarning("确认付款：订单不存在，订单ID: {OrderId}", orderId);
+                return false;
+            }
+
+            // 调用状态更新方法
+            var updateResult = await UpdateOrderStatusAsync(orderId, userId, new UpdateOrderStatusRequest
             {
                 Status = Models.Entities.Order.OrderStatus.Paid,
                 Remarks = "买家确认付款"
             });
+
+            // 如果状态更新成功，发送支付成功通知
+            if (updateResult)
+            {
+                try
+                {
+                    var paymentAmount = order.FinalPrice ?? order.TotalAmount ?? 0;
+
+                    // 通知买家 - 模板ID为3（支付成功确认模板）
+                    var buyerNotificationParams = new Dictionary<string, object>
+                    {
+                        ["orderId"] = orderId,
+                        ["amount"] = paymentAmount.ToString("F2")
+                    };
+                    
+                    await _notificationService.CreateNotificationAsync(
+                        userId, // 买家ID
+                        3, // 支付成功确认模板ID
+                        buyerNotificationParams, 
+                        orderId
+                    );
+
+                    // 通知卖家 - 使用订单状态更新模板
+                    var sellerNotificationParams = new Dictionary<string, object>
+                    {
+                        ["orderId"] = orderId,
+                        ["status"] = "已付款",
+                        ["additionalInfo"] = $"买家已完成付款，订单金额：￥{paymentAmount:F2}，请及时发货。"
+                    };
+                    
+                    await _notificationService.CreateNotificationAsync(
+                        order.SellerId, 
+                        1, // 订单状态更新模板ID
+                        sellerNotificationParams, 
+                        orderId
+                    );
+
+                    _logger.LogInformation("付款确认通知已发送，订单ID: {OrderId}，买家ID: {BuyerId}，卖家ID: {SellerId}", 
+                        orderId, userId, order.SellerId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "发送付款确认通知失败，订单ID: {OrderId}", orderId);
+                    // 注意：通知发送失败不应该影响付款确认结果，所以这里只记录日志
+                }
+            }
+
+            return updateResult;
         }
 
         public async Task<bool> ShipOrderAsync(int orderId, int userId, string? trackingInfo = null)
         {
-            return await UpdateOrderStatusAsync(orderId, userId, new UpdateOrderStatusRequest
+            // 先获取订单详情以便发送通知
+            var order = await _orderRepository.GetOrderWithDetailsAsync(orderId);
+            if (order == null)
+            {
+                _logger.LogWarning("发货操作：订单不存在，订单ID: {OrderId}", orderId);
+                return false;
+            }
+
+            // 调用状态更新方法
+            var updateResult = await UpdateOrderStatusAsync(orderId, userId, new UpdateOrderStatusRequest
             {
                 Status = Models.Entities.Order.OrderStatus.Shipped,
                 Remarks = string.IsNullOrEmpty(trackingInfo) ? "卖家已发货" : $"卖家已发货，物流信息: {trackingInfo}"
             });
+
+            // 如果状态更新成功，发送发货通知
+            if (updateResult)
+            {
+                try
+                {
+                    // 通知买家 - 模板ID为4（发货通知模板）
+                    var buyerNotificationParams = new Dictionary<string, object>
+                    {
+                        ["orderId"] = orderId,
+                        ["trackingInfo"] = string.IsNullOrEmpty(trackingInfo) ? "" : $"物流信息：{trackingInfo}，",
+                        ["deliveryTime"] = "1-3个工作日内" // 可以根据实际业务逻辑动态计算
+                    };
+                    
+                    await _notificationService.CreateNotificationAsync(
+                        order.BuyerId, // 买家ID
+                        4, // 发货通知模板ID
+                        buyerNotificationParams, 
+                        orderId
+                    );
+
+                    // 通知卖家 - 使用订单状态更新模板
+                    var sellerNotificationParams = new Dictionary<string, object>
+                    {
+                        ["orderId"] = orderId,
+                        ["status"] = "已发货",
+                        ["additionalInfo"] = string.IsNullOrEmpty(trackingInfo) 
+                            ? "您已成功发货，买家将收到发货通知。" 
+                            : $"您已成功发货，物流信息：{trackingInfo}，买家将收到发货通知。"
+                    };
+                    
+                    await _notificationService.CreateNotificationAsync(
+                        userId, // 卖家ID
+                        1, // 订单状态更新模板ID
+                        sellerNotificationParams, 
+                        orderId
+                    );
+
+                    _logger.LogInformation("发货通知已发送，订单ID: {OrderId}，买家ID: {BuyerId}，卖家ID: {SellerId}，物流信息: {TrackingInfo}", 
+                        orderId, order.BuyerId, userId, trackingInfo ?? "无");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "发送发货通知失败，订单ID: {OrderId}", orderId);
+                    // 注意：通知发送失败不应该影响发货操作结果，所以这里只记录日志
+                }
+            }
+
+            return updateResult;
         }
 
         public async Task<bool> ConfirmDeliveryAsync(int orderId, int userId)
@@ -435,6 +597,60 @@ namespace CampusTrade.API.Services.Order
                 _logger.LogInformation("订单 {OrderId} 完成并转账成功，卖家 {SellerId} 收到 {Amount}",
                     orderId, order.SellerId, transferAmount);
 
+                // 发送交易完成祝贺通知给买家和卖家
+                try
+                {
+                    // 通知买家 - 模板ID为6（交易完成祝贺模板）
+                    var buyerNotificationParams = new Dictionary<string, object>
+                    {
+                        ["orderId"] = orderId
+                    };
+                    
+                    await _notificationService.CreateNotificationAsync(
+                        order.BuyerId, 
+                        6, // 交易完成祝贺模板ID
+                        buyerNotificationParams, 
+                        orderId
+                    );
+
+                    // 通知卖家 - 同样使用交易完成祝贺模板
+                    var sellerNotificationParams = new Dictionary<string, object>
+                    {
+                        ["orderId"] = orderId
+                    };
+                    
+                    await _notificationService.CreateNotificationAsync(
+                        order.SellerId, 
+                        6, // 交易完成祝贺模板ID
+                        sellerNotificationParams, 
+                        orderId
+                    );
+
+                    _logger.LogInformation("交易完成祝贺通知已发送，订单ID: {OrderId}，买家ID: {BuyerId}，卖家ID: {SellerId}", 
+                        orderId, order.BuyerId, order.SellerId);
+
+                    // 发送评价提醒通知给买家 - 模板ID为23（评价提醒模板）
+                    var reviewReminderParams = new Dictionary<string, object>
+                    {
+                        ["orderId"] = orderId
+                    };
+                    
+                    await _notificationService.CreateNotificationAsync(
+                        order.BuyerId, 
+                        23, // 评价提醒模板ID
+                        reviewReminderParams, 
+                        orderId
+                    );
+
+                    _logger.LogInformation("评价提醒通知已发送给买家，订单ID: {OrderId}，买家ID: {BuyerId}", 
+                        orderId, order.BuyerId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "发送交易完成祝贺通知或评价提醒通知失败，订单ID: {OrderId}", orderId);
+                    // 注意：通知发送失败不应该影响订单完成结果，所以这里只记录日志
+                }
+
                 return true;
             }
             catch (Exception ex)
@@ -447,11 +663,67 @@ namespace CampusTrade.API.Services.Order
 
         public async Task<bool> CancelOrderAsync(int orderId, int userId, string? reason = null)
         {
-            return await UpdateOrderStatusAsync(orderId, userId, new UpdateOrderStatusRequest
+            // 先获取订单详情以便发送通知
+            var order = await _orderRepository.GetOrderWithDetailsAsync(orderId);
+            if (order == null)
+            {
+                _logger.LogWarning("取消订单：订单不存在，订单ID: {OrderId}", orderId);
+                return false;
+            }
+
+            // 调用状态更新方法
+            var updateResult = await UpdateOrderStatusAsync(orderId, userId, new UpdateOrderStatusRequest
             {
                 Status = Models.Entities.Order.OrderStatus.Cancelled,
                 Remarks = string.IsNullOrEmpty(reason) ? "订单已取消" : $"订单已取消: {reason}"
             });
+
+            // // 如果状态更新成功，发送取消通知
+            // if (updateResult)
+            // {
+            //     try
+            //     {
+            //         var cancelReason = string.IsNullOrEmpty(reason) ? "用户主动取消" : reason; // 原因未知
+
+            //         // 通知买家 - 模板ID为7（订单取消通知模板）
+            //         var buyerNotificationParams = new Dictionary<string, object>
+            //         {
+            //             ["orderId"] = orderId,
+            //             ["reason"] = cancelReason
+            //         };
+                    
+            //         await _notificationService.CreateNotificationAsync(
+            //             order.BuyerId, 
+            //             7, // 订单取消通知模板ID
+            //             buyerNotificationParams, 
+            //             orderId
+            //         );
+
+            //         // 通知卖家 - 同样使用订单取消通知模板
+            //         var sellerNotificationParams = new Dictionary<string, object>
+            //         {
+            //             ["orderId"] = orderId,
+            //             ["reason"] = cancelReason
+            //         };
+                    
+            //         await _notificationService.CreateNotificationAsync(
+            //             order.SellerId, 
+            //             7, // 订单取消通知模板ID
+            //             sellerNotificationParams, 
+            //             orderId
+            //         );
+
+            //         _logger.LogInformation("订单取消通知已发送，订单ID: {OrderId}，买家ID: {BuyerId}，卖家ID: {SellerId}，取消原因: {Reason}", 
+            //             orderId, order.BuyerId, order.SellerId, cancelReason);
+            //     }
+            //     catch (Exception ex)
+            //     {
+            //         _logger.LogError(ex, "发送订单取消通知失败，订单ID: {OrderId}", orderId);
+            //         // 注意：通知发送失败不应该影响订单取消结果，所以这里只记录日志
+            //     }
+            // }
+
+            return updateResult;
         }
         #endregion
 
@@ -486,6 +758,53 @@ namespace CampusTrade.API.Services.Order
                             processedCount++;
                             _logger.LogDebug("订单 {OrderId} 因超时被自动取消，买家: {BuyerId}, 过期时间: {ExpireTime}",
                                 order.OrderId, order.BuyerId, order.ExpireTime);
+
+                            // 发送超时取消通知
+                            try
+                            {
+                                // 获取订单详情（包含卖家信息）
+                                var orderDetails = await _orderRepository.GetOrderWithDetailsAsync(order.OrderId);
+                                if (orderDetails != null)
+                                {
+                                    var cancelReason = "因超时被自动取消";
+
+                                    // 通知买家 - 模板ID为7（订单取消通知模板）
+                                    var buyerNotificationParams = new Dictionary<string, object>
+                                    {
+                                        ["orderId"] = order.OrderId,
+                                        ["reason"] = cancelReason
+                                    };
+                                    
+                                    await _notificationService.CreateNotificationAsync(
+                                        order.BuyerId, 
+                                        7, // 订单取消通知模板ID
+                                        buyerNotificationParams, 
+                                        order.OrderId
+                                    );
+
+                                    // 通知卖家 - 同样使用订单取消通知模板
+                                    var sellerNotificationParams = new Dictionary<string, object>
+                                    {
+                                        ["orderId"] = order.OrderId,
+                                        ["reason"] = cancelReason
+                                    };
+                                    
+                                    await _notificationService.CreateNotificationAsync(
+                                        orderDetails.SellerId, 
+                                        7, // 订单取消通知模板ID
+                                        sellerNotificationParams, 
+                                        order.OrderId
+                                    );
+
+                                    _logger.LogDebug("订单超时取消通知已发送，订单ID: {OrderId}，买家ID: {BuyerId}，卖家ID: {SellerId}", 
+                                        order.OrderId, order.BuyerId, orderDetails.SellerId);
+                                }
+                            }
+                            catch (Exception notifyEx)
+                            {
+                                _logger.LogError(notifyEx, "发送订单超时取消通知失败，订单ID: {OrderId}", order.OrderId);
+                                // 注意：通知发送失败不应该影响订单处理流程
+                            }
                         }
                         else
                         {
@@ -534,6 +853,36 @@ namespace CampusTrade.API.Services.Order
                     if (detail != null)
                     {
                         result.Add(detail);
+
+                        // 发送支付提醒通知给买家
+                        try
+                        {
+                            var orderAmount = order.FinalPrice ?? order.TotalAmount ?? 0;
+                            var expireTimeStr = order.ExpireTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "未知";
+
+                            // 通知买家 - 模板ID为2（支付提醒模板）
+                            var notificationParams = new Dictionary<string, object>
+                            {
+                                ["orderId"] = order.OrderId,
+                                ["expireTime"] = expireTimeStr,
+                                ["amount"] = orderAmount.ToString("F2")
+                            };
+                            
+                            await _notificationService.CreateNotificationAsync(
+                                order.BuyerId, 
+                                2, // 支付提醒模板ID
+                                notificationParams, 
+                                order.OrderId
+                            );
+
+                            _logger.LogInformation("支付提醒通知已发送，订单ID: {OrderId}，买家ID: {BuyerId}，过期时间: {ExpireTime}，金额: ￥{Amount}", 
+                                order.OrderId, order.BuyerId, expireTimeStr, orderAmount);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "发送支付提醒通知失败，订单ID: {OrderId}", order.OrderId);
+                            // 注意：通知发送失败不应该影响查询结果，所以这里只记录日志
+                        }
                     }
                 }
 

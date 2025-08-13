@@ -215,10 +215,58 @@ INSERT INTO notification_templates (
 );
 
 -- ================================================================
+-- 换物相关通知模板
+-- ================================================================
+
+-- 18. 收到换物请求
+INSERT INTO notification_templates (
+    template_name, template_type, template_content, description, priority, is_active, created_by
+) VALUES (
+    '收到换物请求', 
+    '交易相关', 
+    '您的商品 "{requestedProductTitle}" 收到换物请求：对方愿意用 "{offeredProductTitle}" 与您交换，请及时回复。', 
+    '卖家收到买家换物请求', 
+    3, 1, 1
+);
+
+-- 19. 换物请求被接受
+INSERT INTO notification_templates (
+    template_name, template_type, template_content, description, priority, is_active, created_by
+) VALUES (
+    '换物请求被接受', 
+    '交易相关', 
+    '好消息！您的换物请求已被接受。您的商品 "{offeredProductTitle}" 将与对方的 "{requestedProductTitle}" 进行交换。', 
+    '换物请求被对方接受', 
+    3, 1, 1
+);
+
+-- 20. 换物请求被拒绝
+INSERT INTO notification_templates (
+    template_name, template_type, template_content, description, priority, is_active, created_by
+) VALUES (
+    '换物请求被拒绝', 
+    '交易相关', 
+    '很遗憾，您的换物请求被拒绝。您的商品 "{offeredProductTitle}" 与 "{requestedProductTitle}" 的交换请求未被接受。{reason}', 
+    '换物请求被对方拒绝', 
+    2, 1, 1
+);
+
+-- 21. 换物交易完成
+INSERT INTO notification_templates (
+    template_name, template_type, template_content, description, priority, is_active, created_by
+) VALUES (
+    '换物交易完成', 
+    '交易相关', 
+    '恭喜！您的换物交易已完成。您的商品 "{offeredProductTitle}" 已成功与对方的 "{requestedProductTitle}" 完成交换。', 
+    '换物交易成功完成', 
+    2, 1, 1
+);
+
+-- ================================================================
 -- 评价相关通知模板
 -- ================================================================
 
--- 18. 收到新评价
+-- 22. 收到新评价
 INSERT INTO notification_templates (
     template_name, template_type, template_content, description, priority, is_active, created_by
 ) VALUES (
@@ -229,7 +277,7 @@ INSERT INTO notification_templates (
     2, 1, 1
 );
 
--- 19. 评价提醒
+-- 23. 评价提醒
 INSERT INTO notification_templates (
     template_name, template_type, template_content, description, priority, is_active, created_by
 ) VALUES (
@@ -240,7 +288,7 @@ INSERT INTO notification_templates (
     2, 1, 1
 );
 
--- 20. 卖家回复评价
+-- 24. 卖家回复评价
 INSERT INTO notification_templates (
     template_name, template_type, template_content, description, priority, is_active, created_by
 ) VALUES (
@@ -255,7 +303,7 @@ INSERT INTO notification_templates (
 -- 系统通知模板
 -- ================================================================
 
--- 21. 账户安全提醒
+-- 25. 账户安全提醒
 INSERT INTO notification_templates (
     template_name, template_type, template_content, description, priority, is_active
 ) VALUES (
@@ -266,7 +314,7 @@ INSERT INTO notification_templates (
     5, 1
 );
 
--- 22. 密码修改成功
+-- 26. 密码修改成功
 INSERT INTO notification_templates (
     template_name, template_type, template_content, description, priority, is_active
 ) VALUES (
@@ -277,7 +325,7 @@ INSERT INTO notification_templates (
     4, 1
 );
 
--- 23. 系统维护通知
+-- 27. 系统维护通知
 INSERT INTO notification_templates (
     template_name, template_type, template_content, description, priority, is_active
 ) VALUES (
@@ -288,7 +336,7 @@ INSERT INTO notification_templates (
     4, 1
 );
 
--- 24. 欢迎新用户
+-- 28. 欢迎新用户
 INSERT INTO notification_templates (
     template_name, template_type, template_content, description, priority, is_active
 ) VALUES (
@@ -299,7 +347,7 @@ INSERT INTO notification_templates (
     1, 1
 );
 
--- 25. 信用分变更
+-- 29. 信用分变更
 INSERT INTO notification_templates (
     template_name, template_type, template_content, description, priority, is_active
 ) VALUES (
@@ -310,7 +358,7 @@ INSERT INTO notification_templates (
     3, 1
 );
 
--- 26. 账户余额变动
+-- 30. 账户余额变动
 INSERT INTO notification_templates (
     template_name, template_type, template_content, description, priority, is_active
 ) VALUES (
@@ -321,7 +369,7 @@ INSERT INTO notification_templates (
     3, 1
 );
 
--- 27. 充值成功通知
+-- 31. 充值成功通知
 INSERT INTO notification_templates (
     template_name, template_type, template_content, description, priority, is_active
 ) VALUES (
@@ -336,7 +384,7 @@ INSERT INTO notification_templates (
 -- 管理员相关通知模板
 -- ================================================================
 
--- 28. 举报处理结果
+-- 32. 举报处理结果
 INSERT INTO notification_templates (
     template_name, template_type, template_content, description, priority, is_active
 ) VALUES (
@@ -347,7 +395,7 @@ INSERT INTO notification_templates (
     3, 1
 );
 
--- 29. 违规处罚通知
+-- 33. 违规处罚通知
 INSERT INTO notification_templates (
     template_name, template_type, template_content, description, priority, is_active
 ) VALUES (
@@ -358,7 +406,7 @@ INSERT INTO notification_templates (
     5, 1
 );
 
--- 30. 申诉处理结果
+-- 34. 申诉处理结果
 INSERT INTO notification_templates (
     template_name, template_type, template_content, description, priority, is_active
 ) VALUES (
