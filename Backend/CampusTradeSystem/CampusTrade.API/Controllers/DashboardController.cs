@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using CampusTrade.API.Models.DTOs;
+using CampusTrade.API.Models.DTOs.Common;
 using CampusTrade.API.Repositories.Interfaces;
 using NPOI.XSSF.UserModel;
 using NPOI.SS.UserModel;
@@ -8,6 +9,8 @@ using iTextSharp.text.pdf;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using System;
 
 namespace CampusTrade.API.Controllers
 {
@@ -17,64 +20,64 @@ namespace CampusTrade.API.Controllers
     {
         private readonly IOrderRepository _orderRepository;
         private readonly IUserRepository _userRepository;
+        private readonly ILogger<DashboardController> _logger;
 
-        public DashboardController(IOrderRepository orderRepository, IUserRepository userRepository)
+        // 注入日志服务
+        public DashboardController(
+            IOrderRepository orderRepository,
+            IUserRepository userRepository,
+            ILogger<DashboardController> logger)
         {
             _orderRepository = orderRepository;
             _userRepository = userRepository;
+            _logger = logger;
         }
 
         /// <summary>
         /// 获取数据报表统计数据
         /// </summary>
         [HttpGet("statistics")]
-        public async Task<ActionResult<DashboardStatsDto>> GetDashboardStatistics(int year, int activityDays = 30)
+        public async Task<ActionResult<ApiResponse<DashboardStatsDto>>> GetDashboardStatistics(int year, int activityDays = 30)
         {
-            var stats = new DashboardStatsDto();
-
-            // 获取月度交易数据
-            stats.MonthlyTransactions = await _orderRepository.GetMonthlyTransactionsAsync(year);
-
-            // 获取热门商品排行（取前10）
-            stats.PopularProducts = await _orderRepository.GetPopularProductsAsync(10);
-
-            // 获取用户活跃度数据（最近N天）
-            var registrationTrend = await _userRepository.GetUserRegistrationTrendAsync(activityDays);
-            var startDate = DateTime.UtcNow.AddDays(-activityDays).Date;
-
-            // 获取所有用户的登录日志来统计活跃用户
-            var allUsers = await _userRepository.GetAllAsync();
-            var dailyActiveUsers = new Dictionary<DateTime, int>();
-
-            foreach (var user in allUsers)
+            try
             {
-                var loginLogs = await _userRepository.GetLoginLogsAsync(user.UserId);
-                foreach (var log in loginLogs)
+                _logger.LogInformation("开始获取报表统计数据，年份：{Year}，活跃天数：{ActivityDays}", year, activityDays);
+                var stats = new DashboardStatsDto();
+
+                // 批量获取月度交易数据
+                stats.MonthlyTransactions = await _orderRepository.GetMonthlyTransactionsAsync(year);
+                _logger.LogDebug("已获取月度交易数据，记录数：{Count}", stats.MonthlyTransactions?.Count ?? 0);
+
+                // 批量获取热门商品
+                stats.PopularProducts = await _orderRepository.GetPopularProductsAsync(10);
+                _logger.LogDebug("已获取热门商品数据，记录数：{Count}", stats.PopularProducts?.Count ?? 0);
+
+                // 获取用户活跃度数据
+                var startDate = DateTime.UtcNow.AddDays(-activityDays).Date;
+                // 优化点：通过仓储一次性获取日期范围内的活跃用户统计，避免循环查询
+                var dailyActiveUsers = await _userRepository.GetDailyActiveUsersAsync(startDate, DateTime.UtcNow.Date);
+                // 获取注册趋势
+                var registrationTrend = await _userRepository.GetUserRegistrationTrendAsync(activityDays);
+
+                // 填充用户活跃度数据
+                foreach (var item in registrationTrend)
                 {
-                    var logDate = log.LogTime.Date;
-                    if (logDate >= startDate)
+                    stats.UserActivities.Add(new UserActivityDto
                     {
-                        if (!dailyActiveUsers.ContainsKey(logDate))
-                        {
-                            dailyActiveUsers[logDate] = 0;
-                        }
-                        dailyActiveUsers[logDate]++;
-                    }
+                        Date = item.Key,
+                        ActiveUserCount = dailyActiveUsers.TryGetValue(item.Key, out int count) ? count : 0,
+                        NewUserCount = item.Value
+                    });
                 }
-            }
 
-            // 填充用户活跃度数据
-            foreach (var item in registrationTrend)
+                _logger.LogInformation("报表统计数据获取成功，年份：{Year}", year);
+                return Ok(ApiResponse<DashboardStatsDto>.CreateSuccess(stats, "报表统计数据获取成功"));
+            }
+            catch (Exception ex)
             {
-                stats.UserActivities.Add(new UserActivityDto
-                {
-                    Date = item.Key,
-                    ActiveUserCount = dailyActiveUsers.TryGetValue(item.Key, out int count) ? count : 0,
-                    NewUserCount = item.Value
-                });
+                _logger.LogError(ex, "获取报表统计数据失败，年份：{Year}，活跃天数：{ActivityDays}", year, activityDays);
+                return StatusCode(500, ApiResponse<DashboardStatsDto>.CreateError("获取统计数据失败", "DASHBOARD_STATS_ERROR"));
             }
-
-            return Ok(stats);
         }
 
         /// <summary>
@@ -83,28 +86,39 @@ namespace CampusTrade.API.Controllers
         [HttpGet("export/excel")]
         public async Task<IActionResult> ExportToExcel(int year)
         {
-            var stats = new DashboardStatsDto
+            try
             {
-                MonthlyTransactions = await _orderRepository.GetMonthlyTransactionsAsync(year),
-                PopularProducts = await _orderRepository.GetPopularProductsAsync(10)
-            };
+                _logger.LogInformation("开始导出Excel报表，年份：{Year}", year);
+                var stats = new DashboardStatsDto
+                {
+                    MonthlyTransactions = await _orderRepository.GetMonthlyTransactionsAsync(year),
+                    PopularProducts = await _orderRepository.GetPopularProductsAsync(10)
+                };
 
-            using (var stream = new MemoryStream())
+                using (var stream = new MemoryStream())
+                {
+                    var workbook = new XSSFWorkbook();
+
+                    // 创建月度交易数据工作表
+                    var monthlySheet = workbook.CreateSheet("月度交易数据");
+                    CreateMonthlyTransactionsSheet(monthlySheet, stats.MonthlyTransactions);
+
+                    // 创建热门商品工作表
+                    var popularSheet = workbook.CreateSheet("热门商品排行");
+                    CreatePopularProductsSheet(popularSheet, stats.PopularProducts);
+
+                    workbook.Write(stream);
+                    _logger.LogInformation("Excel报表导出成功，年份：{Year}", year);
+                    return File(
+                        stream.ToArray(),
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        $"校园交易统计_{year}.xlsx");
+                }
+            }
+            catch (Exception ex)
             {
-                var workbook = new XSSFWorkbook();
-
-                // 创建月度交易数据工作表
-                var monthlySheet = workbook.CreateSheet("月度交易数据");
-                CreateMonthlyTransactionsSheet(monthlySheet, stats.MonthlyTransactions);
-
-                // 创建热门商品工作表
-                var popularSheet = workbook.CreateSheet("热门商品排行");
-                CreatePopularProductsSheet(popularSheet, stats.PopularProducts);
-
-                workbook.Write(stream);
-                return File(stream.ToArray(),
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    $"校园交易统计_{year}.xlsx");
+                _logger.LogError(ex, "导出Excel报表失败，年份：{Year}", year);
+                return BadRequest(ApiResponse.CreateError("Excel导出失败", "EXCEL_EXPORT_ERROR"));
             }
         }
 
@@ -114,34 +128,47 @@ namespace CampusTrade.API.Controllers
         [HttpGet("export/pdf")]
         public async Task<IActionResult> ExportToPdf(int year)
         {
-            var stats = new DashboardStatsDto
+            try
             {
-                MonthlyTransactions = await _orderRepository.GetMonthlyTransactionsAsync(year),
-                PopularProducts = await _orderRepository.GetPopularProductsAsync(10)
-            };
+                _logger.LogInformation("开始导出PDF报表，年份：{Year}", year);
+                var stats = new DashboardStatsDto
+                {
+                    MonthlyTransactions = await _orderRepository.GetMonthlyTransactionsAsync(year),
+                    PopularProducts = await _orderRepository.GetPopularProductsAsync(10)
+                };
 
-            using (var stream = new MemoryStream())
+                using (var stream = new MemoryStream())
+                {
+                    var document = new Document(PageSize.A4, 50, 50, 25, 25);
+                    var writer = PdfWriter.GetInstance(document, stream);
+
+                    document.Open();
+
+                    // 添加标题
+                    var titleFont = FontFactory.GetFont("Arial", 18, Font.BOLD);
+                    var title = new Paragraph($"校园交易平台统计报表 - {year}", titleFont);
+                    title.Alignment = Element.ALIGN_CENTER;
+                    document.Add(title);
+                    document.Add(Chunk.NEWLINE);
+
+                    // 添加月度交易数据
+                    AddMonthlyTransactionsToPdf(document, stats.MonthlyTransactions);
+
+                    // 添加热门商品数据
+                    AddPopularProductsToPdf(document, stats.PopularProducts);
+
+                    document.Close();
+                    _logger.LogInformation("PDF报表导出成功，年份：{Year}", year);
+                    return File(
+                        stream.ToArray(),
+                        "application/pdf",
+                        $"校园交易统计_{year}.pdf");
+                }
+            }
+            catch (Exception ex)
             {
-                var document = new Document(PageSize.A4, 50, 50, 25, 25);
-                var writer = PdfWriter.GetInstance(document, stream);
-
-                document.Open();
-
-                // 添加标题
-                var titleFont = FontFactory.GetFont("Arial", 18, Font.BOLD);
-                var title = new Paragraph($"校园交易平台统计报表 - {year}", titleFont);
-                title.Alignment = Element.ALIGN_CENTER;
-                document.Add(title);
-                document.Add(Chunk.NEWLINE);
-
-                // 添加月度交易数据
-                AddMonthlyTransactionsToPdf(document, stats.MonthlyTransactions);
-
-                // 添加热门商品数据
-                AddPopularProductsToPdf(document, stats.PopularProducts);
-
-                document.Close();
-                return File(stream.ToArray(), "application/pdf", $"校园交易统计_{year}.pdf");
+                _logger.LogError(ex, "导出PDF报表失败，年份：{Year}", year);
+                return BadRequest(ApiResponse.CreateError("PDF导出失败", "PDF_EXPORT_ERROR"));
             }
         }
 
@@ -155,7 +182,7 @@ namespace CampusTrade.API.Controllers
             headerRow.CreateCell(2).SetCellValue("交易总金额");
 
             // 填充数据
-            for (int i = 0; i < data.Count; i++)
+            for (int i = 0; i < data?.Count; i++)
             {
                 var row = sheet.CreateRow(i + 1);
                 row.CreateCell(0).SetCellValue(data[i].Month);
@@ -179,7 +206,7 @@ namespace CampusTrade.API.Controllers
             headerRow.CreateCell(2).SetCellValue("订单数量");
 
             // 填充数据
-            for (int i = 0; i < data.Count; i++)
+            for (int i = 0; i < data?.Count; i++)
             {
                 var row = sheet.CreateRow(i + 1);
                 row.CreateCell(0).SetCellValue(data[i].ProductId);
@@ -208,7 +235,7 @@ namespace CampusTrade.API.Controllers
             table.AddCell("交易总金额");
 
             // 添加数据
-            foreach (var item in data)
+            foreach (var item in data ?? Enumerable.Empty<MonthlyTransactionDto>())
             {
                 table.AddCell(item.Month);
                 table.AddCell(item.OrderCount.ToString());
@@ -233,7 +260,7 @@ namespace CampusTrade.API.Controllers
             table.AddCell("订单数量");
 
             // 添加数据
-            foreach (var item in data)
+            foreach (var item in data ?? Enumerable.Empty<PopularProductDto>())
             {
                 table.AddCell(item.ProductId.ToString());
                 table.AddCell(item.ProductTitle);

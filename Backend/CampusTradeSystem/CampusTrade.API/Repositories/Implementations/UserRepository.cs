@@ -67,6 +67,33 @@ namespace CampusTrade.API.Repositories.Implementations
         }
 
         /// <summary>
+        /// 获取指定日期范围内的每日活跃用户数
+        /// （活跃用户定义：当天有登录记录的用户，每个用户每天只统计一次）
+        /// </summary>
+        public async Task<Dictionary<DateTime, int>> GetDailyActiveUsersAsync(DateTime startDate, DateTime endDate)
+        {
+            // 确保日期范围正确（只取日期部分，忽略时间）
+            var start = startDate.Date;
+            var end = endDate.Date.AddDays(1).AddTicks(-1); // 取结束日期的23:59:59
+
+            // 查询登录日志，按日期分组统计去重后的用户数
+            var dailyActiveData = await _context.LoginLogs
+                .Where(log => log.LogTime >= start && log.LogTime <= end)
+                .GroupBy(log => log.LogTime.Date) // 按登录日期分组
+                .Select(g => new
+                {
+                    Date = g.Key,
+                    ActiveUserCount = g.Select(log => log.UserId).Distinct().Count()
+                }) // 统计每个日期的独立用户数
+                .ToDictionaryAsync(
+                    keySelector: item => item.Date,
+                    elementSelector: item => item.ActiveUserCount
+                );
+
+            return dailyActiveData;
+        }
+
+        /// <summary>
         /// 获取用户详细信息
         /// </summary>
         public async Task<User?> GetUserWithDetailsAsync(int userId)

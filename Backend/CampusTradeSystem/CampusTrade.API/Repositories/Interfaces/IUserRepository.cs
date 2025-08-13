@@ -46,6 +46,14 @@ namespace CampusTrade.API.Repositories.Interfaces
         /// <returns>活跃用户集合</returns>
         Task<IEnumerable<User>> GetActiveUsersAsync();
         /// <summary>
+        /// 获取指定日期范围内的每日活跃用户数
+        /// （活跃用户定义：当天有登录记录的用户，每个用户每天只统计一次）
+        /// </summary>
+        /// <param name="startDate">起始日期（包含）</param>
+        /// <param name="endDate">结束日期（包含）</param>
+        /// <returns>日期-活跃用户数字典</returns>
+        Task<Dictionary<DateTime, int>> GetDailyActiveUsersAsync(DateTime startDate, DateTime endDate);
+        /// <summary>
         /// 获取用户详细信息（含导航属性）
         /// </summary>
         /// <param name="userId">用户ID</param>
