@@ -111,6 +111,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IReportsRepository, ReportsRepository>();
         services.AddScoped<INegotiationsRepository, NegotiationsRepository>();
         services.AddScoped<IExchangeRequestsRepository, ExchangeRequestsRepository>();
+        services.AddScoped<IReviewsRepository, ReviewsRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         return services;
     }
@@ -256,6 +257,15 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddExchangeServices(this IServiceCollection services)
     {
         services.AddScoped<Services.Interfaces.IExchangeService, Services.Exchange.ExchangeService>();
+        return services;
+    }
+
+    /// <summary>
+    /// 添加评价相关服务
+    /// </summary>
+    public static IServiceCollection AddReviewServices(this IServiceCollection services)
+    {
+        services.AddScoped<Services.Review.IReviewService, Services.Review.ReviewService>();
         return services;
     }
 }

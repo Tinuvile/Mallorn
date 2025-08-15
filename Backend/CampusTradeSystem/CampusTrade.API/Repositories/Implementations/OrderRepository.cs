@@ -157,17 +157,29 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<List<MonthlyTransactionDto>> GetMonthlyTransactionsAsync(int year)
         {
-            return await _dbSet
+            // 先在数据库层面进行分组和聚合，获取原始数据
+            var rawData = await _dbSet
                 .Where(o => o.CreateTime.Year == year && o.Status == "交易完成")
                 .GroupBy(o => new { o.CreateTime.Year, o.CreateTime.Month })
-                .Select(g => new MonthlyTransactionDto
+                .Select(g => new
                 {
-                    Month = $"{g.Key.Year}-{g.Key.Month:D2}",
+                    Year = g.Key.Year,
+                    Month = g.Key.Month,
                     OrderCount = g.Count(),
                     TotalAmount = g.Sum(o => o.TotalAmount ?? 0)
                 })
-                .OrderBy(g => g.Month)
                 .ToListAsync();
+
+            // 在内存中格式化月份字符串并转换为DTO
+            return rawData
+                .Select(data => new MonthlyTransactionDto
+                {
+                    Month = $"{data.Year}-{data.Month:D2}",
+                    OrderCount = data.OrderCount,
+                    TotalAmount = data.TotalAmount
+                })
+                .OrderBy(dto => dto.Month)
+                .ToList();
         }
         #endregion
 
