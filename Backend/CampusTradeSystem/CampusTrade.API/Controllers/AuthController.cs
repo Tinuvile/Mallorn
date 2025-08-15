@@ -307,10 +307,33 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> SendVerificationCode([FromBody] SendCodeDto dto)
     {
         if (!ModelState.IsValid)
-            return BadRequest("无效的请求参数");
+        {
+            return BadRequest(ApiResponse.CreateError("请求参数验证失败", "VALIDATION_ERROR"));
+        }
 
-        var result = await _verificationService.SendVerificationCodeAsync(dto.UserId, dto.Email);
-        return result.Success ? Ok(result) : BadRequest(result);
+        try
+        {
+            var result = await _verificationService.SendVerificationCodeAsync(dto.UserId, dto.Email);
+
+            if (result.Success)
+            {
+                return Ok(ApiResponse<object>.CreateSuccess(new
+                {
+                    userId = dto.UserId,
+                    email = dto.Email,
+                    message = result.Message
+                }, "验证码发送成功"));
+            }
+            else
+            {
+                return BadRequest(ApiResponse.CreateError(result.Message ?? "发送验证码失败", "SEND_CODE_FAILED"));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "发送邮箱验证码失败，用户ID: {UserId}, 邮箱: {Email}", dto.UserId, dto.Email);
+            return StatusCode(500, ApiResponse.CreateError("发送验证码时发生内部错误", "INTERNAL_ERROR"));
+        }
     }
 
     /// <summary>
@@ -320,10 +343,33 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> VerifyCode([FromBody] VerifyCodeDto dto)
     {
         if (!ModelState.IsValid)
-            return BadRequest("无效的请求参数");
+        {
+            return BadRequest(ApiResponse.CreateError("请求参数验证失败", "VALIDATION_ERROR"));
+        }
 
-        var result = await _verificationService.VerifyCodeAsync(dto.UserId, dto.Code);
-        return result.Valid ? Ok(result) : BadRequest(result);
+        try
+        {
+            var result = await _verificationService.VerifyCodeAsync(dto.UserId, dto.Code);
+
+            if (result.Valid)
+            {
+                return Ok(ApiResponse<object>.CreateSuccess(new
+                {
+                    userId = dto.UserId,
+                    verified = true,
+                    message = result.Message
+                }, "验证码验证成功"));
+            }
+            else
+            {
+                return BadRequest(ApiResponse.CreateError(result.Message ?? "验证码验证失败", "VERIFY_CODE_FAILED"));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "验证邮箱验证码失败，用户ID: {UserId}", dto.UserId);
+            return StatusCode(500, ApiResponse.CreateError("验证验证码时发生内部错误", "INTERNAL_ERROR"));
+        }
     }
 
     /// <summary>
@@ -333,16 +379,60 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> VerifyEmail([FromQuery] string token)
     {
         if (string.IsNullOrEmpty(token))
-            return BadRequest("验证令牌不能为空");
-
-        var result = await _verificationService.VerifyTokenAsync(token);
-        if (result.Valid)
         {
-            // 验证成功，重定向到前端成功页面
-            return Redirect("https://your-domain.com/email-verified");
+            return BadRequest(ApiResponse.CreateError("验证令牌不能为空", "INVALID_TOKEN"));
         }
-        // 验证失败，重定向到前端失败页面
-        return Redirect("https://your-domain.com/email-verify-failed");
+
+        try
+        {
+            var result = await _verificationService.VerifyTokenAsync(token);
+
+            if (result.Valid)
+            {
+                // 对于邮箱验证链接，通常需要重定向到前端页面
+                // 但也可以提供API响应供前端AJAX调用使用
+                if (Request.Headers.Accept.ToString().Contains("application/json"))
+                {
+                    // API调用返回JSON
+                    return Ok(ApiResponse<object>.CreateSuccess(new
+                    {
+                        verified = true,
+                        message = result.Message
+                    }, "邮箱验证成功"));
+                }
+                else
+                {
+                    // 浏览器访问重定向到前端成功页面
+                    return Redirect("https://your-domain.com/email-verified");
+                }
+            }
+            else
+            {
+                // 验证失败
+                if (Request.Headers.Accept.ToString().Contains("application/json"))
+                {
+                    return BadRequest(ApiResponse.CreateError(result.Message ?? "邮箱验证失败", "EMAIL_VERIFY_FAILED"));
+                }
+                else
+                {
+                    // 浏览器访问重定向到前端失败页面
+                    return Redirect("https://your-domain.com/email-verify-failed");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "处理邮箱验证链接失败，令牌: {Token}", token);
+
+            if (Request.Headers.Accept.ToString().Contains("application/json"))
+            {
+                return StatusCode(500, ApiResponse.CreateError("邮箱验证时发生内部错误", "INTERNAL_ERROR"));
+            }
+            else
+            {
+                return Redirect("https://your-domain.com/email-verify-failed");
+            }
+        }
     }
 }
 
