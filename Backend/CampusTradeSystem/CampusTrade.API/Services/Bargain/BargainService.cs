@@ -13,19 +13,25 @@ namespace CampusTrade.API.Services.Bargain
     {
         private readonly INegotiationsRepository _negotiationsRepository;
         private readonly IRepository<Models.Entities.Order> _ordersRepository;
+        private readonly IRepository<Models.Entities.Product> _productsRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<BargainService> _logger;
+        private readonly Auth.NotifiService _notificationService;
 
         public BargainService(
             INegotiationsRepository negotiationsRepository,
             IRepository<Models.Entities.Order> ordersRepository,
+            IRepository<Models.Entities.Product> productsRepository,
             IUnitOfWork unitOfWork,
-            ILogger<BargainService> logger)
+            ILogger<BargainService> logger,
+            Auth.NotifiService notificationService)
         {
             _negotiationsRepository = negotiationsRepository;
             _ordersRepository = ordersRepository;
+            _productsRepository = productsRepository;
             _unitOfWork = unitOfWork;
             _logger = logger;
+            _notificationService = notificationService;
         }
 
         /// <summary>
@@ -75,6 +81,38 @@ namespace CampusTrade.API.Services.Bargain
 
                 await _negotiationsRepository.AddAsync(negotiation);
                 await _unitOfWork.CommitTransactionAsync();
+
+                // 发送议价请求通知给卖家
+                try
+                {
+                    // 获取订单关联的商品信息
+                    var product = await _productsRepository.GetByPrimaryKeyAsync(order.ProductId);
+                    if (product != null)
+                    {
+                        // 通知卖家 - 模板ID为14（收到议价请求模板）
+                        var notificationParams = new Dictionary<string, object>
+                        {
+                            ["productTitle"] = product.Title,
+                            ["proposedPrice"] = bargainRequest.ProposedPrice.ToString("F2"),
+                            ["originalPrice"] = (order.TotalAmount ?? product.BasePrice).ToString("F2")
+                        };
+                        
+                        await _notificationService.CreateNotificationAsync(
+                            order.SellerId, 
+                            14, // 收到议价请求模板ID
+                            notificationParams, 
+                            negotiation.NegotiationId
+                        );
+
+                        _logger.LogInformation("议价请求通知已发送，议价ID: {NegotiationId}，买家ID: {BuyerId}，卖家ID: {SellerId}，商品: {ProductTitle}，议价: ￥{ProposedPrice}，原价: ￥{OriginalPrice}", 
+                            negotiation.NegotiationId, userId, order.SellerId, product.Title, bargainRequest.ProposedPrice, order.TotalAmount ?? product.BasePrice);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "发送议价请求通知失败，议价ID: {NegotiationId}", negotiation.NegotiationId);
+                    // 注意：通知发送失败不应该影响议价请求创建结果，所以这里只记录日志
+                }
 
                 _logger.LogInformation("议价请求创建成功，议价ID：{NegotiationId}", negotiation.NegotiationId);
                 return (true, "议价请求已发送", negotiation.NegotiationId);
