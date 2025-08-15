@@ -1,21 +1,21 @@
-using Microsoft.AspNetCore.Mvc;
+using System;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using CampusTrade.API.Models.DTOs;
 using CampusTrade.API.Models.DTOs.Common;
 using CampusTrade.API.Repositories.Interfaces;
-using NPOI.XSSF.UserModel;
-using NPOI.SS.UserModel;
+using iText.IO.Font;
+using iText.IO.Font.Constants;
+using iText.Kernel.Font;
 using iText.Kernel.Pdf;
 using iText.Layout;
 using iText.Layout.Element;
 using iText.Layout.Properties;
-using iText.Kernel.Font;
-using iText.IO.Font;
-using iText.IO.Font.Constants;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using System;
+using NPOI.SS.UserModel;
+using NPOI.XSSF.UserModel;
 
 namespace CampusTrade.API.Controllers
 {

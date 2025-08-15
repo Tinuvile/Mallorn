@@ -161,7 +161,7 @@ namespace CampusTrade.API.Repositories.Implementations
             var rawData = await _dbSet
                 .Where(o => o.CreateTime.Year == year && o.Status == "交易完成")
                 .GroupBy(o => new { o.CreateTime.Year, o.CreateTime.Month })
-                .Select(g => new 
+                .Select(g => new
                 {
                     Year = g.Key.Year,
                     Month = g.Key.Month,

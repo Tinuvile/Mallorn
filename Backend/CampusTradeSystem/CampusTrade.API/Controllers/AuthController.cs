@@ -313,7 +313,7 @@ public class AuthController : ControllerBase
         try
         {
             var result = await _verificationService.SendVerificationCodeAsync(dto.UserId, dto.Email);
-            
+
             if (result.Success)
             {
                 return Ok(ApiResponse<object>.CreateSuccess(new
@@ -349,7 +349,7 @@ public class AuthController : ControllerBase
         try
         {
             var result = await _verificationService.VerifyCodeAsync(dto.UserId, dto.Code);
-            
+
             if (result.Valid)
             {
                 return Ok(ApiResponse<object>.CreateSuccess(new
@@ -385,7 +385,7 @@ public class AuthController : ControllerBase
         try
         {
             var result = await _verificationService.VerifyTokenAsync(token);
-            
+
             if (result.Valid)
             {
                 // 对于邮箱验证链接，通常需要重定向到前端页面
@@ -422,7 +422,7 @@ public class AuthController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "处理邮箱验证链接失败，令牌: {Token}", token);
-            
+
             if (Request.Headers.Accept.ToString().Contains("application/json"))
             {
                 return StatusCode(500, ApiResponse.CreateError("邮箱验证时发生内部错误", "INTERNAL_ERROR"));
