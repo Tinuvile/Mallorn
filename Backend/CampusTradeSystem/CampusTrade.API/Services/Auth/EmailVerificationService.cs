@@ -6,6 +6,7 @@ using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Options;
 using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Email;
+using CampusTrade.API.Services.Notification;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
