@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using CampusTrade.API.Infrastructure.Utils.Notificate;
 using CampusTrade.API.Services.Auth;
-using CampusTrade.API.Services.Notification;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
