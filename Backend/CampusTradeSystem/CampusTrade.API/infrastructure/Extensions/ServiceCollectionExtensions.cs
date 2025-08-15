@@ -132,6 +132,7 @@ public static class ServiceCollectionExtensions
 
         // 注册通知服务
         services.AddScoped<Services.Notification.NotifiService>();
+        services.AddScoped<Services.Notification.SignalRNotificationService>();
         services.AddScoped<Services.Notification.NotifiSenderService>();
 
         // 注册邮件服务
