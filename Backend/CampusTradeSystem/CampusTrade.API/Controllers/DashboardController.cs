@@ -4,8 +4,13 @@ using CampusTrade.API.Models.DTOs.Common;
 using CampusTrade.API.Repositories.Interfaces;
 using NPOI.XSSF.UserModel;
 using NPOI.SS.UserModel;
-using iTextSharp.text;
-using iTextSharp.text.pdf;
+using iText.Kernel.Pdf;
+using iText.Layout;
+using iText.Layout.Element;
+using iText.Layout.Properties;
+using iText.Kernel.Font;
+using iText.IO.Font;
+using iText.IO.Font.Constants;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -139,23 +144,45 @@ namespace CampusTrade.API.Controllers
 
                 using (var stream = new MemoryStream())
                 {
-                    var document = new Document(PageSize.A4, 50, 50, 25, 25);
-                    var writer = PdfWriter.GetInstance(document, stream);
+                    var writer = new PdfWriter(stream);
+                    var pdf = new PdfDocument(writer);
+                    var document = new Document(pdf);
 
-                    document.Open();
+                    // 创建中文字体
+                    PdfFont chineseFont;
+                    try
+                    {
+                        // 尝试使用 iText7 的亚洲字体支持
+                        chineseFont = PdfFontFactory.CreateFont("STSong-Light", "UniGB-UCS2-H");
+                    }
+                    catch
+                    {
+                        try
+                        {
+                            // 备选方案：使用内置字体
+                            chineseFont = PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
+                        }
+                        catch
+                        {
+                            // 最后备选
+                            chineseFont = PdfFontFactory.CreateFont();
+                        }
+                    }
 
                     // 添加标题
-                    var titleFont = FontFactory.GetFont("Arial", 18, Font.BOLD);
-                    var title = new Paragraph($"校园交易平台统计报表 - {year}", titleFont);
-                    title.Alignment = Element.ALIGN_CENTER;
+                    var title = new Paragraph($"校园交易平台统计报表 - {year}")
+                        .SetFont(chineseFont)
+                        .SetFontSize(18)
+                        .SetTextAlignment(TextAlignment.CENTER)
+                        .SetBold();
                     document.Add(title);
-                    document.Add(Chunk.NEWLINE);
+                    document.Add(new Paragraph(""));
 
                     // 添加月度交易数据
-                    AddMonthlyTransactionsToPdf(document, stats.MonthlyTransactions);
+                    AddMonthlyTransactionsToPdf(document, stats.MonthlyTransactions, chineseFont);
 
                     // 添加热门商品数据
-                    AddPopularProductsToPdf(document, stats.PopularProducts);
+                    AddPopularProductsToPdf(document, stats.PopularProducts, chineseFont);
 
                     document.Close();
                     _logger.LogInformation("PDF报表导出成功，年份：{Year}", year);
@@ -190,11 +217,10 @@ namespace CampusTrade.API.Controllers
                 row.CreateCell(2).SetCellValue((double)data[i].TotalAmount);
             }
 
-            // 自动调整列宽
-            for (int i = 0; i < 3; i++)
-            {
-                sheet.AutoSizeColumn(i);
-            }
+            // 手动设置列宽（避免AutoSizeColumn在Docker环境中的字体问题）
+            sheet.SetColumnWidth(0, 3000);  // 月份列
+            sheet.SetColumnWidth(1, 3000);  // 订单数量列
+            sheet.SetColumnWidth(2, 4000);  // 交易总金额列
         }
 
         private void CreatePopularProductsSheet(ISheet sheet, List<PopularProductDto> data)
@@ -214,57 +240,60 @@ namespace CampusTrade.API.Controllers
                 row.CreateCell(2).SetCellValue(data[i].OrderCount);
             }
 
-            // 自动调整列宽
-            for (int i = 0; i < 3; i++)
-            {
-                sheet.AutoSizeColumn(i);
-            }
+            // 手动设置列宽（避免AutoSizeColumn在Docker环境中的字体问题）
+            sheet.SetColumnWidth(0, 3000);  // 商品ID列
+            sheet.SetColumnWidth(1, 6000);  // 商品名称列
+            sheet.SetColumnWidth(2, 3000);  // 订单数量列
         }
 
-        private void AddMonthlyTransactionsToPdf(Document document, List<MonthlyTransactionDto> data)
+        private void AddMonthlyTransactionsToPdf(Document document, List<MonthlyTransactionDto> data, PdfFont font)
         {
-            var font = FontFactory.GetFont("Arial", 14, Font.BOLD);
-            document.Add(new Paragraph("月度交易数据", font));
+            document.Add(new Paragraph("月度交易数据")
+                .SetFont(font)
+                .SetFontSize(14)
+                .SetBold());
 
-            var table = new PdfPTable(3);
-            table.WidthPercentage = 100;
+            var table = new iText.Layout.Element.Table(3);
+            table.SetWidth(UnitValue.CreatePercentValue(100));
 
             // 添加表头
-            table.AddCell("月份");
-            table.AddCell("订单数量");
-            table.AddCell("交易总金额");
+            table.AddHeaderCell(new Cell().Add(new Paragraph("月份").SetFont(font)).SetBackgroundColor(iText.Kernel.Colors.ColorConstants.LIGHT_GRAY));
+            table.AddHeaderCell(new Cell().Add(new Paragraph("订单数量").SetFont(font)).SetBackgroundColor(iText.Kernel.Colors.ColorConstants.LIGHT_GRAY));
+            table.AddHeaderCell(new Cell().Add(new Paragraph("交易总金额").SetFont(font)).SetBackgroundColor(iText.Kernel.Colors.ColorConstants.LIGHT_GRAY));
 
             // 添加数据
             foreach (var item in data ?? Enumerable.Empty<MonthlyTransactionDto>())
             {
-                table.AddCell(item.Month);
-                table.AddCell(item.OrderCount.ToString());
-                table.AddCell(item.TotalAmount.ToString("C"));
+                table.AddCell(new Cell().Add(new Paragraph(item.Month).SetFont(font)));
+                table.AddCell(new Cell().Add(new Paragraph(item.OrderCount.ToString()).SetFont(font)));
+                table.AddCell(new Cell().Add(new Paragraph(item.TotalAmount.ToString("C")).SetFont(font)));
             }
 
             document.Add(table);
-            document.Add(Chunk.NEWLINE);
+            document.Add(new Paragraph(""));
         }
 
-        private void AddPopularProductsToPdf(Document document, List<PopularProductDto> data)
+        private void AddPopularProductsToPdf(Document document, List<PopularProductDto> data, PdfFont font)
         {
-            var font = FontFactory.GetFont("Arial", 14, Font.BOLD);
-            document.Add(new Paragraph("热门商品排行", font));
+            document.Add(new Paragraph("热门商品排行")
+                .SetFont(font)
+                .SetFontSize(14)
+                .SetBold());
 
-            var table = new PdfPTable(3);
-            table.WidthPercentage = 100;
+            var table = new iText.Layout.Element.Table(3);
+            table.SetWidth(UnitValue.CreatePercentValue(100));
 
             // 添加表头
-            table.AddCell("商品ID");
-            table.AddCell("商品名称");
-            table.AddCell("订单数量");
+            table.AddHeaderCell(new Cell().Add(new Paragraph("商品ID").SetFont(font)).SetBackgroundColor(iText.Kernel.Colors.ColorConstants.LIGHT_GRAY));
+            table.AddHeaderCell(new Cell().Add(new Paragraph("商品名称").SetFont(font)).SetBackgroundColor(iText.Kernel.Colors.ColorConstants.LIGHT_GRAY));
+            table.AddHeaderCell(new Cell().Add(new Paragraph("订单数量").SetFont(font)).SetBackgroundColor(iText.Kernel.Colors.ColorConstants.LIGHT_GRAY));
 
             // 添加数据
             foreach (var item in data ?? Enumerable.Empty<PopularProductDto>())
             {
-                table.AddCell(item.ProductId.ToString());
-                table.AddCell(item.ProductTitle);
-                table.AddCell(item.OrderCount.ToString());
+                table.AddCell(new Cell().Add(new Paragraph(item.ProductId.ToString()).SetFont(font)));
+                table.AddCell(new Cell().Add(new Paragraph(item.ProductTitle ?? "").SetFont(font)));
+                table.AddCell(new Cell().Add(new Paragraph(item.OrderCount.ToString()).SetFont(font)));
             }
 
             document.Add(table);
