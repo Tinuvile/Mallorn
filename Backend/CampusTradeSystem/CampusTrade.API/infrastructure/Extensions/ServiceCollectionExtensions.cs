@@ -7,6 +7,7 @@ using CampusTrade.API.Services.Background;
 using CampusTrade.API.Services.File;
 using CampusTrade.API.Services.Interfaces;
 using CampusTrade.API.Services.Order;
+using CampusTrade.API.Services.Email;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -130,8 +131,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<Services.Auth.EmailVerificationService>();
 
         // 注册通知服务
-        services.AddScoped<Services.Auth.NotifiService>();
-        services.AddScoped<Services.Auth.NotifiSenderService>();
+        services.AddScoped<Services.Notification.NotifiService>();
+        services.AddScoped<Services.Notification.SignalRNotificationService>();
+        services.AddScoped<Services.Notification.NotifiSenderService>();
 
         // 注册邮件服务
         services.AddScoped<Services.Email.EmailService>();
