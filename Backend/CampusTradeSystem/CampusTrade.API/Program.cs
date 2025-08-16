@@ -149,6 +149,9 @@ try
     // 添加举报相关服务
     builder.Services.AddReportServices();
 
+    // 添加管理员相关服务
+    builder.Services.AddAdminServices();
+
     // 添加文件管理服务
     builder.Services.AddFileManagementServices(builder.Configuration);
 
