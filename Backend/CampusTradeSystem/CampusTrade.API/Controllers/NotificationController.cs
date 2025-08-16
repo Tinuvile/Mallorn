@@ -351,7 +351,7 @@ namespace CampusTrade.API.Controllers
                 });
             }
         }
-        
+
         /// <summary>
         /// 生成系统优化建议
         /// </summary>

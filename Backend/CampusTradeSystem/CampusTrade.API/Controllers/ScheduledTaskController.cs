@@ -181,7 +181,6 @@ namespace CampusTrade.API.Controllers
             {
                 "TokenCleanupTask" => DateTime.UtcNow.AddHours(1),
                 "LogCleanupTask" => DateTime.UtcNow.AddDays(1),
-                "EmailVerificationCleanupTask" => DateTime.UtcNow.AddDays(1),
                 "ProductManagementTask" => DateTime.UtcNow.AddDays(1),
                 "OrderProcessingTask" => DateTime.UtcNow.AddHours(6),
                 "UserCreditScoreCalculationTask" => DateTime.UtcNow.AddDays(7),
