@@ -723,11 +723,12 @@ namespace CampusTrade.API.Data
                 });
                 entity.HasKey(e => e.AbstractOrderId);
 
-                // 主键配置 - 由ORDER_SEQ序列生成
+                // 主键配置 - 由ABSTRACT_ORDER_SEQ序列生成
                 entity.Property(e => e.AbstractOrderId)
                     .HasColumnName("ABSTRACT_ORDER_ID")
                     .HasColumnType("NUMBER")
-                    .ValueGeneratedOnAdd();
+                    .ValueGeneratedOnAdd()
+                    .HasDefaultValueSql("ABSTRACT_ORDER_SEQ.NEXTVAL");
 
                 // 订单类型配置
                 entity.Property(e => e.OrderType)

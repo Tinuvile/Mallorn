@@ -49,6 +49,13 @@ namespace CampusTrade.API.Repositories.Interfaces
         /// 获取举报证据集合
         /// </summary>
         Task<IEnumerable<ReportEvidence>> GetReportEvidencesAsync(int reportId);
+
+        /// <summary>
+        /// 获取举报关联商品的一级分类信息
+        /// </summary>
+        /// <param name="reportId">举报ID</param>
+        /// <returns>一级分类信息</returns>
+        Task<Category?> GetReportProductPrimaryCategoryAsync(int reportId);
         #endregion
 
         #region 更新操作

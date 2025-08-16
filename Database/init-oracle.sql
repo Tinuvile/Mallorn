@@ -619,17 +619,6 @@ BEGIN
 END;
 /
 
--- 抽象订单和具体订单关联触发器
-CREATE OR REPLACE TRIGGER trg_orders_abstract
-    BEFORE INSERT ON orders
-    FOR EACH ROW
-BEGIN
-    -- 先插入抽象订单
-    INSERT INTO abstract_orders (abstract_order_id, order_type) 
-    VALUES (:NEW.order_id, 'normal');
-END;
-/
-
 -- 换物请求抽象订单触发器
 CREATE OR REPLACE TRIGGER trg_exchange_abstract
     BEFORE INSERT ON exchange_requests

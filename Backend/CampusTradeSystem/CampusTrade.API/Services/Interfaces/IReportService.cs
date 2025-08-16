@@ -69,5 +69,13 @@ namespace CampusTrade.API.Services.Interfaces
         /// <param name="reporterId">举报人ID</param>
         /// <returns>撤销结果</returns>
         Task<(bool Success, string Message)> CancelReportAsync(int reportId, int reporterId);
+
+        /// <summary>
+        /// 获取举报关联商品的一级分类信息
+        /// </summary>
+        /// <param name="reportId">举报ID</param>
+        /// <param name="requestUserId">请求用户ID（用于权限验证）</param>
+        /// <returns>一级分类信息</returns>
+        Task<Category?> GetReportProductPrimaryCategoryAsync(int reportId, int requestUserId);
     }
 }
