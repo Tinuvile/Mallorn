@@ -39,11 +39,11 @@
       </v-overlay>
 
       <!-- 主内容区 -->
-      <template v-if="!isLoading && userStore.user">
+      <template v-if="!isLoading">
         <!-- 背景装饰图 -->
         <div class="decorative-bg">
-          <img src="https://grace-l-hub.oss-cn-shanghai.aliyuncs.com/OIP-C%281%29%281%29.png" class="top-image" alt="Decorative image">
-          <img src="https://grace-l-hub.oss-cn-shanghai.aliyuncs.com/OIP-C%282%29%281%29.png" class="bottom-image" alt="Decorative image">
+          <img src="/images/UserBack1.png" class="top-image" alt="Decorative image">
+          <img src="/images/UserBack2.png" class="bottom-image" alt="Decorative image">
         </div>
         
         <!-- 用户信息卡片 -->
@@ -62,71 +62,89 @@
                     <p class="text-h4 font-weight-bold mb-6">个人信息</p>
                     <v-divider class="my-4"></v-divider>
                     
-                    <v-list lines="two" density="comfortable" class="text-left">
-                      <v-list-item prepend-icon="mdi-account" title="用户名">
-                        <template v-slot:append>
-                          <span class="text-body-1">{{ userStore.user.username }}</span>
-                        </template>
-                      </v-list-item>
-                      
-                      <v-list-item prepend-icon="mdi-identifier" title="用户ID">
-                        <template v-slot:append>
-                          <span class="text-body-1">{{ userStore.user.userId }}</span>
-                        </template>
-                      </v-list-item>
-                      
-                      <v-list-item prepend-icon="mdi-card-account-details" title="学号">
-                        <template v-slot:append>
-                          <span class="text-body-1">{{ userStore.user.studentId || '未填写' }}</span>
-                        </template>
-                      </v-list-item>
-                      
-                      <v-list-item prepend-icon="mdi-email" title="邮箱">
-                        <template v-slot:append>
-                          <span class="text-body-1">{{ userStore.user.email }}</span>
-                          <v-chip 
-                            :color="userStore.user.emailVerified ? 'success' : 'warning'" 
-                            size="small" 
-                            class="ml-2"
-                          >
-                            {{ userStore.user.emailVerified ? '已认证' : '未认证' }}
-                          </v-chip>
-                        </template>
-                      </v-list-item>
-                      
-                      <v-list-item prepend-icon="mdi-phone" title="电话">
-                        <template v-slot:append>
-                          <span class="text-body-1">{{ userStore.user.phone || '未填写' }}</span>
-                        </template>
-                      </v-list-item>
-                    </v-list>
-                  </div>
-                  
-                  <!-- 信用评分 -->
-                  <div class="credit-score-container mt-6" v-if="userStore.user.creditScore !== undefined">
-                    <div class="d-flex justify-center align-center">
-                      <v-progress-circular
-                        :model-value="userStore.user.creditScore"
-                        :color="creditScoreColor"
-                        :size="120"
-                        :width="12"
-                        class="mr-4"
+                    <!-- 未登录提示 -->
+                    <div v-if="!userStore.user" class="text-center py-8">
+                      <v-icon size="64" color="grey-lighten-1" class="mb-4">mdi-account-off</v-icon>
+                      <h3 class="text-h5 mb-4">未登录</h3>
+                      <p class="text-body-1 mb-6">请登录后查看个人信息</p>
+                      <v-btn 
+                        color="primary" 
+                        to="/login"
+                        size="large"
                       >
-                        <span class="text-h5 font-weight-bold">{{ userStore.user.creditScore }}</span>
-                      </v-progress-circular>
-                      
-                      <div class="text-left">
-                        <h3 class="text-h6 mb-2">信用评分</h3>
-                        <p class="text-caption text-medium-emphasis">
-                          {{ creditScoreRemark }}
-                        </p>
-                      </div>
+                        <v-icon start>mdi-login</v-icon>
+                        前往登录
+                      </v-btn>
                     </div>
+
+                    <!-- 已登录显示用户信息 -->
+                    <template v-else>
+                      <v-list lines="two" density="comfortable" class="text-left">
+                        <v-list-item prepend-icon="mdi-account" title="用户名">
+                          <template v-slot:append>
+                            <span class="text-body-1">{{ userStore.user.username }}</span>
+                          </template>
+                        </v-list-item>
+                        
+                        <v-list-item prepend-icon="mdi-identifier" title="用户ID">
+                          <template v-slot:append>
+                            <span class="text-body-1">{{ userStore.user.userId }}</span>
+                          </template>
+                        </v-list-item>
+                        
+                        <v-list-item prepend-icon="mdi-card-account-details" title="学号">
+                          <template v-slot:append>
+                            <span class="text-body-1">{{ userStore.user.studentId || '未填写' }}</span>
+                          </template>
+                        </v-list-item>
+                        
+                        <v-list-item prepend-icon="mdi-email" title="邮箱">
+                          <template v-slot:append>
+                            <span class="text-body-1">{{ userStore.user.email }}</span>
+                            <v-chip 
+                              :color="userStore.user.emailVerified ? 'success' : 'warning'" 
+                              size="small" 
+                              class="ml-2"
+                            >
+                              {{ userStore.user.emailVerified ? '已认证' : '未认证' }}
+                            </v-chip>
+                          </template>
+                        </v-list-item>
+                        
+                        <v-list-item prepend-icon="mdi-phone" title="电话">
+                          <template v-slot:append>
+                            <span class="text-body-1">{{ userStore.user.phone || '未填写' }}</span>
+                          </template>
+                        </v-list-item>
+                      </v-list>
+                      
+                      <!-- 信用评分 -->
+                      <div class="credit-score-container mt-6" v-if="userStore.user.creditScore !== undefined">
+                        <div class="d-flex justify-center align-center">
+                          <v-progress-circular
+                            :model-value="userStore.user.creditScore"
+                            :color="creditScoreColor"
+                            :size="120"
+                            :width="12"
+                            class="mr-4"
+                          >
+                            <span class="text-h5 font-weight-bold">{{ userStore.user.creditScore }}</span>
+                          </v-progress-circular>
+                          
+                          <div class="text-left">
+                            <h3 class="text-h6 mb-2">信用评分</h3>
+                            <p class="text-caption text-medium-emphasis">
+                              {{ creditScoreRemark }}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </template>
                   </div>
                 </v-card-text>
                 
-                <!-- 操作按钮 -->
-                <v-card-actions class="justify-center pb-6">
+                <!-- 操作按钮 - 仅登录时显示 -->
+                <v-card-actions class="justify-center pb-6" v-if="userStore.user">
                   <v-btn 
                     color="indigo" 
                     variant="tonal" 
@@ -144,6 +162,28 @@
                   >
                     <v-icon start>mdi-email-check</v-icon>
                     {{ userStore.user.emailVerified ? '重新验证' : '邮箱认证' }}
+                  </v-btn>
+                  <!-- 新增退出登录按钮 -->
+                  <v-btn 
+                    color="red" 
+                    variant="tonal" 
+                    class="ml-4"
+                    @click="handleLogout"
+                    :loading="loggingOut"
+                  >
+                    <v-icon start>mdi-logout</v-icon>
+                    退出登录
+                  </v-btn>
+                  <!-- 新增注销账户按钮 -->
+                  <v-btn 
+                    color="grey-darken-2" 
+                    variant="tonal" 
+                    class="ml-4"
+                    @click="showDeleteDialog = true"
+                    :loading="deletingAccount"
+                  >
+                    <v-icon start>mdi-account-remove</v-icon>
+                    注销账户
                   </v-btn>
                 </v-card-actions>
               </v-card>
@@ -195,7 +235,7 @@
             <v-card-title class="text-h5">邮箱认证</v-card-title>
             <v-card-text>
               <p>我们将发送验证邮件到：</p>
-              <p class="text-h6 text-primary">{{ userStore.user.email }}</p>
+              <p class="text-h6 text-primary">{{ userStore.user?.email }}</p>
               <p class="mt-2">请检查您的邮箱并点击验证链接完成认证</p>
             </v-card-text>
             <v-card-actions>
@@ -207,6 +247,28 @@
                 :loading="sendingEmail"
               >
                 发送验证邮件
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+
+        <!-- 注销账户确认对话框 -->
+        <v-dialog v-model="showDeleteDialog" max-width="500">
+          <v-card>
+            <v-card-title class="text-h5">确认注销账户</v-card-title>
+            <v-card-text>
+              <p class="text-body-1">您确定要注销账户吗？</p>
+              <p class="text-body-2 text-warning mt-2">此操作将永久删除您的账户和所有数据，且不可恢复！</p>
+            </v-card-text>
+            <v-card-actions>
+              <v-spacer></v-spacer>
+              <v-btn color="secondary" @click="showDeleteDialog = false">取消</v-btn>
+              <v-btn 
+                color="error" 
+                @click="handleDeleteAccount"
+                :loading="deletingAccount"
+              >
+                确认注销
               </v-btn>
             </v-card-actions>
           </v-card>
@@ -235,11 +297,14 @@ const userStore = useUserStore()
 const isLoading = ref(true)
 const editDialog = ref(false)
 const showVerificationDialog = ref(false)
+const showDeleteDialog = ref(false)
 const showSnackbar = ref(false)
 const snackbarMessage = ref('')
 const snackbarColor = ref('success')
 const sendingEmail = ref(false)
 const savingChanges = ref(false)
+const loggingOut = ref(false)
+const deletingAccount = ref(false)
 
 // 表单引用
 const editForm = ref<VForm | null>(null)
@@ -258,7 +323,8 @@ const phoneRule = (v: string) => !v || /^1[3-9]\d{9}$/.test(v) || '请输入有�
 
 // 计算属性
 const creditScoreColor = computed(() => {
-  const score = userStore.user?.creditScore || 0
+  if (!userStore.user?.creditScore) return 'grey'
+  const score = userStore.user.creditScore
   if (score >= 90) return 'success'
   if (score >= 70) return 'info'
   if (score >= 50) return 'warning'
@@ -266,7 +332,8 @@ const creditScoreColor = computed(() => {
 })
 
 const creditScoreRemark = computed(() => {
-  const score = userStore.user?.creditScore || 0
+  if (!userStore.user?.creditScore) return '登录后查看信用评分'
+  const score = userStore.user.creditScore
   if (score >= 90) return '优秀 - 信用状况非常好'
   if (score >= 70) return '良好 - 继续保持'
   if (score >= 50) return '一般 - 有提升空间'
@@ -276,10 +343,7 @@ const creditScoreRemark = computed(() => {
 // 生命周期钩子
 onMounted(async () => {
   try {
-    // 如果store中没有用户数据，尝试获取
-    if (!userStore.user) {
-      await userStore.fetchUserInfo('current')
-    }
+    await userStore.fetchUserInfo('current')
     // 初始化可编辑数据
     if (userStore.user) {
       editableUser.value = {
@@ -289,7 +353,6 @@ onMounted(async () => {
       }
     }
   } catch (error) {
-    showMessage('加载用户信息失败', 'error')
     console.error('加载用户信息失败:', error)
   } finally {
     isLoading.value = false
@@ -368,6 +431,46 @@ const sendVerificationEmail = async () => {
   }
 }
 
+// 在 UserDetailView.vue 的 script setup 部分修改 handleLogout 方法
+const handleLogout = async () => {
+  loggingOut.value = true
+  try {
+    // 调用 userStore 的 logout 方法
+    await userStore.logout()
+    
+    // 显示成功消息
+    showMessage('已成功退出登录', 'success')
+    
+    // 延迟跳转，让用户看到成功消息
+    setTimeout(() => {
+      window.location.href = '/login'
+    }, 1500)
+  } catch (error) {
+    console.error('退出登录失败:', error)
+    showMessage('退出登录失败', 'error')
+  } finally {
+    loggingOut.value = false
+  }
+}
+
+// 新增方法 - 处理注销账户（暂时只做UI展示）
+const handleDeleteAccount = async () => {
+  deletingAccount.value = true
+  try {
+    // 这里应该是调用API注销账户
+    // 暂时只模拟API调用
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    showMessage('账户注销功能暂未实现', 'info')
+    showDeleteDialog.value = false
+  } catch (error) {
+    console.error('注销账户失败:', error)
+    showMessage('注销账户失败', 'error')
+  } finally {
+    deletingAccount.value = false
+  }
+}
+
 const showMessage = (message: string, color: string) => {
   snackbarMessage.value = message
   snackbarColor.value = color
@@ -376,7 +479,6 @@ const showMessage = (message: string, color: string) => {
 </script>
 
 <style scoped>
-/* 导航栏样式 */
 .navbar {
   position: fixed;
   top: 0;
@@ -403,7 +505,6 @@ const showMessage = (message: string, color: string) => {
   color: #333;
 }
 
-/* 退出按钮样式 */
 .logout-btn {
   position: fixed;
   top: 75px;
@@ -418,15 +519,13 @@ const showMessage = (message: string, color: string) => {
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
-/* 主容器样式 */
 .profile-container {
   position: relative;
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: linear-gradient(135deg, #FFD6E0 0%, #C1E0FF 100%);
   padding-top: 60px;
 }
 
-/* 内容区域样式 */
 .content-wrapper {
   position: relative;
   z-index: 2;
@@ -453,7 +552,6 @@ const showMessage = (message: string, color: string) => {
   margin-top: 24px;
 }
 
-/* 背景装饰图样式 */
 .decorative-bg {
   position: absolute;
   top: 50%;
@@ -461,7 +559,7 @@ const showMessage = (message: string, color: string) => {
   width: 40%;
   transform: translateY(-50%);
   z-index: 1;
-  opacity: 0.8;
+  opacity: 1;
 }
 
 .decorative-bg img {
@@ -470,7 +568,6 @@ const showMessage = (message: string, color: string) => {
   object-fit: contain;
 }
 
-/* 响应式设计 */
 @media (max-width: 960px) {
   .content-wrapper {
     padding-top: 10px;

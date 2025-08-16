@@ -3,9 +3,11 @@ import { useUserStore } from '@/stores/user'
 import HomeView from '@/views/HomeView.vue'
 import LoginView from '@/views/LoginView.vue'
 import UserDetailView from '@/views/UserDetailView.vue'
+import DataWatchingView from '@/views/dataWatchingView.vue'
 import Welcome from '@/views/Welcome.vue'
 import OrderView from '@/views/order.vue'
 import GoodsDetails from '@/views/GoodsDetails.vue'
+
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -33,6 +35,11 @@ const router = createRouter({
       component: UserDetailView,
     },
     {
+      path: '/datawatchingview',
+      name: 'datawatchingview',
+      component: DataWatchingView,
+    },
+    {
       path: '/about',
       name: 'about',
       component: () => import('@/views/AboutView.vue'),
@@ -50,6 +57,11 @@ const router = createRouter({
     props: true  // 允许将路由参数作为props传递
     }
   ],
+   // 添加滚动行为配置
+  scrollBehavior(to, from, savedPosition) {
+    // 始终滚动到顶部
+    return { top: 0 }
+  }
 })
 
 // 路由守卫

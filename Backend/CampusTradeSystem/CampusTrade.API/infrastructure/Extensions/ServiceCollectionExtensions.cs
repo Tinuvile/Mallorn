@@ -4,6 +4,7 @@ using CampusTrade.API.Repositories.Implementations;
 using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Auth;
 using CampusTrade.API.Services.Background;
+using CampusTrade.API.Services.Email;
 using CampusTrade.API.Services.File;
 using CampusTrade.API.Services.Interfaces;
 using CampusTrade.API.Services.Order;
@@ -118,13 +119,21 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// 添加认证相关服务
     /// </summary>
-    public static IServiceCollection AddAuthenticationServices(this IServiceCollection services)
+    public static IServiceCollection AddAuthenticationServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<IAuthService, AuthService>();
 
+        // 配置邮件验证选项
+        services.Configure<EmailVerificationOptions>(configuration.GetSection(EmailVerificationOptions.SectionName));
+        services.AddSingleton<IValidateOptions<EmailVerificationOptions>, EmailVerificationOptionsValidator>();
+
+        // 注册邮件验证服务
+        services.AddScoped<Services.Auth.EmailVerificationService>();
+
         // 注册通知服务
-        services.AddScoped<Services.Auth.NotifiService>();
-        services.AddScoped<Services.Auth.NotifiSenderService>();
+        services.AddScoped<Services.Notification.NotifiService>();
+        services.AddScoped<Services.Notification.SignalRNotificationService>();
+        services.AddScoped<Services.Notification.NotifiSenderService>();
 
         // 注册邮件服务
         services.AddScoped<Services.Email.EmailService>();
@@ -294,6 +303,20 @@ public class FileStorageOptionsValidator : IValidateOptions<FileStorageOptions>
             errors.Add("缩略图尺寸必须大于0");
         if (options.ThumbnailQuality < 1 || options.ThumbnailQuality > 100)
             errors.Add("缩略图质量必须在1-100之间");
+        if (errors.Any())
+            return ValidateOptionsResult.Fail(errors);
+        return ValidateOptionsResult.Success;
+    }
+}
+
+/// <summary>
+/// 邮件验证选项验证器
+/// </summary>
+public class EmailVerificationOptionsValidator : IValidateOptions<EmailVerificationOptions>
+{
+    public ValidateOptionsResult Validate(string? name, EmailVerificationOptions options)
+    {
+        var errors = options.GetValidationErrors().ToList();
         if (errors.Any())
             return ValidateOptionsResult.Fail(errors);
         return ValidateOptionsResult.Success;

@@ -19,6 +19,7 @@
     "@element-plus/icons-vue": "^2.3.1",
     "@mdi/font": "^7.4.47",
     "axios": "^1.10.0",
+    "chart.js": "^4.5.0",
     "element-plus": "^2.10.3",
     "lottie-web": "^5.13.0",
     "pinia": "^3.0.3",

@@ -1,0 +1,51 @@
+# 设置默认行为，自动处理行尾符
+* text=auto
+
+# 指定文本文件使用 CRLF 行尾符（Windows）
+*.cs text eol=crlf
+*.js text eol=crlf
+*.ts text eol=crlf
+*.vue text eol=crlf
+*.json text eol=crlf
+*.yml text eol=crlf
+*.yaml text eol=crlf
+*.md text eol=crlf
+*.txt text eol=crlf
+*.xml text eol=crlf
+*.html text eol=crlf
+*.css text eol=crlf
+*.scss text eol=crlf
+*.sass text eol=crlf
+
+# 二进制文件
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.dll binary
+*.exe binary
+*.so binary
+*.dylib binary
+
+# 特殊处理的文件
+*.sln text eol=crlf
+*.csproj text eol=crlf
+*.props text eol=crlf
+*.targets text eol=crlf
+
+# Git 配置文件
+.gitignore text eol=crlf
+.gitattributes text eol=crlf
+
+# Docker 文件（保持 LF，因为在 Linux 容器中运行）
+Dockerfile text eol=lf
+*.dockerfile text eol=lf
+
+# 脚本文件
+*.sh text eol=lf
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf

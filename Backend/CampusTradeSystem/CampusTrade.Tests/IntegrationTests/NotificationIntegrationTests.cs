@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using CampusTrade.API.Infrastructure.Hubs;
 using CampusTrade.API.Services.Auth;
 using CampusTrade.API.Services.Email;
+using CampusTrade.API.Services.Notification;
 using CampusTrade.Tests.Helpers;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
@@ -43,7 +44,8 @@ namespace CampusTrade.Tests.IntegrationTests
             services.AddScoped<EmailService>(provider =>
             {
                 var config = new Mock<Microsoft.Extensions.Configuration.IConfiguration>();
-                var logger = provider.GetService<ILogger<EmailService>>();
+                var logger = provider.GetRequiredService<ILogger<EmailService>>();
+                var dbContext = provider.GetRequiredService<CampusTrade.API.Data.CampusTradeDbContext>();
 
                 // 设置基本的配置值
                 config.Setup(x => x["Email:SmtpServer"]).Returns("smtp.test.com");
@@ -54,7 +56,7 @@ namespace CampusTrade.Tests.IntegrationTests
                 config.Setup(x => x["Email:SenderName"]).Returns("Test");
                 config.Setup(x => x["Email:EnableSsl"]).Returns("true");
 
-                return new EmailService(config.Object, logger);
+                return new EmailService(config.Object, logger, dbContext);
             });
 
             // 注册通知服务

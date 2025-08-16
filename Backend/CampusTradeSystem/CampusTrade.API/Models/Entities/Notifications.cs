@@ -105,5 +105,15 @@ namespace CampusTrade.API.Models.Entities
         /// 关联的抽象订单（可选）
         /// </summary>
         public virtual AbstractOrder? AbstractOrder { get; set; }
+
+        /// <summary>
+        /// 关联的SignalR通知发送记录
+        /// </summary>
+        public virtual ICollection<SignalRNotification> SignalRNotifications { get; set; } = new List<SignalRNotification>();
+
+        /// <summary>
+        /// 关联的邮件通知发送记录
+        /// </summary>
+        public virtual ICollection<EmailNotification> EmailNotifications { get; set; } = new List<EmailNotification>();
     }
 }
