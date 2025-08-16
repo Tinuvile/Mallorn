@@ -1764,7 +1764,7 @@ namespace CampusTrade.API.Data
                     .HasDatabaseName("IX_EMAIL_NOTIFICATIONS_TYPE_STATUS");
 
                 entity.HasIndex(e => new { e.RecipientEmail, e.EmailType })
-                    .HasDatabaseName("IX_EMAIL_NOTIFICATIONS_EMAIL_TYPE");
+                    .HasDatabaseName("IX_EMAIL_NOTIFICATIONS_RECIPIENT_EMAIL_TYPE");
 
                 // 配置与Notification的多对一关系（可选）
                 entity.HasOne(e => e.Notification)
