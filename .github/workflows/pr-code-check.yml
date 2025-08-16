@@ -6,9 +6,13 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  code-quality-check:
+  # 变更检测 Job
+  detect-changes:
     runs-on: ubuntu-latest
-    name: Code Quality & Formatting Check
+    name: Detect Changes
+    outputs:
+      backend_changed: ${{ steps.changes.outputs.backend_changed }}
+      frontend_changed: ${{ steps.changes.outputs.frontend_changed }}
 
     steps:
       - name: Checkout Code
@@ -16,7 +20,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 检测变更的文件
       - name: Detect changed files
         id: changes
         run: |
@@ -43,133 +46,339 @@ jobs:
             echo "未检测到前端代码变更"
           fi
 
+  # 后端构建和测试 Job
+  backend-build-test:
+    runs-on: ubuntu-latest
+    name: Backend Build Test
+    needs: detect-changes
+    if: needs.detect-changes.outputs.backend_changed == 'true'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
       - name: Setup .NET
-        if: steps.changes.outputs.backend_changed == 'true'
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "9.0.x"
+          dotnet-version: "8.0.x"
+
+      - name: Restore .NET dependencies
+        run: dotnet restore Backend/CampusTradeSystem/CampusTradeSystem.sln
+
+      - name: Build .NET project
+        run: |
+          echo "编译后端项目..."
+          dotnet build Backend/CampusTradeSystem/CampusTradeSystem.sln --configuration Release --no-restore --verbosity minimal
+
+  # 后端安全扫描 Job
+  backend-security:
+    runs-on: ubuntu-latest
+    name: Backend Security Scan
+    needs: detect-changes
+    if: needs.detect-changes.outputs.backend_changed == 'true'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore .NET dependencies
+        run: dotnet restore Backend/CampusTradeSystem/CampusTradeSystem.sln
+
+      - name: Run .NET security scan
+        run: |
+          echo "运行后端安全扫描..."
+          dotnet list Backend/CampusTradeSystem/CampusTrade.API/CampusTrade.API.csproj package --vulnerable --include-transitive
+
+  # 后端格式化检查 Job
+  backend-formatting:
+    runs-on: ubuntu-latest
+    name: Backend Code Formatting
+    needs: detect-changes
+    if: needs.detect-changes.outputs.backend_changed == 'true'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore .NET dependencies
+        run: dotnet restore Backend/CampusTradeSystem/CampusTradeSystem.sln
+
+      - name: Check .NET code formatting
+        run: |
+          dotnet format Backend/CampusTradeSystem/CampusTradeSystem.sln --verify-no-changes --verbosity diagnostic
+
+  # 前端类型检查 Job
+  frontend-typecheck:
+    runs-on: ubuntu-latest
+    name: Frontend TypeScript Check
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend_changed == 'true'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        if: steps.changes.outputs.frontend_changed == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
           cache-dependency-path: Frontend/campus-trade-web/package-lock.json
 
-      # .NET 代码质量检查
-      - name: Restore .NET dependencies
-        if: steps.changes.outputs.backend_changed == 'true'
-        run: dotnet restore Backend/CampusTradeSystem/CampusTradeSystem.sln
-
-      - name: Check .NET code formatting
-        if: steps.changes.outputs.backend_changed == 'true'
-        run: |
-          dotnet format Backend/CampusTradeSystem/CampusTradeSystem.sln --verify-no-changes --verbosity diagnostic
-
-      - name: Build .NET project
-        if: steps.changes.outputs.backend_changed == 'true'
-        run: |
-          echo "编译后端项目..."
-          dotnet build Backend/CampusTradeSystem/CampusTradeSystem.sln --configuration Release --no-restore --verbosity minimal
-
-      - name: Run .NET tests
-        if: steps.changes.outputs.backend_changed == 'true'
-        run: |
-          echo "运行后端测试..."
-          dotnet test Backend/CampusTradeSystem/CampusTrade.Tests/CampusTrade.Tests.csproj --no-build --configuration Release --logger trx --collect:"XPlat Code Coverage"
-
-      - name: Run .NET security scan
-        if: steps.changes.outputs.backend_changed == 'true'
-        run: |
-          echo "运行后端安全扫描..."
-          dotnet list Backend/CampusTradeSystem/CampusTrade.API/CampusTrade.API.csproj package --vulnerable --include-transitive
-
-      # 前端代码质量检查
       - name: Install frontend dependencies
-        if: steps.changes.outputs.frontend_changed == 'true'
         working-directory: Frontend/campus-trade-web
         run: npm ci
 
-      - name: Check frontend code formatting (Prettier)
-        if: steps.changes.outputs.frontend_changed == 'true'
-        working-directory: Frontend/campus-trade-web
-        run: |
-          npx prettier --check "src/**/*.{js,ts,vue,json,css,md}"
-
-      - name: Run ESLint
-        if: steps.changes.outputs.frontend_changed == 'true'
-        working-directory: Frontend/campus-trade-web
-        run: |
-          npx eslint "src/**/*.{js,ts,vue}" --max-warnings 0
-
       - name: Run TypeScript type checking
-        if: steps.changes.outputs.frontend_changed == 'true'
         working-directory: Frontend/campus-trade-web
         run: |
           npx vue-tsc --noEmit
 
+  # 前端构建和测试 Job
+  frontend-build-test:
+    runs-on: ubuntu-latest
+    name: Frontend Build & Test
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend_changed == 'true'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: Frontend/campus-trade-web/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: Frontend/campus-trade-web
+        run: npm ci
+
       - name: Build frontend project
-        if: steps.changes.outputs.frontend_changed == 'true'
         working-directory: Frontend/campus-trade-web
         run: |
           echo "编译前端项目..."
           npm run build
 
       - name: Run frontend tests
-        if: steps.changes.outputs.frontend_changed == 'true'
         working-directory: Frontend/campus-trade-web
         run: |
           echo "运行前端测试..."
           npm run test:unit
 
+  # 前端安全扫描 Job
+  frontend-security:
+    runs-on: ubuntu-latest
+    name: Frontend Security Scan
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend_changed == 'true'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: Frontend/campus-trade-web/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: Frontend/campus-trade-web
+        run: npm ci
+
       - name: Run frontend security scan
-        if: steps.changes.outputs.frontend_changed == 'true'
         working-directory: Frontend/campus-trade-web
         run: |
           echo "运行前端安全扫描..."
           npm audit --audit-level moderate
 
-      # 生成检查报告
+  # 前端 ESLint 检查 Job
+  frontend-eslint:
+    runs-on: ubuntu-latest
+    name: Frontend ESLint Check
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend_changed == 'true'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: Frontend/campus-trade-web/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: Frontend/campus-trade-web
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: Frontend/campus-trade-web
+        run: |
+          npx eslint "src/**/*.{js,ts,vue}" --max-warnings 0
+
+  # 前端格式化检查 Job
+  frontend-formatting:
+    runs-on: ubuntu-latest
+    name: Frontend Code Formatting
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend_changed == 'true'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: Frontend/campus-trade-web/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: Frontend/campus-trade-web
+        run: npm ci
+
+      - name: Check frontend code formatting (Prettier)
+        working-directory: Frontend/campus-trade-web
+        run: |
+          npx prettier --check "src/**/*.{js,ts,vue,json,css,md}"
+
+  # 汇总报告 Job
+  generate-summary:
+    runs-on: ubuntu-latest
+    name: Generate Summary Report
+    needs:
+      [
+        detect-changes,
+        backend-build-test,
+        backend-security,
+        backend-formatting,
+        frontend-typecheck,
+        frontend-build-test,
+        frontend-security,
+        frontend-eslint,
+        frontend-formatting,
+      ]
+    if: always()
+
+    steps:
       - name: Generate quality report
-        if: always()
         run: |
           echo "## 代码质量检查结果" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           # 检查结果概览
           echo "### 变更检测结果" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.changes.outputs.backend_changed }}" == "true" ]; then
+          if [ "${{ needs.detect-changes.outputs.backend_changed }}" == "true" ]; then
             echo "- **后端代码**: 检测到变更，已执行相关检查" >> $GITHUB_STEP_SUMMARY
           else
             echo "- **后端代码**: 未检测到变更，跳过检查" >> $GITHUB_STEP_SUMMARY
           fi
 
-          if [ "${{ steps.changes.outputs.frontend_changed }}" == "true" ]; then
+          if [ "${{ needs.detect-changes.outputs.frontend_changed }}" == "true" ]; then
             echo "- **前端代码**: 检测到变更，已执行相关检查" >> $GITHUB_STEP_SUMMARY
           else
             echo "- **前端代码**: 未检测到变更，跳过检查" >> $GITHUB_STEP_SUMMARY
           fi
 
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 执行的检查项目" >> $GITHUB_STEP_SUMMARY
+          echo "### 检查结果状态" >> $GITHUB_STEP_SUMMARY
 
-          if [ "${{ steps.changes.outputs.backend_changed }}" == "true" ]; then
-            echo "#### 后端检查项目" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ 代码格式化检查 (.NET)" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ 项目编译测试" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ 单元测试" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ 安全漏洞扫描" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.detect-changes.outputs.backend_changed }}" == "true" ]; then
+            echo "#### 后端检查结果" >> $GITHUB_STEP_SUMMARY
+            
+            # 后端构建测试状态
+            if [ "${{ needs.backend-build-test.result }}" == "success" ]; then
+              echo "- ✅ **构建和测试**: 通过" >> $GITHUB_STEP_SUMMARY
+            elif [ "${{ needs.backend-build-test.result }}" == "failure" ]; then
+              echo "- ❌ **构建和测试**: 失败" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- ⏭️ **构建和测试**: 跳过或取消" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            # 后端安全扫描状态
+            if [ "${{ needs.backend-security.result }}" == "success" ]; then
+              echo "- ✅ **安全扫描**: 通过" >> $GITHUB_STEP_SUMMARY
+            elif [ "${{ needs.backend-security.result }}" == "failure" ]; then
+              echo "- ❌ **安全扫描**: 发现漏洞" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- ⏭️ **安全扫描**: 跳过或取消" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            # 后端格式化状态
+            if [ "${{ needs.backend-formatting.result }}" == "success" ]; then
+              echo "- ✅ **代码格式化**: 通过" >> $GITHUB_STEP_SUMMARY
+            elif [ "${{ needs.backend-formatting.result }}" == "failure" ]; then
+              echo "- ❌ **代码格式化**: 需要格式化" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- ⏭️ **代码格式化**: 跳过或取消" >> $GITHUB_STEP_SUMMARY
+            fi
           fi
 
-          if [ "${{ steps.changes.outputs.frontend_changed }}" == "true" ]; then
-            echo "#### 前端检查项目" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ 代码格式化检查 (Prettier)" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ ESLint 代码质量检查" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ TypeScript 类型检查" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ 项目编译测试" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ 单元测试" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ 安全漏洞扫描" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.detect-changes.outputs.frontend_changed }}" == "true" ]; then
+            echo "#### 前端检查结果" >> $GITHUB_STEP_SUMMARY
+            
+            # TypeScript 检查状态
+            if [ "${{ needs.frontend-typecheck.result }}" == "success" ]; then
+              echo "- ✅ **TypeScript 类型检查**: 通过" >> $GITHUB_STEP_SUMMARY
+            elif [ "${{ needs.frontend-typecheck.result }}" == "failure" ]; then
+              echo "- ❌ **TypeScript 类型检查**: 类型错误" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- ⏭️ **TypeScript 类型检查**: 跳过或取消" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            # 前端构建测试状态
+            if [ "${{ needs.frontend-build-test.result }}" == "success" ]; then
+              echo "- ✅ **构建和测试**: 通过" >> $GITHUB_STEP_SUMMARY
+            elif [ "${{ needs.frontend-build-test.result }}" == "failure" ]; then
+              echo "- ❌ **构建和测试**: 失败" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- ⏭️ **构建和测试**: 跳过或取消" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            # 前端安全扫描状态
+            if [ "${{ needs.frontend-security.result }}" == "success" ]; then
+              echo "- ✅ **安全扫描**: 通过" >> $GITHUB_STEP_SUMMARY
+            elif [ "${{ needs.frontend-security.result }}" == "failure" ]; then
+              echo "- ❌ **安全扫描**: 发现漏洞" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- ⏭️ **安全扫描**: 跳过或取消" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            # ESLint 状态
+            if [ "${{ needs.frontend-eslint.result }}" == "success" ]; then
+              echo "- ✅ **ESLint 检查**: 通过" >> $GITHUB_STEP_SUMMARY
+            elif [ "${{ needs.frontend-eslint.result }}" == "failure" ]; then
+              echo "- ❌ **ESLint 检查**: 代码质量问题" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- ⏭️ **ESLint 检查**: 跳过或取消" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            # Prettier 格式化状态
+            if [ "${{ needs.frontend-formatting.result }}" == "success" ]; then
+              echo "- ✅ **代码格式化**: 通过" >> $GITHUB_STEP_SUMMARY
+            elif [ "${{ needs.frontend-formatting.result }}" == "failure" ]; then
+              echo "- ❌ **代码格式化**: 需要格式化" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- ⏭️ **代码格式化**: 跳过或取消" >> $GITHUB_STEP_SUMMARY
+            fi
           fi
 
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -179,3 +388,4 @@ jobs:
           echo "3. **编译失败**: 检查编译错误日志并修复相关问题" >> $GITHUB_STEP_SUMMARY
           echo "4. **测试失败**: 检查测试日志并修复相关问题" >> $GITHUB_STEP_SUMMARY
           echo "5. **安全漏洞**: 更新相关依赖包版本" >> $GITHUB_STEP_SUMMARY
+          echo "6. **类型错误**: 修复 TypeScript 类型相关问题" >> $GITHUB_STEP_SUMMARY

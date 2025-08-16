@@ -16,7 +16,7 @@ namespace CampusTrade.API.Repositories.Interfaces
         IRefreshTokenRepository RefreshTokens { get; }
         ICreditHistoryRepository CreditHistory { get; }
         IRepository<LoginLogs> LoginLogs { get; }
-        IRepository<EmailVerification> EmailVerifications { get; }
+        IEmailVerificationRepository EmailVerifications { get; }
 
         // 商品管理相关
         ICategoriesRepository Categories { get; }

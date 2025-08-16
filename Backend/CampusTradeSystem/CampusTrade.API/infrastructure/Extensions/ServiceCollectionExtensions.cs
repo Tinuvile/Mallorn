@@ -4,7 +4,10 @@ using CampusTrade.API.Repositories.Implementations;
 using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Auth;
 using CampusTrade.API.Services.Background;
+using CampusTrade.API.Services.Email;
 using CampusTrade.API.Services.File;
+using CampusTrade.API.Services.Interfaces;
+using CampusTrade.API.Services.Order;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -102,6 +105,13 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<IVirtualAccountsRepository, VirtualAccountsRepository>();
+        services.AddScoped<IRechargeRecordsRepository, RechargeRecordsRepository>();
+        services.AddScoped<IReportsRepository, ReportsRepository>();
+        services.AddScoped<INegotiationsRepository, NegotiationsRepository>();
+        services.AddScoped<IExchangeRequestsRepository, ExchangeRequestsRepository>();
+        services.AddScoped<IReviewsRepository, ReviewsRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         return services;
     }
@@ -109,13 +119,21 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// 添加认证相关服务
     /// </summary>
-    public static IServiceCollection AddAuthenticationServices(this IServiceCollection services)
+    public static IServiceCollection AddAuthenticationServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<IAuthService, AuthService>();
 
+        // 配置邮件验证选项
+        services.Configure<EmailVerificationOptions>(configuration.GetSection(EmailVerificationOptions.SectionName));
+        services.AddSingleton<IValidateOptions<EmailVerificationOptions>, EmailVerificationOptionsValidator>();
+
+        // 注册邮件验证服务
+        services.AddScoped<Services.Auth.EmailVerificationService>();
+
         // 注册通知服务
-        services.AddScoped<Services.Auth.NotifiService>();
-        services.AddScoped<Services.Auth.NotifiSenderService>();
+        services.AddScoped<Services.Notification.NotifiService>();
+        services.AddScoped<Services.Notification.SignalRNotificationService>();
+        services.AddScoped<Services.Notification.NotifiSenderService>();
 
         // 注册邮件服务
         services.AddScoped<Services.Email.EmailService>();
@@ -123,6 +141,15 @@ public static class ServiceCollectionExtensions
         // 添加内存缓存（用于Token黑名单）
         services.AddMemoryCache();
         services.AddHttpContextAccessor();
+        return services;
+    }
+
+    /// <summary>
+    /// 添加举报相关服务
+    /// </summary>
+    public static IServiceCollection AddReportServices(this IServiceCollection services)
+    {
+        services.AddScoped<Services.Interfaces.IReportService, Services.Report.ReportService>();
         return services;
     }
 
@@ -179,6 +206,9 @@ public static class ServiceCollectionExtensions
         // 注册通知发送后台服务
         services.AddHostedService<NotificationBackgroundService>();
 
+        // 注册订单超时监控后台服务
+        services.AddHostedService<OrderTimeoutBackgroundService>();
+
         return services;
     }
 
@@ -191,6 +221,52 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IFileService, FileService>();
         services.AddScoped<IThumbnailService, ThumbnailService>();
         services.AddSingleton<IValidateOptions<FileStorageOptions>, FileStorageOptionsValidator>();
+        return services;
+    }
+
+    /// <summary>
+    /// 添加订单相关服务
+    /// </summary>
+    public static IServiceCollection AddOrderServices(this IServiceCollection services)
+    {
+        services.AddScoped<IOrderService, OrderService>();
+        services.AddScoped<IRechargeService, RechargeService>();
+        return services;
+    }
+
+    /// <summary>
+    /// 添加商品相关服务
+    /// </summary>
+    public static IServiceCollection AddProductServices(this IServiceCollection services)
+    {
+        services.AddScoped<Services.Product.IProductService, Services.Product.ProductService>();
+        return services;
+    }
+
+    /// <summary>
+    /// 添加议价服务
+    /// </summary>
+    public static IServiceCollection AddBargainServices(this IServiceCollection services)
+    {
+        services.AddScoped<Services.Interfaces.IBargainService, Services.Bargain.BargainService>();
+        return services;
+    }
+
+    /// <summary>
+    /// 添加换物服务
+    /// </summary>
+    public static IServiceCollection AddExchangeServices(this IServiceCollection services)
+    {
+        services.AddScoped<Services.Interfaces.IExchangeService, Services.Exchange.ExchangeService>();
+        return services;
+    }
+
+    /// <summary>
+    /// 添加评价相关服务
+    /// </summary>
+    public static IServiceCollection AddReviewServices(this IServiceCollection services)
+    {
+        services.AddScoped<Services.Review.IReviewService, Services.Review.ReviewService>();
         return services;
     }
 }
@@ -227,6 +303,20 @@ public class FileStorageOptionsValidator : IValidateOptions<FileStorageOptions>
             errors.Add("缩略图尺寸必须大于0");
         if (options.ThumbnailQuality < 1 || options.ThumbnailQuality > 100)
             errors.Add("缩略图质量必须在1-100之间");
+        if (errors.Any())
+            return ValidateOptionsResult.Fail(errors);
+        return ValidateOptionsResult.Success;
+    }
+}
+
+/// <summary>
+/// 邮件验证选项验证器
+/// </summary>
+public class EmailVerificationOptionsValidator : IValidateOptions<EmailVerificationOptions>
+{
+    public ValidateOptionsResult Validate(string? name, EmailVerificationOptions options)
+    {
+        var errors = options.GetValidationErrors().ToList();
         if (errors.Any())
             return ValidateOptionsResult.Fail(errors);
         return ValidateOptionsResult.Success;

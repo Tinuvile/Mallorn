@@ -4,9 +4,11 @@ using CampusTrade.API.Data;
 using CampusTrade.API.Infrastructure.Extensions;
 using CampusTrade.API.Infrastructure.Middleware;
 using CampusTrade.API.Options;
+using CampusTrade.API.Services.Auth;
 using CampusTrade.API.Services.Background;
 using CampusTrade.API.Services.Cache;
 using CampusTrade.API.Services.Interfaces;
+using CampusTrade.API.Services.Review;
 using CampusTrade.API.Services.ScheduledTasks;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -141,10 +143,19 @@ try
     builder.Services.AddHostedService<NotificationPushTask>();
 
     // 添加认证相关服务
-    builder.Services.AddAuthenticationServices();
+    builder.Services.AddAuthenticationServices(builder.Configuration);
+
+    // 添加举报相关服务
+    builder.Services.AddReportServices();
 
     // 添加文件管理服务
     builder.Services.AddFileManagementServices(builder.Configuration);
+
+    // 添加订单服务
+    builder.Services.AddOrderServices();
+
+    // 添加商品服务
+    builder.Services.AddProductServices();
 
     // 配置 CORS
     builder.Services.AddCorsPolicy(builder.Configuration);
@@ -159,86 +170,104 @@ try
     // 注册后台服务
     builder.Services.AddHostedService<CacheRefreshBackgroundService>();
 
-    // 注册缓存服务（确保这些已存在）
+    // 注册缓存服务
     builder.Services.AddScoped<ICategoryCacheService, CategoryCacheService>();
     builder.Services.AddScoped<IProductCacheService, ProductCacheService>();
     builder.Services.AddScoped<ISystemConfigCacheService, SystemConfigCacheService>();
     builder.Services.AddScoped<IUserCacheService, UserCacheService>();
 
+    // 注册邮箱验证服务
+    builder.Services.AddScoped<EmailVerificationService>();
+
+    // 注册议价服务
+    builder.Services.AddBargainServices();
+
+    // 注册换物服务
+    builder.Services.AddExchangeServices();
+
+    // 注册评价服务
+    builder.Services.AddReviewServices();
 
     var app = builder.Build();
 
     // 配置HTTP请求管道
     if (app.Environment.IsDevelopment())
     {
-        // 在开发环境下，先配置Swagger，避免被其他中间件影响
+        // 开发环境下，先配置Swagger，避免被其他中间件影响
         app.UseSwagger();
-        app.UseSwaggerUI(c =>
-        {
-            c.SwaggerEndpoint("/swagger/v1/swagger.json", "Campus Trade API v1.0");
-            c.RoutePrefix = string.Empty; // 将Swagger UI设置为根路径
-            c.DocumentTitle = "Campus Trade API Documentation";
-            c.DefaultModelsExpandDepth(-1); // 隐藏模型
-            c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None); // 默认折叠所有操作
 
-            // 自定义HTML模板
-            c.IndexStream = () =>
+        app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Campus Trade API v1.0");
+    c.RoutePrefix = string.Empty; // 可选：设置 Swagger 为根路径
+});
+    }
+    /*
+            app.UseSwaggerUI(c =>
             {
-                var assembly = System.Reflection.Assembly.GetExecutingAssembly();
-                return new MemoryStream(System.Text.Encoding.UTF8.GetBytes(@"
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset='UTF-8'>
-     <meta http-equiv='X-UA-Compatible' content='IE=edge'>
-     <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-    <title>Campus Trade API Documentation</title>
-    <link rel='stylesheet' type='text/css' href='./swagger-ui.css' />
-    <style>
-        html { box-sizing: border-box; overflow: -moz-scrollbars-vertical; overflow-y: scroll; }
-        *, *:before, *:after { box-sizing: inherit; }
-        body { margin:0; background: #fafafa; }
-    </style>
-</head>
-<body>
-    <div id='swagger-ui'></div>
-     <script>
-         // Polyfill for Object.hasOwn (ES2022) to support older browsers
-         if (!Object.hasOwn) {
-             Object.hasOwn = function(obj, prop) {
-                 return Object.prototype.hasOwnProperty.call(obj, prop);
-             };
-         }
-     </script>
-    <script src='./swagger-ui-bundle.js'></script>
-    <script src='./swagger-ui-standalone-preset.js'></script>
-    <script>
-        window.onload = function() {
-            const ui = SwaggerUIBundle({
-                url: '/swagger/v1/swagger.json',
-                dom_id: '#swagger-ui',
-                deepLinking: true,
-                presets: [
-                    SwaggerUIBundle.presets.apis,
-                    SwaggerUIStandalonePreset
-                ],
-                plugins: [
-                    SwaggerUIBundle.plugins.DownloadUrl
-                ],
-                layout: 'StandaloneLayout'
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Campus Trade API v1.0");
+                c.RoutePrefix = string.Empty; // 将Swagger UI设置为根路径
+                c.DocumentTitle = "Campus Trade API Documentation";
+                c.DefaultModelsExpandDepth(-1); // 隐藏模型
+                c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None); // 默认折叠所有操作
+         // 自定义HTML模板
+                c.IndexStream = () =>
+                {
+                    var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+                    return new MemoryStream(System.Text.Encoding.UTF8.GetBytes(@"
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset='UTF-8'>
+         <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+         <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+        <title>Campus Trade API Documentation</title>
+        <link rel='stylesheet' type='text/css' href='./swagger-ui.css' />
+        <style>
+            html { box-sizing: border-box; overflow: -moz-scrollbars-vertical; overflow-y: scroll; }
+            *, *:before, *:after { box-sizing: inherit; }
+            body { margin:0; background: #fafafa; }
+        </style>
+    </head>
+    <body>
+        <div id='swagger-ui'></div>
+         <script>
+             // Polyfill for Object.hasOwn (ES2022) to support older browsers
+             if (!Object.hasOwn) {
+                 Object.hasOwn = function(obj, prop) {
+                     return Object.prototype.hasOwnProperty.call(obj, prop);
+                 };
+             }
+         </script>
+        <script src='./swagger-ui-bundle.js'></script>
+        <script src='./swagger-ui-standalone-preset.js'></script>
+        <script>
+            window.onload = function() {
+                const ui = SwaggerUIBundle({
+                    url: '/swagger/v1/swagger.json',
+                    dom_id: '#swagger-ui',
+                    deepLinking: true,
+                    presets: [
+                        SwaggerUIBundle.presets.apis,
+                        SwaggerUIStandalonePreset
+                    ],
+                    plugins: [
+                        SwaggerUIBundle.plugins.DownloadUrl
+                    ],
+                    layout: 'StandaloneLayout'
+                });
+            }
+        </script>
+    </body>
+    </html>"));
+                };
             });
         }
-    </script>
-</body>
-</html>"));
-            };
-        });
-    }
-    else
-    {
-        app.UseHsts();
-    }
-
+        else
+        {
+            app.UseHsts();
+        }
+    */
     // 使用全局异常处理中间件
     app.UseGlobalExceptionHandler();
 

@@ -76,23 +76,48 @@ namespace CampusTrade.API.Repositories.Implementations
             if (amount <= 0) return false;
             try
             {
-                using var transaction = await _context.Database.BeginTransactionAsync();
-                var account = await GetByUserIdAsync(userId);
-                if (account == null || account.Balance < amount)
+                // 检查是否已有活动事务，如果有则不创建新事务
+                var hasActiveTransaction = _context.Database.CurrentTransaction != null;
+
+                if (!hasActiveTransaction)
                 {
-                    await transaction.RollbackAsync();
-                    return false;
+                    using var transaction = await _context.Database.BeginTransactionAsync();
+                    var result = await DebitInternalAsync(userId, amount, reason);
+                    if (result)
+                    {
+                        await transaction.CommitAsync();
+                    }
+                    else
+                    {
+                        await transaction.RollbackAsync();
+                    }
+                    return result;
                 }
-                account.Balance -= amount;
-                _context.VirtualAccounts.Update(account);
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-                return true;
+                else
+                {
+                    // 使用现有事务
+                    return await DebitInternalAsync(userId, amount, reason);
+                }
             }
             catch
             {
                 return false;
             }
+        }
+
+        /// <summary>
+        /// 内部扣减余额方法（不管理事务）
+        /// </summary>
+        private async Task<bool> DebitInternalAsync(int userId, decimal amount, string reason)
+        {
+            var account = await GetByUserIdAsync(userId);
+            if (account == null || account.Balance < amount)
+            {
+                return false;
+            }
+            account.Balance -= amount;
+            _context.VirtualAccounts.Update(account);
+            return true;
         }
         /// <summary>
         /// 增加余额（线程安全）
@@ -102,25 +127,53 @@ namespace CampusTrade.API.Repositories.Implementations
             if (amount <= 0) return false;
             try
             {
-                var account = await GetByUserIdAsync(userId);
-                if (account == null)
+                // 检查是否已有活动事务，如果有则不创建新事务
+                var hasActiveTransaction = _context.Database.CurrentTransaction != null;
+
+                if (!hasActiveTransaction)
                 {
-                    account = new VirtualAccount { UserId = userId, Balance = amount, CreatedAt = DateTime.UtcNow };
-                    await AddAsync(account);
-                    await _context.SaveChangesAsync();
+                    using var transaction = await _context.Database.BeginTransactionAsync();
+                    var result = await CreditInternalAsync(userId, amount, reason);
+                    if (result)
+                    {
+                        await _context.SaveChangesAsync();
+                        await transaction.CommitAsync();
+                    }
+                    else
+                    {
+                        await transaction.RollbackAsync();
+                    }
+                    return result;
                 }
                 else
                 {
-                    account.Balance += amount;
-                    _context.VirtualAccounts.Update(account);
-                    await _context.SaveChangesAsync();
+                    // 使用现有事务
+                    return await CreditInternalAsync(userId, amount, reason);
                 }
-                return true;
             }
             catch
             {
                 return false;
             }
+        }
+
+        /// <summary>
+        /// 内部增加余额方法（不管理事务）
+        /// </summary>
+        private async Task<bool> CreditInternalAsync(int userId, decimal amount, string reason)
+        {
+            var account = await GetByUserIdAsync(userId);
+            if (account == null)
+            {
+                account = new VirtualAccount { UserId = userId, Balance = amount, CreatedAt = DateTime.UtcNow };
+                await AddAsync(account);
+            }
+            else
+            {
+                account.Balance += amount;
+                _context.VirtualAccounts.Update(account);
+            }
+            return true;
         }
         /// <summary>
         /// 批量更新余额

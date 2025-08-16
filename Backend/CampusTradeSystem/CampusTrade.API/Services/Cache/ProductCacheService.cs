@@ -26,7 +26,7 @@ namespace CampusTrade.API.Services.Cache
         private readonly SemaphoreSlim _userProductsLock = new(1, 1);
 
         // 内存缓存用于频繁访问的基本产品信息
-        private static readonly ConcurrentDictionary<int, Product> _basicProductCache = new();
+        private static readonly ConcurrentDictionary<int, Models.Entities.Product> _basicProductCache = new();
 
         public ProductCacheService(
             ICacheService cache,
@@ -40,7 +40,7 @@ namespace CampusTrade.API.Services.Cache
             _logger = logger;
         }
 
-        public async Task<Product?> GetProductAsync(int productId)
+        public async Task<Models.Entities.Product?> GetProductAsync(int productId)
         {
             var key = CacheKeyHelper.ProductKey(productId);
 
@@ -70,7 +70,7 @@ namespace CampusTrade.API.Services.Cache
             }
         }
 
-        public async Task SetProductAsync(Product product)
+        public async Task SetProductAsync(Models.Entities.Product product)
         {
             var key = CacheKeyHelper.ProductKey(product.ProductId);
 
@@ -89,9 +89,9 @@ namespace CampusTrade.API.Services.Cache
             }
         }
 
-        public async Task<Dictionary<int, Product>> GetProductsAsync(IEnumerable<int> productIds)
+        public async Task<Dictionary<int, Models.Entities.Product>> GetProductsAsync(IEnumerable<int> productIds)
         {
-            var result = new Dictionary<int, Product>();
+            var result = new Dictionary<int, Models.Entities.Product>();
             var missingIds = new List<int>();
 
             // 首先检查内存缓存
@@ -114,7 +114,7 @@ namespace CampusTrade.API.Services.Cache
 
             // 然后检查分布式缓存
             var cacheKeys = missingIds.Select(CacheKeyHelper.ProductKey).ToList();
-            var cachedProducts = await _cache.GetAllAsync<Product>(cacheKeys);
+            var cachedProducts = await _cache.GetAllAsync<Models.Entities.Product>(cacheKeys);
 
             foreach (var pair in cachedProducts)
             {
@@ -151,7 +151,7 @@ namespace CampusTrade.API.Services.Cache
             return result;
         }
 
-        public async Task<List<Product>> GetProductsByCategoryAsync(int categoryId, int pageIndex, int pageSize)
+        public async Task<List<Models.Entities.Product>> GetProductsByCategoryAsync(int categoryId, int pageIndex, int pageSize)
         {
             var key = CacheKeyHelper.ProductListKey(categoryId, pageIndex, pageSize);
 
@@ -169,7 +169,7 @@ namespace CampusTrade.API.Services.Cache
                     .ToListAsync();
                 }, _options.ProductCacheDuration);
 
-                return result ?? new List<Product>(); // 确保不返回null
+                return result ?? new List<Models.Entities.Product>(); // 确保不返回null
             }
             finally
             {
@@ -177,7 +177,7 @@ namespace CampusTrade.API.Services.Cache
             }
         }
 
-        public async Task<List<Product>> GetProductsByUserAsync(int userId, int pageIndex, int pageSize)
+        public async Task<List<Models.Entities.Product>> GetProductsByUserAsync(int userId, int pageIndex, int pageSize)
         {
             var key = CacheKeyHelper.ProductListKey(null, pageIndex, pageSize);
 
@@ -195,7 +195,7 @@ namespace CampusTrade.API.Services.Cache
                         .ToListAsync();
                 }, _options.ProductCacheDuration); // 用户产品列表缓存时间
 
-                return result ?? new List<Product>(); // 确保不返回null
+                return result ?? new List<Models.Entities.Product>(); // 确保不返回null
             }
             finally
             {
@@ -273,7 +273,7 @@ namespace CampusTrade.API.Services.Cache
         }
 
         // Null object pattern for product
-        private class NullProduct : Product
+        private class NullProduct : Models.Entities.Product
         {
             public static readonly NullProduct Instance = new();
             private NullProduct() { }
