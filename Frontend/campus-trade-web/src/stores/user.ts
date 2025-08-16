@@ -16,6 +16,7 @@ export interface User {
   phone?: string
   studentId?: string
   creditScore?: number
+  emailVerified?: boolean // 新增字段
 }
 
 export const useUserStore = defineStore('user', () => {
@@ -54,13 +55,14 @@ export const useUserStore = defineStore('user', () => {
         token.value = tokenData.access_token
         refreshToken.value = tokenData.refresh_token
 
-        // 保存用户信息
+        // 保存用户信息（新增 emailVerified 字段）
         user.value = {
           userId: tokenData.user_id,
           username: tokenData.username,
           email: tokenData.email,
           studentId: tokenData.student_id,
           creditScore: tokenData.credit_score,
+          emailVerified: tokenData.email_verified || false // 新增字段，默认为 false
         }
 
         isLoggedIn.value = true
@@ -169,7 +171,6 @@ export const useUserStore = defineStore('user', () => {
       }
     } catch (error) {
       console.error('登出请求失败:', error)
-      // 即使请求失败也要清除本地状态
     } finally {
       // 清除状态
       user.value = null
@@ -184,7 +185,7 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  // 获取用户信息
+  // 获取用户信息（新增 emailVerified 字段）
   const fetchUserInfo = async (username: string) => {
     try {
       const response: ApiResponse<UserInfo> = await authApi.getUser(username)
@@ -199,6 +200,7 @@ export const useUserStore = defineStore('user', () => {
           phone: userData.phone,
           studentId: userData.studentId,
           creditScore: userData.creditScore,
+          emailVerified: userData.emailVerified || false // 新增字段
         }
         localStorage.setItem('user', JSON.stringify(user.value))
 
@@ -220,6 +222,8 @@ export const useUserStore = defineStore('user', () => {
       return { success: false, message }
     }
   }
+
+
 
   return {
     user,

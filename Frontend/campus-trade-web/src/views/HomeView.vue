@@ -1,275 +1,398 @@
-<script setup lang="ts">
-  import { ref, onMounted } from 'vue'
-  import { ShoppingBag, ChatLineRound, Lock } from '@element-plus/icons-vue'
-
-  // 统计数据
-  const totalProducts = ref(1234)
-  const totalUsers = ref(5678)
-  const totalTransactions = ref(987)
-
-  // 最新商品数据
-  const recentProducts = ref([
-    {
-      id: 1,
-      name: '二手笔记本电脑',
-      price: 2999,
-      seller: '张同学',
-      image: 'https://via.placeholder.com/200x150?text=笔记本',
-    },
-    {
-      id: 2,
-      name: '数学教材',
-      price: 45,
-      seller: '李同学',
-      image: 'https://via.placeholder.com/200x150?text=教材',
-    },
-    {
-      id: 3,
-      name: '自行车',
-      price: 300,
-      seller: '王同学',
-      image: 'https://via.placeholder.com/200x150?text=自行车',
-    },
-    {
-      id: 4,
-      name: '台灯',
-      price: 80,
-      seller: '赵同学',
-      image: 'https://via.placeholder.com/200x150?text=台灯',
-    },
-  ])
-
-  onMounted(() => {
-    // 这里可以加载真实数据
-    console.log('Home page mounted')
-  })
-</script>
-
 <template>
-  <div class="home">
-    <div class="welcome-section">
-      <el-card class="welcome-card">
-        <div class="welcome-content">
-          <h1>欢迎来到校园交易平台</h1>
-          <p>在这里，你可以轻松买卖二手物品，与同学们交流交易</p>
-          <div class="stats">
-            <div class="stat-item">
-              <el-statistic title="在售商品" :value="totalProducts" />
-            </div>
-            <div class="stat-item">
-              <el-statistic title="注册用户" :value="totalUsers" />
-            </div>
-            <div class="stat-item">
-              <el-statistic title="成功交易" :value="totalTransactions" />
-            </div>
-          </div>
-        </div>
-      </el-card>
-    </div>
+  <v-app id="inspire">
+    <!-- 导航栏 -->
+    <v-app-bar color="#BBDEFB" height="72" dark>
+      <span class="title" style="font-size: 24px; margin-left: 30px;margin-right: 30px;">Campus Secondhand</span>
+      <v-btn icon color="indigo" @click="goToUserDetail" class="mx-2">
+        <v-icon size="40">mdi-account-circle</v-icon>
+      </v-btn>
+      <v-btn icon @click="goToCart" class="mx-2">
+        <v-icon size="40">mdi-cart</v-icon>
+      </v-btn>
 
-    <div class="features-section">
-      <h2>平台特色</h2>
-      <el-row :gutter="20">
-        <el-col :span="8" :xs="24" :sm="12" :md="8">
-          <el-card class="feature-card">
-            <div class="feature-icon">
-              <el-icon size="48" color="#409EFF">
-                <ShoppingBag />
-              </el-icon>
-            </div>
-            <h3>商品发布</h3>
-            <p>轻松发布你的闲置物品，详细的分类和搜索功能让买家快速找到心仪商品</p>
-          </el-card>
-        </el-col>
-
-        <el-col :span="8" :xs="24" :sm="12" :md="8">
-          <el-card class="feature-card">
-            <div class="feature-icon">
-              <el-icon size="48" color="#67C23A">
-                <ChatLineRound />
-              </el-icon>
-            </div>
-            <h3>即时沟通</h3>
-            <p>内置消息系统，买卖双方可以实时沟通，确保交易顺利进行</p>
-          </el-card>
-        </el-col>
-
-        <el-col :span="8" :xs="24" :sm="12" :md="8">
-          <el-card class="feature-card">
-            <div class="feature-icon">
-              <el-icon size="48" color="#E6A23C">
-                <Lock />
-              </el-icon>
-            </div>
-            <h3>安全保障</h3>
-            <p>校园内部交易，身份认证，为你的每一次交易提供安全保障</p>
-          </el-card>
-        </el-col>
-      </el-row>
-    </div>
-
-    <div class="recent-section">
-      <h2>最新商品</h2>
-      <el-row :gutter="20">
-        <el-col
-          :span="6"
-          :xs="24"
-          :sm="12"
-          :md="6"
-          v-for="product in recentProducts"
-          :key="product.id"
+      <v-btn class="me-2" color="black" height="40" variant="text" width="100" style="margin-left: 100px;" @click="goToLogin"
+        size="large" v-if="!isLoggedIn">登录/注册</v-btn>
+     
+      <!-- 搜索框 -->
+      <v-text-field :loading="loading" append-inner-icon="mdi-magnify" density="compact" label="Search" variant="solo"
+        hide-details single-line @click:append-inner="onClick" style="margin-left: 100px;"></v-text-field>
+      <v-btn
+        color="primary"
+        class="mx-2"
+        to="/order"
+        prepend-icon="mdi-file-document-outline"
         >
-          <el-card class="product-card" shadow="hover">
-            <img :src="product.image" class="product-image" />
-            <div class="product-info">
-              <h4>{{ product.name }}</h4>
-              <p class="product-price">¥{{ product.price }}</p>
-              <p class="product-seller">卖家：{{ product.seller }}</p>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-    </div>
-  </div>
+          我的订单
+        </v-btn>
+         <v-btn
+        class="mx-2"
+        to="/datawatchingview"
+        height="40"
+        variant="text"
+        style="min-width: 40px; padding: 0;"
+      >
+        <v-img
+          src="/images/DataAnalyze.png"
+          alt="数据看板"
+          width="30"
+          height="30"
+          contain
+        />
+      </v-btn>
+      <v-spacer></v-spacer>
+    </v-app-bar>
+    <!-- 错误提示的snackbar -->
+    <v-snackbar
+      v-model="showAuthWarning"
+      :timeout="3000"
+      color="error"
+      location="top"
+    >
+      {{ authWarningMessage }}
+      <template v-slot:actions>
+        <v-btn
+          variant="text"
+          @click="showAuthWarning = false"
+        >
+          关闭
+        </v-btn>
+      </template>
+    </v-snackbar>
+
+    <v-divider></v-divider>
+    <!-- 页面主体内容 -->
+    <v-main style="margin-top: 30px;" >
+
+      <div class="d-flex flex-row">
+      <!-- 分类列表 -->
+        <v-card class="pa-0" width = "15%" style="background-color: #f5f5f5; border-radius: 5px; margin: 40px 20px 20px 20px; ">
+        <v-list class="pa-4" style="margin-top: 20px;margin-left: -10px; background-color: transparent; ">
+          <v-list-item
+            v-for="(category, index) in categories"
+            :key="index"
+            link
+            @click="selectCategory(category.id)"
+          >
+            <v-list-item-title>{{ category.name }}</v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-card>
+      <!-- 滚动图片展示 -->
+      <v-carousel 
+      style="height: 500px;width: 80%; margin: 40px auto 20px; overflow: hidden;" 
+       interval="3000"
+        show-arrows="hover" hide-delimiters rounded class="rounded-lg" contain cycle>
+        <v-carousel-item v-for="(image, index) in carouselImages" :key="index">
+          <img :src="image.url" :alt="image.title" style="
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: inherit;
+          " />
+          >
+          <div class="pa-6 text-center" style="
+            position: absolute; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%);
+            z-index: 1; /* 设置 z-index 确保文字显示在图片上方 */
+            padding: 20px;
+            border-radius: 10px;
+          ">
+            <h1 class="text-white">{{ image.title }}</h1>
+            <p class="text-white">{{ image.subtitle }}</p>
+          </div>
+        </v-carousel-item>
+      </v-carousel>
+
+      <!-- 个人信息区块 -->
+        <v-card class="pa-4" width="20%" style="margin: 40px 20px 20px 20px; border-radius: 10px;background:linear-gradient(to bottom,#fceeee,#F8BBD0)">
+          <v-avatar size="100" class="mx-auto">
+            <img :src="userInfo.avatar" :alt="userInfo.name" />
+          </v-avatar>
+          <v-card-title class="text-center mt-4">{{ userInfo.name }}</v-card-title>
+          <v-card-subtitle class="text-center">{{ userInfo.email }}</v-card-subtitle>
+          <v-divider class="my-4"></v-divider>
+          <v-list style="background-color: transparent;">
+            <v-list-item>
+              <v-list-item-icon>
+                <v-icon>mdi-phone</v-icon>
+              </v-list-item-icon>
+              <v-list-item-content>
+                <v-list-item-title>{{ userInfo.phone }}</v-list-item-title>
+              </v-list-item-content>
+            </v-list-item>
+            <v-list-item>
+              <v-list-item-icon>
+                <v-icon>mdi-account-group</v-icon>
+              </v-list-item-icon>
+              <v-list-item-content>
+                <v-list-item-title>{{ userInfo.role }}</v-list-item-title>
+              </v-list-item-content>
+            </v-list-item>
+          </v-list>
+        </v-card>
+      </div>
+
+      
+      <!-- 促销 -->
+      <v-sheet class="mx-auto pa-2 pt-6" style="border: 3px solid #fceeee; border-radius: 10px;box-shadow: 0 40px 8px rgba(0, 0, 0, 0.1);">
+        <v-icon color="deep-purple">mdi-sale</v-icon>
+        <p style="font-size: 40px; font-weight: bold; color: #E1BEE7;">促销</p>
+        <v-slide-group show-arrows>
+          <v-slide-group-item v-for="(product, index) in saleProducts" :key="index">
+          <v-card class="ma-3" height="200" width="250" rounded @click="goToProductDetail(product.id)" elevation="0">
+          <v-img class="product-img" :src="product.imageUrl" :alt="product.name" height="150" contain placeholder="加载中..." />
+          <v-card-title class="text-center">
+          <div class="product-name">{{ product.name }}</div>
+          <div class="product-price" style="margin-top: -5px;">¥{{ product.price }}</div>
+          </v-card-title>
+          </v-card>
+          </v-slide-group-item>
+          
+          </v-slide-group>
+      </v-sheet>
+
+      <!-- 热销商品 -->
+      <v-sheet class="mx-auto pa-2 pt-6">
+        <v-icon color="red">mdi-fire</v-icon>
+        <p style="font-size: 40px;font-weight: bold; color: #C2185B;">热销中</p>
+
+        <v-slide-group show-arrows>
+          <v-slide-group-item v-for="product in hotProducts" :key="product.id">
+
+            <v-card class="ma-3" elevation="0" @click="goToProductDetail(product.id)">
+            <v-img class="product-img" :width="product.id === 100 ? 300 : 200"
+            :src="product.imageUrl" 
+            :alt="product.name" 
+            height="200" 
+            rounded 
+            contain 
+            loading="lazy" 
+            />
+            <v-card-item>
+            <v-card-title class="text-center pt-2">
+            <div class="product-name">{{ product.name }}</div>
+            <div class="product-price">¥{{ product.price }}</div>
+            </v-card-title>
+            </v-card-item>
+            </v-card>
+          </v-slide-group-item>
+        </v-slide-group>
+
+        <v-container fluid>
+        <v-icon color="red">mdi-store</v-icon>
+        <p style="font-size: 40px;font-weight: bold; color: rgb(167, 54, 54);">更多推荐</p>
+
+        <v-row>
+        <v-col v-for="product in recommendedProducts" :key="product.id" cols="3">
+          <v-card class="ma-1" elevation="0" @click="goToProductDetail(product.id)">
+            <!-- 推荐商品区域 -->
+            <v-card class="pa-2" elevation="0" @click="goToProductDetail(product.id)">
+            <v-img class="product-img" 
+            :src="product.imageUrl" 
+            :alt="product.name" 
+            height="200" 
+            rounded 
+            contain 
+            loading="lazy" 
+            />
+            <v-card-item>
+
+            <v-card-title class="text-center">
+              <div class="product-name">{{ product.name }}</div>
+              <div class="product-price">¥{{ product.price }}</div>
+            </v-card-title>
+            </v-card-item>
+            </v-card>
+          </v-card>
+        </v-col>
+      </v-row>
+        </v-container>
+      </v-sheet>
+    </v-main>
+  </v-app>
 </template>
 
+<script setup>
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
+
+const router = useRouter()
+const userStore = useUserStore()
+const showAuthWarning = ref(false)
+const authWarningMessage = ref('')
+const isLoading = ref(false)
+const isLoggedIn = computed(() => userStore.isLoggedIn) // 添加登录状态
+
+
+// 分类数据
+const categories = ref([
+  { id: 1, name: '电脑/配件/办公' },
+  { id: 2, name: '工业品/商业/农业' },
+  { id: 3, name: '家电/手机/通信' },
+  { id: 4, name: '家具/家装/家居' },
+  { id: 5, name: '食品/生鲜/酒类' },
+  { id: 6, name: '女装/男装/内衣' },
+  { id: 7, name: '美妆/个护/娱乐' },
+  { id: 8, name: '运动/户外/交通' },
+  { id: 9, name: '母婴/玩具/乐器' },
+])
+
+// 分类选择方法
+const selectCategory = (categoryId) => {
+  console.log('选中分类 ID:', categoryId)
+  // 这里可以添加跳转或筛选逻辑
+}
+
+// 个人信息数据
+const userInfo = ref({
+  avatar: 'https://picsum.photos/100/100?random=1',
+  name: '张三',
+  email: 'zhangsan@example.com',
+  phone: '13800138000',
+  role: '普通用户'
+})
+
+
+// 模拟购物车商品数量
+const cartItemsCount = ref(3)
+
+// 点击购物车图标时的跳转方法(还需要根据实际路由调整)
+const goToCart = () => {
+  //router.push({ name: 'Cart' }) // 跳转到名为'Cart'的路由
+}
+
+//点击用户图标的跳转
+const goToUserDetail = async () => {
+  if (!userStore.isLoggedIn) {
+    showAuthWarning.value = true
+    authWarningMessage.value = '请先登录后再查看个人信息'
+    return
+  }
+
+  isLoading.value = true
+  try {
+    // 调用 Store 的 fetchUserInfo 方法获取最新用户数据
+    const result = await userStore.fetchUserInfo(userStore.user?.username || '')
+    
+    if (result.success) {
+      router.push('/userdetailview')
+    } else {
+      showAuthWarning.value = true
+      authWarningMessage.value = result.message || '获取用户信息失败'
+    }
+  } catch (error) {
+    console.error('获取用户信息失败:', error)
+    showAuthWarning.value = true
+    authWarningMessage.value = '请求失败，请重试'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// 跳转到登录页面
+const goToLogin = () => {
+  router.push('/login')
+}
+
+// 跳转到商品详情页
+const goToProductDetail = (id) => {
+  router.push({ 
+    path: `/goods/${id}`,  // 路由路径格式：/goods/商品ID
+    params: { id }         // 传递商品ID参数
+  })
+}
+
+// 模拟促销商品数据 (ID范围: 1-9)
+const saleProducts = ref([
+  { id: 1, name: 'Nike1', imageUrl: '/images/shoe1.jpg', price: 399 },
+  { id: 2, name: '商品2', imageUrl: '/images/shoe2.jpg', price: 299 },
+  { id: 3, name: '商品3', imageUrl: '/images/shoe3.jpg', price: 499 },
+  { id: 4, name: '商品4', imageUrl: '/images/shoe4.jpg', price: 199 },
+  { id: 5, name: '商品5', imageUrl: '/images/shoe5.jpg', price: 599 },
+  { id: 6, name: '商品6', imageUrl: '/images/shoe6.jpg', price: 349 },
+  { id: 7, name: '商品7', imageUrl: '/images/shoe7.jpg', price: 459 },
+])
+
+// 模拟热销商品数据 (ID范围: 100-108)
+const hotProducts = ref([
+  { id: 100, name: '热销商品1', imageUrl: '/images/hot1.webp', price: 699 },
+  { id: 101, name: '热销商品2', imageUrl: '/images/hot2.webp', price: 599 },
+  { id: 102, name: '热销商品3', imageUrl: '/images/hot3.webp', price: 799 },
+  { id: 103, name: '热销商品4', imageUrl: '/images/hot4.webp', price: 499 },
+  { id: 104, name: '热销商品5', imageUrl: '/images/hot5.webp', price: 899 },
+  { id: 105, name: '热销商品6', imageUrl: '/images/hot6.webp', price: 549 },
+  { id: 106, name: '热销商品7', imageUrl: '/images/hot7.webp', price: 649 },
+  { id: 107, name: '热销商品8', imageUrl: '/images/hot8.webp', price: 749 },
+])
+
+// 添加推荐商品数据 (ID范围: 200-211)
+const recommendedProducts = ref([
+  { id: 200, name: '推荐商品1', imageUrl: '/images/rec1.webp', price: 329 },
+  { id: 201, name: '推荐商品2', imageUrl: '/images/rec2.webp', price: 279 },
+  { id: 202, name: '推荐商品3', imageUrl: '/images/rec3.webp', price: 359 },
+  { id: 203, name: '推荐商品4', imageUrl: '/images/rec4.webp', price: 299 },
+  { id: 204, name: '推荐商品5', imageUrl: '/images/rec5.webp', price: 399 },
+  { id: 205, name: '推荐商品6', imageUrl: '/images/rec6.webp', price: 429 },
+  { id: 206, name: '推荐商品7', imageUrl: '/images/rec7.webp', price: 319 },
+  { id: 207, name: '推荐商品8', imageUrl: '/images/rec8.webp', price: 289 },
+  { id: 208, name: '推荐商品9', imageUrl: '/images/rec9.webp', price: 369 },
+  { id: 209, name: '推荐商品10', imageUrl: '/images/rec10.webp', price: 349 },
+  { id: 210, name: '推荐商品11', imageUrl: '/images/rec11.webp', price: 419 },
+  { id: 211, name: '推荐商品12', imageUrl: '/images/rec12.webp', price: 389 },
+])
+
+// 轮播图数据
+const carouselImages = ref([
+  {
+    url: '/images/campus.png',
+    title: '校园交易平台',
+    subtitle: '开启便捷品质生活，品类齐全 现货热销'
+  },
+  {
+    url: '/images/show.jpg',
+    title: '实战必备穿搭优选',
+    subtitle: '衣橱焕新精致指南，精选球鞋 火热开抢'
+  },
+  {
+    url: '/images/show2.jpg',
+    title: '崭新出售',
+    subtitle: '极限竞速，极限挑战'
+  }
+])
+
+const loading = ref(false)
+</script>
+
 <style scoped>
-  .home {
-    width: 100%;
-    padding: 20px;
-    box-sizing: border-box;
-  }
 
-  .welcome-section {
-    margin-bottom: 40px;
-  }
+.v-card:hover {
+  box-shadow: var(--v-shadow-key-1) !important; /* 强制使用默认阴影值 */
+}
 
-  .welcome-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-  }
+/* 商品图片悬浮放大效果 */
+.product-img {
+  transition: transform 0.3s ease;
+}
 
-  .welcome-card :deep(.el-card__body) {
-    padding: 40px;
-  }
+.product-img:hover {
+  transform: scale(1.05); /* 放大5% */
+}
 
-  .welcome-content h1 {
-    font-size: 32px;
-    margin-bottom: 16px;
-    text-align: center;
-  }
+.product-name {
+  color: black;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
 
-  .welcome-content p {
-    font-size: 18px;
-    text-align: center;
-    margin-bottom: 30px;
-    opacity: 0.9;
-  }
+/* 商品价格样式 */
+.product-price {
+  color: rgb(167, 54, 54);
+  font-size: 18px;
+  font-weight: bold;
+}
 
-  .stats {
-    display: flex;
-    justify-content: space-around;
-    gap: 20px;
-  }
-
-  .stat-item {
-    text-align: center;
-  }
-
-  .stat-item :deep(.el-statistic__content) {
-    color: white;
-  }
-
-  .stat-item :deep(.el-statistic__head) {
-    color: rgba(255, 255, 255, 0.8);
-  }
-
-  .features-section,
-  .recent-section {
-    margin-bottom: 40px;
-  }
-
-  .features-section h2,
-  .recent-section h2 {
-    text-align: center;
-    margin-bottom: 30px;
-    color: #333;
-    font-size: 28px;
-  }
-
-  .feature-card {
-    text-align: center;
-    height: 200px;
-    margin-bottom: 20px;
-  }
-
-  .feature-icon {
-    margin-bottom: 16px;
-  }
-
-  .feature-card h3 {
-    color: #333;
-    margin-bottom: 12px;
-  }
-
-  .feature-card p {
-    color: #666;
-    line-height: 1.6;
-  }
-
-  .product-card {
-    margin-bottom: 20px;
-    cursor: pointer;
-    transition: transform 0.2s;
-  }
-
-  .product-card:hover {
-    transform: translateY(-4px);
-  }
-
-  .product-image {
-    width: 100%;
-    height: 150px;
-    object-fit: cover;
-    border-radius: 4px;
-  }
-
-  .product-info {
-    padding: 12px 0;
-  }
-
-  .product-info h4 {
-    margin: 0 0 8px 0;
-    color: #333;
-    font-size: 16px;
-  }
-
-  .product-price {
-    color: #e6a23c;
-    font-size: 18px;
-    font-weight: bold;
-    margin: 4px 0;
-  }
-
-  .product-seller {
-    color: #999;
-    font-size: 14px;
-    margin: 4px 0 0 0;
-  }
-
-  @media (max-width: 768px) {
-    .stats {
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .welcome-content h1 {
-      font-size: 24px;
-    }
-
-    .welcome-content p {
-      font-size: 16px;
-    }
-  }
 </style>

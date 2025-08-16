@@ -30,6 +30,9 @@ api.interceptors.response.use(
   },
   (error: AxiosError) => {
     console.error('API请求错误:', error)
+    console.error('错误响应数据:', error.response?.data)
+    console.error('错误状态码:', error.response?.status)
+    console.error('错误头信息:', error.response?.headers)
 
     if (error.response?.status === 401) {
       // 清除 token 并跳转到登录页
@@ -123,6 +126,7 @@ export interface UserInfo {
   phone?: string
   studentId: string
   creditScore: number
+  emailVerified: boolean
   createdAt: string
   student?: {
     studentId: string
@@ -173,6 +177,7 @@ export const authApi = {
       refresh_token: refreshToken,
     })
   },
+
 }
 
 export default api
