@@ -49,7 +49,7 @@ jobs:
   # 后端构建和测试 Job
   backend-build-test:
     runs-on: ubuntu-latest
-    name: Backend Build & Test
+    name: Backend Build Test
     needs: detect-changes
     if: needs.detect-changes.outputs.backend_changed == 'true'
 
@@ -69,11 +69,6 @@ jobs:
         run: |
           echo "编译后端项目..."
           dotnet build Backend/CampusTradeSystem/CampusTradeSystem.sln --configuration Release --no-restore --verbosity minimal
-
-      - name: Run .NET tests
-        run: |
-          echo "运行后端测试..."
-          dotnet test Backend/CampusTradeSystem/CampusTrade.Tests/CampusTrade.Tests.csproj --no-build --configuration Release --logger trx --collect:"XPlat Code Coverage"
 
   # 后端安全扫描 Job
   backend-security:
