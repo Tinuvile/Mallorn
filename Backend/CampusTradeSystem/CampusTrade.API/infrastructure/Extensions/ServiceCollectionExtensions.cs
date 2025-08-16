@@ -105,6 +105,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IVirtualAccountsRepository, VirtualAccountsRepository>();
         services.AddScoped<IRechargeRecordsRepository, RechargeRecordsRepository>();
@@ -112,6 +113,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<INegotiationsRepository, NegotiationsRepository>();
         services.AddScoped<IExchangeRequestsRepository, ExchangeRequestsRepository>();
         services.AddScoped<IReviewsRepository, ReviewsRepository>();
+        services.AddScoped<IAdminRepository, AdminRepository>();
+        services.AddScoped<IAuditLogRepository, AuditLogRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         return services;
     }
@@ -306,6 +309,21 @@ public class FileStorageOptionsValidator : IValidateOptions<FileStorageOptions>
         if (errors.Any())
             return ValidateOptionsResult.Fail(errors);
         return ValidateOptionsResult.Success;
+    }
+}
+
+/// <summary>
+/// 管理员功能服务配置的扩展方法
+/// </summary>
+public static class AdminServiceExtensions
+{
+    /// <summary>
+    /// 添加管理员相关服务
+    /// </summary>
+    public static IServiceCollection AddAdminServices(this IServiceCollection services)
+    {
+        services.AddScoped<Services.Interfaces.IAdminService, Services.Admin.AdminService>();
+        return services;
     }
 }
 

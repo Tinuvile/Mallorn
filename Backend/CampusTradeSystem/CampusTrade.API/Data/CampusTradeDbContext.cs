@@ -723,11 +723,12 @@ namespace CampusTrade.API.Data
                 });
                 entity.HasKey(e => e.AbstractOrderId);
 
-                // 主键配置 - 由ORDER_SEQ序列生成
+                // 主键配置 - 由ABSTRACT_ORDER_SEQ序列生成
                 entity.Property(e => e.AbstractOrderId)
                     .HasColumnName("ABSTRACT_ORDER_ID")
                     .HasColumnType("NUMBER")
-                    .ValueGeneratedOnAdd();
+                    .ValueGeneratedOnAdd()
+                    .HasDefaultValueSql("ABSTRACT_ORDER_SEQ.NEXTVAL");
 
                 // 订单类型配置
                 entity.Property(e => e.OrderType)
@@ -1763,7 +1764,7 @@ namespace CampusTrade.API.Data
                     .HasDatabaseName("IX_EMAIL_NOTIFICATIONS_TYPE_STATUS");
 
                 entity.HasIndex(e => new { e.RecipientEmail, e.EmailType })
-                    .HasDatabaseName("IX_EMAIL_NOTIFICATIONS_EMAIL_TYPE");
+                    .HasDatabaseName("IX_EMAIL_NOTIFICATIONS_RECIPIENT_EMAIL_TYPE");
 
                 // 配置与Notification的多对一关系（可选）
                 entity.HasOne(e => e.Notification)

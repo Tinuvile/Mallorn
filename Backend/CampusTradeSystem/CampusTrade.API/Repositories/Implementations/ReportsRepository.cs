@@ -86,6 +86,34 @@ namespace CampusTrade.API.Repositories.Implementations
         {
             return await _context.Set<ReportEvidence>().Where(re => re.ReportId == reportId).OrderBy(re => re.UploadedAt).ToListAsync();
         }
+
+        /// <summary>
+        /// 获取举报关联商品的一级分类信息
+        /// </summary>
+        public async Task<Category?> GetReportProductPrimaryCategoryAsync(int reportId)
+        {
+            var report = await _dbSet
+                .Where(r => r.ReportId == reportId)
+                .Include(r => r.AbstractOrder)
+                    .ThenInclude(ao => ao.Order)
+                        .ThenInclude(o => o.Product)
+                            .ThenInclude(p => p.Category)
+                                .ThenInclude(c => c.Parent)
+                .FirstOrDefaultAsync();
+
+            if (report?.AbstractOrder?.Order?.Product?.Category == null)
+                return null;
+
+            var category = report.AbstractOrder.Order.Product.Category;
+            
+            // 找到一级分类（没有父分类的分类）
+            while (category.Parent != null)
+            {
+                category = category.Parent;
+            }
+
+            return category;
+        }
         #endregion
 
         #region 更新操作
