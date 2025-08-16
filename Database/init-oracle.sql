@@ -458,7 +458,45 @@ CREATE TABLE notifications (
 );
 
 -- ================================================================
--- 20. 评价表 (reviews)
+-- 20. SignalR通知表 (signalr_notifications)
+-- ================================================================
+CREATE TABLE signalr_notifications (
+    signalr_notification_id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    notification_id NUMBER NOT NULL,
+    connection_id VARCHAR2(100),
+    group_name VARCHAR2(50),
+    send_status VARCHAR2(20) DEFAULT '待发送' CHECK (send_status IN ('待发送','成功','失败')),
+    retry_count NUMBER DEFAULT 0 CHECK (retry_count >= 0),
+    last_attempt_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sent_at TIMESTAMP,
+    error_message VARCHAR2(500),
+    CONSTRAINT fk_signalr_notification FOREIGN KEY (notification_id) REFERENCES notifications(notification_id) ON DELETE CASCADE
+);
+
+-- ================================================================
+-- 21. 邮件通知表 (email_notifications)
+-- ================================================================
+CREATE TABLE email_notifications (
+    email_notification_id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    email_type VARCHAR2(20) NOT NULL CHECK (email_type IN ('通知','验证码')),
+    notification_id NUMBER,
+    recipient_email VARCHAR2(100) NOT NULL,
+    subject VARCHAR2(200) NOT NULL,
+    content CLOB NOT NULL,
+    verification_code VARCHAR2(10),
+    code_expires_at TIMESTAMP,
+    send_status VARCHAR2(20) DEFAULT '待发送' CHECK (send_status IN ('待发送','成功','失败')),
+    retry_count NUMBER DEFAULT 0 CHECK (retry_count >= 0),
+    last_attempt_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sent_at TIMESTAMP,
+    error_message VARCHAR2(500),
+    CONSTRAINT fk_email_notification FOREIGN KEY (notification_id) REFERENCES notifications(notification_id) ON DELETE SET NULL
+);
+
+-- ================================================================
+-- 22. 评价表 (reviews)
 -- ================================================================
 CREATE TABLE reviews (
     review_id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -474,7 +512,7 @@ CREATE TABLE reviews (
 );
 
 -- ================================================================
--- 21. 举报表 (reports)
+-- 23. 举报表 (reports)
 -- ================================================================
 CREATE TABLE reports (
     report_id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -490,7 +528,7 @@ CREATE TABLE reports (
 );
 
 -- ================================================================
--- 22. 举报证据表 (report_evidence)
+-- 24. 举报证据表 (report_evidence)
 -- ================================================================
 CREATE TABLE report_evidence (
     evidence_id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -500,6 +538,29 @@ CREATE TABLE report_evidence (
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_evidence_report FOREIGN KEY (report_id) REFERENCES reports(report_id)
 );
+
+-- ================================================================
+-- 创建索引 (针对新增的通知渠道表)
+-- ================================================================
+
+-- SignalR通知表索引
+CREATE INDEX idx_signalr_notifications_notification_id ON signalr_notifications(notification_id);
+CREATE INDEX idx_signalr_notifications_send_status ON signalr_notifications(send_status);
+CREATE INDEX idx_signalr_notifications_connection_id ON signalr_notifications(connection_id);
+CREATE INDEX idx_signalr_notifications_created_at ON signalr_notifications(created_at);
+
+-- 邮件通知表索引
+CREATE INDEX idx_email_notifications_notification_id ON email_notifications(notification_id);
+CREATE INDEX idx_email_notifications_email_type ON email_notifications(email_type);
+CREATE INDEX idx_email_notifications_send_status ON email_notifications(send_status);
+CREATE INDEX idx_email_notifications_recipient_email ON email_notifications(recipient_email);
+CREATE INDEX idx_email_notifications_created_at ON email_notifications(created_at);
+CREATE INDEX idx_email_notifications_verification_code ON email_notifications(verification_code);
+CREATE INDEX idx_email_notifications_code_expires ON email_notifications(code_expires_at);
+
+-- 复合索引
+CREATE INDEX idx_email_notifications_type_status ON email_notifications(email_type, send_status);
+CREATE INDEX idx_email_notifications_email_type_comb ON email_notifications(recipient_email, email_type);
 
 -- ================================================================
 -- 创建触发器
@@ -589,6 +650,37 @@ BEGIN
     VALUES (:NEW.user_id, 0.00);
 END;
 /
+
+-- ================================================================
+-- 添加表注释 (针对新增的通知渠道表)
+-- ================================================================
+COMMENT ON TABLE signalr_notifications IS 'SignalR通知发送记录表';
+COMMENT ON COLUMN signalr_notifications.signalr_notification_id IS 'SignalR通知ID';
+COMMENT ON COLUMN signalr_notifications.notification_id IS '关联的通知ID';
+COMMENT ON COLUMN signalr_notifications.connection_id IS 'SignalR连接ID';
+COMMENT ON COLUMN signalr_notifications.group_name IS '用户组名称（用于群发）';
+COMMENT ON COLUMN signalr_notifications.send_status IS '发送状态：待发送、成功、失败';
+COMMENT ON COLUMN signalr_notifications.retry_count IS '重试次数';
+COMMENT ON COLUMN signalr_notifications.last_attempt_time IS '最后尝试发送时间';
+COMMENT ON COLUMN signalr_notifications.created_at IS '创建时间';
+COMMENT ON COLUMN signalr_notifications.sent_at IS '发送成功时间';
+COMMENT ON COLUMN signalr_notifications.error_message IS '错误信息';
+
+COMMENT ON TABLE email_notifications IS '邮件通知发送记录表';
+COMMENT ON COLUMN email_notifications.email_notification_id IS '邮件通知ID';
+COMMENT ON COLUMN email_notifications.email_type IS '邮件类型：通知、验证码';
+COMMENT ON COLUMN email_notifications.notification_id IS '关联的通知ID（验证码类型时可为空）';
+COMMENT ON COLUMN email_notifications.recipient_email IS '收件人邮箱地址';
+COMMENT ON COLUMN email_notifications.subject IS '邮件主题';
+COMMENT ON COLUMN email_notifications.content IS '邮件内容（HTML格式）';
+COMMENT ON COLUMN email_notifications.verification_code IS '验证码（仅验证码类型使用）';
+COMMENT ON COLUMN email_notifications.code_expires_at IS '验证码过期时间（仅验证码类型使用）';
+COMMENT ON COLUMN email_notifications.send_status IS '发送状态：待发送、成功、失败';
+COMMENT ON COLUMN email_notifications.retry_count IS '重试次数';
+COMMENT ON COLUMN email_notifications.last_attempt_time IS '最后尝试发送时间';
+COMMENT ON COLUMN email_notifications.created_at IS '创建时间';
+COMMENT ON COLUMN email_notifications.sent_at IS '发送成功时间';
+COMMENT ON COLUMN email_notifications.error_message IS '错误信息';
 
 -- ================================================================
 -- 插入基础数据
