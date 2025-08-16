@@ -364,7 +364,7 @@ namespace CampusTrade.API.Services.Report
                 }
 
                 var primaryCategory = await _reportsRepository.GetReportProductPrimaryCategoryAsync(reportId);
-                
+
                 if (primaryCategory != null)
                 {
                     _serilogLogger.Information("举报商品一级分类查询成功 - 举报ID: {ReportId}, 分类: {CategoryName}(ID: {CategoryId})",

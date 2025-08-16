@@ -1,9 +1,9 @@
+using CampusTrade.API.Infrastructure.Extensions;
 using CampusTrade.API.Models.DTOs.Admin;
 using CampusTrade.API.Models.DTOs.Common;
 using CampusTrade.API.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using CampusTrade.API.Infrastructure.Extensions;
 
 namespace CampusTrade.API.Controllers
 {
@@ -76,7 +76,7 @@ namespace CampusTrade.API.Controllers
         {
             try
             {
-               // 获取当前用户ID
+                // 获取当前用户ID
                 var userId = User.GetUserId();
                 if (userId == 0)
                     return Unauthorized("用户身份验证失败");
@@ -565,8 +565,8 @@ namespace CampusTrade.API.Controllers
 
                 var result = await _adminService.GetManagedProductsAsync(operatorAdmin.AdminId, queryDto);
 
-                return Ok(ApiResponse.CreateSuccess(new 
-                { 
+                return Ok(ApiResponse.CreateSuccess(new
+                {
                     products = result.Products,
                     totalCount = result.TotalCount,
                     pageIndex = queryDto.PageIndex,
@@ -716,8 +716,8 @@ namespace CampusTrade.API.Controllers
 
                 var result = await _adminService.BatchOperateProductsAsync(operatorAdmin.AdminId, batchDto);
 
-                return Ok(ApiResponse.CreateSuccess(new 
-                { 
+                return Ok(ApiResponse.CreateSuccess(new
+                {
                     message = result.Message,
                     failedProducts = result.FailedProducts
                 }, result.Message));

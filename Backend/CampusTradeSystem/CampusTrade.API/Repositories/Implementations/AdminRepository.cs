@@ -158,9 +158,9 @@ namespace CampusTrade.API.Repositories.Implementations
         /// 分页获取管理员列表
         /// </summary>
         public async Task<(IEnumerable<Admin> Admins, int TotalCount)> GetPagedAdminsAsync(
-            int pageIndex, 
-            int pageSize, 
-            string? role = null, 
+            int pageIndex,
+            int pageSize,
+            string? role = null,
             string? searchKeyword = null)
         {
             var query = _dbSet
@@ -177,7 +177,7 @@ namespace CampusTrade.API.Repositories.Implementations
             // 搜索关键字筛选（用户名或邮箱）
             if (!string.IsNullOrEmpty(searchKeyword))
             {
-                query = query.Where(a => 
+                query = query.Where(a =>
                     (a.User.Username != null && a.User.Username.Contains(searchKeyword)) ||
                     a.User.Email.Contains(searchKeyword));
             }
@@ -206,7 +206,7 @@ namespace CampusTrade.API.Repositories.Implementations
         public async Task<bool> IsCategoryAssignedAsync(int categoryId, int? excludeAdminId = null)
         {
             var query = _dbSet.Where(a => a.AssignedCategory == categoryId);
-            
+
             if (excludeAdminId.HasValue)
             {
                 query = query.Where(a => a.AdminId != excludeAdminId.Value);

@@ -50,9 +50,9 @@ namespace CampusTrade.API.Services.Interfaces
         /// <param name="searchKeyword">搜索关键字</param>
         /// <returns>管理员列表</returns>
         Task<(IEnumerable<AdminResponseDto> Admins, int TotalCount)> GetAdminsAsync(
-            int pageIndex, 
-            int pageSize, 
-            string? role = null, 
+            int pageIndex,
+            int pageSize,
+            string? role = null,
             string? searchKeyword = null);
 
         /// <summary>
@@ -82,9 +82,9 @@ namespace CampusTrade.API.Services.Interfaces
         /// <param name="status">状态筛选</param>
         /// <returns>举报列表</returns>
         Task<(IEnumerable<Reports> Reports, int TotalCount)> GetAdminReportsAsync(
-            int adminId, 
-            int pageIndex, 
-            int pageSize, 
+            int adminId,
+            int pageIndex,
+            int pageSize,
             string? status = null);
         #endregion
 
@@ -170,7 +170,7 @@ namespace CampusTrade.API.Services.Interfaces
         /// <param name="queryDto">查询条件</param>
         /// <returns>商品列表</returns>
         Task<(IEnumerable<Models.DTOs.Product.ProductListDto> Products, int TotalCount)> GetManagedProductsAsync(
-            int adminId, 
+            int adminId,
             AdminProductQueryDto queryDto);
 
         /// <summary>
@@ -206,7 +206,7 @@ namespace CampusTrade.API.Services.Interfaces
         /// <param name="batchDto">批量操作DTO</param>
         /// <returns>操作结果</returns>
         Task<(bool Success, string Message, Dictionary<int, string> FailedProducts)> BatchOperateProductsAsync(
-            int adminId, 
+            int adminId,
             BatchProductOperationDto batchDto);
 
         /// <summary>

@@ -105,7 +105,7 @@ namespace CampusTrade.API.Repositories.Implementations
                 return null;
 
             var category = report.AbstractOrder.Order.Product.Category;
-            
+
             // 找到一级分类（没有父分类的分类）
             while (category.Parent != null)
             {

@@ -73,9 +73,9 @@ namespace CampusTrade.API.Repositories.Interfaces
         /// <param name="searchKeyword">搜索关键字</param>
         /// <returns>管理员列表和总数</returns>
         Task<(IEnumerable<Admin> Admins, int TotalCount)> GetPagedAdminsAsync(
-            int pageIndex, 
-            int pageSize, 
-            string? role = null, 
+            int pageIndex,
+            int pageSize,
+            string? role = null,
             string? searchKeyword = null);
 
         /// <summary>

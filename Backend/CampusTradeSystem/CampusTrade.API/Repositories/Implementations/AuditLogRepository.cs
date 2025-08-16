@@ -86,7 +86,7 @@ namespace CampusTrade.API.Repositories.Implementations
                 query = query.Where(log => log.LogTime <= endDate.Value);
 
             var totalCount = await query.CountAsync();
-            
+
             var logs = await query
                 .OrderByDescending(log => log.LogTime)
                 .Skip(pageIndex * pageSize)

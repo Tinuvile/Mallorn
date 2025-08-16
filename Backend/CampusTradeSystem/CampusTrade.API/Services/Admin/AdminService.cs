@@ -3,8 +3,8 @@ using CampusTrade.API.Models.DTOs.Admin;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Interfaces;
-using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Serilog;
 
 namespace CampusTrade.API.Services.Admin
@@ -307,17 +307,17 @@ namespace CampusTrade.API.Services.Admin
         /// 分页获取管理员列表
         /// </summary>
         public async Task<(IEnumerable<AdminResponseDto> Admins, int TotalCount)> GetAdminsAsync(
-            int pageIndex, 
-            int pageSize, 
-            string? role = null, 
+            int pageIndex,
+            int pageSize,
+            string? role = null,
             string? searchKeyword = null)
         {
             try
             {
                 var (admins, totalCount) = await _adminRepository.GetPagedAdminsAsync(pageIndex, pageSize, role, searchKeyword);
-                
+
                 var adminDtos = admins.Select(MapToAdminResponseDto).ToList();
-                
+
                 return (adminDtos, totalCount);
             }
             catch (Exception ex)
@@ -425,9 +425,9 @@ namespace CampusTrade.API.Services.Admin
         /// 获取管理员负责的举报列表
         /// </summary>
         public async Task<(IEnumerable<Reports> Reports, int TotalCount)> GetAdminReportsAsync(
-            int adminId, 
-            int pageIndex, 
-            int pageSize, 
+            int adminId,
+            int pageIndex,
+            int pageSize,
             string? status = null)
         {
             try
@@ -653,7 +653,7 @@ namespace CampusTrade.API.Services.Admin
         /// 获取管理员可管理的商品列表
         /// </summary>
         public async Task<(IEnumerable<Models.DTOs.Product.ProductListDto> Products, int TotalCount)> GetManagedProductsAsync(
-            int adminId, 
+            int adminId,
             AdminProductQueryDto queryDto)
         {
             using var performanceTracker = new PerformanceTracker(_serilogLogger, "GetManagedProducts", "AdminService")
@@ -710,7 +710,7 @@ namespace CampusTrade.API.Services.Admin
                 if (admin.Role == Models.Entities.Admin.Roles.CategoryAdmin)
                 {
                     var managedCategoryIds = await GetManagedCategoryIdsAsync(adminId);
-                    
+
                     // 如果管理员没有分配分类，返回空结果
                     if (!managedCategoryIds.Any())
                     {
@@ -765,7 +765,7 @@ namespace CampusTrade.API.Services.Admin
                     // 如果没有指定分类，需要查询所有可管理分类下的商品
                     // 由于GetPagedProductsAsync只支持单个分类，我们需要分别查询每个分类然后合并结果
                     var allProducts = new List<Models.Entities.Product>();
-                    
+
                     foreach (var categoryId in managedCategoryIds)
                     {
                         var categoryResult = await _productRepository.GetPagedProductsAsync(
@@ -778,7 +778,7 @@ namespace CampusTrade.API.Services.Admin
                             null, // maxPrice
                             queryDto.UserId
                         );
-                        
+
                         allProducts.AddRange(categoryResult.Products);
                     }
 
@@ -1058,7 +1058,7 @@ namespace CampusTrade.API.Services.Admin
         /// 批量操作商品
         /// </summary>
         public async Task<(bool Success, string Message, Dictionary<int, string> FailedProducts)> BatchOperateProductsAsync(
-            int adminId, 
+            int adminId,
             BatchProductOperationDto batchDto)
         {
             var failedProducts = new Dictionary<int, string>();
@@ -1159,7 +1159,7 @@ namespace CampusTrade.API.Services.Admin
 
                     // 获取商品分类的根分类
                     var productRootCategoryId = await GetRootCategoryIdAsync(product.CategoryId);
-                    
+
                     // 检查根分类是否是管理员分配的分类
                     return productRootCategoryId == admin.AssignedCategory.Value;
                 }
