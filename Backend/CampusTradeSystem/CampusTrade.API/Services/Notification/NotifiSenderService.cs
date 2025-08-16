@@ -105,8 +105,8 @@ namespace CampusTrade.API.Services.Notification
                 {
                     // 用户没有邮箱：只需SignalR成功
                     overallSuccess = signalRResult.Success;
-                    resultMessage = overallSuccess 
-                        ? "SignalR通知发送成功（用户未设置邮箱）" 
+                    resultMessage = overallSuccess
+                        ? "SignalR通知发送成功（用户未设置邮箱）"
                         : $"SignalR通知发送失败: {signalRResult.ErrorMessage}";
                 }
 
@@ -137,21 +137,21 @@ namespace CampusTrade.API.Services.Notification
         /// <param name="content">渲染后的内容</param>
         /// <param name="forceResend">是否强制重新发送所有渠道</param>
         /// <returns>各渠道发送结果</returns>
-        private async Task<((bool Success, string ErrorMessage), (bool Success, string ErrorMessage))> 
+        private async Task<((bool Success, string ErrorMessage), (bool Success, string ErrorMessage))>
             SendNotificationChannelsAsync(Models.Entities.Notification notification, string content, bool forceResend)
         {
             // 检查SignalR渠道状态
             var existingSignalR = await _context.SignalRNotifications
                 .FirstOrDefaultAsync(sr => sr.NotificationId == notification.NotificationId);
-            
-            bool needSendSignalR = forceResend || existingSignalR == null || 
+
+            bool needSendSignalR = forceResend || existingSignalR == null ||
                                   existingSignalR.SendStatus != SignalRNotification.SendStatuses.Success;
 
             // 检查Email渠道状态
             var existingEmail = await _context.EmailNotifications
                 .FirstOrDefaultAsync(en => en.NotificationId == notification.NotificationId);
-            
-            bool needSendEmail = forceResend || existingEmail == null || 
+
+            bool needSendEmail = forceResend || existingEmail == null ||
                                 existingEmail.SendStatus != EmailNotification.SendStatuses.Success;
 
             // 用户没有邮箱的情况
@@ -321,7 +321,7 @@ namespace CampusTrade.API.Services.Notification
         /// </summary>
         /// <param name="batchSize">批次大小</param>
         /// <returns>处理结果统计</returns>
-        public async Task<(int TotalSignalR, int SuccessSignalR, int FailedSignalR, int TotalEmail, int SuccessEmail, int FailedEmail)> 
+        public async Task<(int TotalSignalR, int SuccessSignalR, int FailedSignalR, int TotalEmail, int SuccessEmail, int FailedEmail)>
             RetryAllChannelFailuresAsync(int batchSize = 10)
         {
             // 重试SignalR失败的通知

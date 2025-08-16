@@ -46,11 +46,11 @@ namespace CampusTrade.API.Services.ScheduledTasks
 
                 // 3. 清理每个用户的旧记录，保留最新的10条记录
                 var userCleanupCount = 0;
-                
+
                 // 这里可以根据需要实现批量用户清理逻辑
                 // 为了避免一次性处理过多数据，可以分批处理用户
                 // 示例：每次处理100个用户的记录
-                
+
                 // 4. 保存更改
                 await unitOfWork.SaveChangesAsync();
 
@@ -96,7 +96,7 @@ namespace CampusTrade.API.Services.ScheduledTasks
         public override object GetTaskStatus()
         {
             var baseStatus = base.GetTaskStatus();
-            
+
             return new
             {
                 TaskName = "EmailVerificationCleanupTask",

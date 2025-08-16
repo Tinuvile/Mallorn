@@ -34,7 +34,7 @@ namespace CampusTrade.API.Services.Notification
         /// <param name="content">渲染后的内容</param>
         /// <returns>发送结果</returns>
         public async Task<(bool Success, string ErrorMessage)> SendSignalRNotificationAsync(
-            Models.Entities.Notification notification, 
+            Models.Entities.Notification notification,
             string content)
         {
             var signalRNotification = new SignalRNotification
@@ -53,8 +53,8 @@ namespace CampusTrade.API.Services.Notification
 
                 // 发送SignalR消息
                 var sendResult = await SendSignalRMessageAsync(
-                    notification.RecipientId, 
-                    notification.Template.TemplateName, 
+                    notification.RecipientId,
+                    notification.Template.TemplateName,
                     content,
                     signalRNotification.SignalRNotificationId);
 
@@ -63,7 +63,7 @@ namespace CampusTrade.API.Services.Notification
                     // 发送成功，更新状态
                     signalRNotification.SendStatus = SignalRNotification.SendStatuses.Success;
                     signalRNotification.SentAt = DateTime.UtcNow;
-                    
+
                     _logger.LogInformation($"SignalR通知发送成功 - NotificationId: {notification.NotificationId}, " +
                                          $"RecipientId: {notification.RecipientId}");
                 }
@@ -71,8 +71,8 @@ namespace CampusTrade.API.Services.Notification
                 {
                     // 发送失败，增加重试次数
                     signalRNotification.RetryCount++;
-                    signalRNotification.SendStatus = signalRNotification.RetryCount >= SignalRNotification.MaxRetryCount 
-                        ? SignalRNotification.SendStatuses.Failed 
+                    signalRNotification.SendStatus = signalRNotification.RetryCount >= SignalRNotification.MaxRetryCount
+                        ? SignalRNotification.SendStatuses.Failed
                         : SignalRNotification.SendStatuses.Pending;
                     signalRNotification.ErrorMessage = sendResult.ErrorMessage;
                     signalRNotification.LastAttemptTime = DateTime.UtcNow;
@@ -116,8 +116,8 @@ namespace CampusTrade.API.Services.Notification
         /// <param name="signalRNotificationId">SignalR通知记录ID</param>
         /// <returns>发送结果</returns>
         private async Task<(bool Success, string ErrorMessage)> SendSignalRMessageAsync(
-            int userId, 
-            string title, 
+            int userId,
+            string title,
             string content,
             int signalRNotificationId)
         {
@@ -270,7 +270,7 @@ namespace CampusTrade.API.Services.Notification
         public async Task<Dictionary<string, int>> GetSignalRFailureReasonsAsync(int topN = 10)
         {
             var failureReasons = await _context.SignalRNotifications
-                .Where(sr => sr.SendStatus == SignalRNotification.SendStatuses.Failed && 
+                .Where(sr => sr.SendStatus == SignalRNotification.SendStatuses.Failed &&
                            !string.IsNullOrEmpty(sr.ErrorMessage))
                 .GroupBy(sr => sr.ErrorMessage)
                 .Select(g => new { Reason = g.Key, Count = g.Count() })
@@ -289,7 +289,7 @@ namespace CampusTrade.API.Services.Notification
         public async Task<Dictionary<int, (int Success, int Failed)>> GetHourlySignalRTrendAsync(int days = 7)
         {
             var startTime = DateTime.UtcNow.AddDays(-days);
-            
+
             var hourlyData = await _context.SignalRNotifications
                 .Where(sr => sr.CreatedAt >= startTime)
                 .GroupBy(sr => sr.CreatedAt.Hour)

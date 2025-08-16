@@ -73,7 +73,7 @@ namespace CampusTrade.API.Services.Background
                     if (DateTime.Now.Minute % 2 == 0 && DateTime.Now.Second >= 30 && DateTime.Now.Second < 40)
                     {
                         var channelRetryResult = await senderService.RetryAllChannelFailuresAsync(15);
-                        
+
                         if (channelRetryResult.TotalSignalR > 0 || channelRetryResult.TotalEmail > 0)
                         {
                             _logger.LogInformation($"重试渠道失败通知: " +

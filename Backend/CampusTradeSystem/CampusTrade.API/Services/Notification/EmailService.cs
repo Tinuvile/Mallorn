@@ -28,7 +28,7 @@ namespace CampusTrade.API.Services.Email
         private readonly bool _enableSsl;
 
         public EmailService(
-            IConfiguration configuration, 
+            IConfiguration configuration,
             ILogger<EmailService> logger,
             CampusTradeDbContext context)
         {
@@ -100,7 +100,7 @@ namespace CampusTrade.API.Services.Email
         /// <param name="content">邮件内容</param>
         /// <returns>发送结果</returns>
         public async Task<(bool Success, string ErrorMessage)> SendNotificationEmailAsync(
-            Models.Entities.Notification notification, 
+            Models.Entities.Notification notification,
             string content)
         {
             // 检查用户是否有邮箱
@@ -149,7 +149,7 @@ namespace CampusTrade.API.Services.Email
                     // 发送成功，更新状态
                     emailNotification.SendStatus = EmailNotification.SendStatuses.Success;
                     emailNotification.SentAt = DateTime.UtcNow;
-                    
+
                     _logger.LogInformation($"邮件通知发送成功 - " +
                                          $"Type: {emailNotification.EmailType}, " +
                                          $"Email: {emailNotification.RecipientEmail}, " +
@@ -159,8 +159,8 @@ namespace CampusTrade.API.Services.Email
                 {
                     // 发送失败，增加重试次数
                     emailNotification.RetryCount++;
-                    emailNotification.SendStatus = emailNotification.RetryCount >= EmailNotification.MaxRetryCount 
-                        ? EmailNotification.SendStatuses.Failed 
+                    emailNotification.SendStatus = emailNotification.RetryCount >= EmailNotification.MaxRetryCount
+                        ? EmailNotification.SendStatuses.Failed
                         : EmailNotification.SendStatuses.Pending;
                     emailNotification.ErrorMessage = sendResult.Message;
                     emailNotification.LastAttemptTime = DateTime.UtcNow;
@@ -316,7 +316,7 @@ namespace CampusTrade.API.Services.Email
         public async Task<Dictionary<string, int>> GetEmailFailureReasonsAsync(int topN = 10)
         {
             var failureReasons = await _context.EmailNotifications
-                .Where(en => en.SendStatus == EmailNotification.SendStatuses.Failed && 
+                .Where(en => en.SendStatus == EmailNotification.SendStatuses.Failed &&
                            !string.IsNullOrEmpty(en.ErrorMessage))
                 .GroupBy(en => en.ErrorMessage)
                 .Select(g => new { Reason = g.Key, Count = g.Count() })
@@ -335,7 +335,7 @@ namespace CampusTrade.API.Services.Email
         public async Task<Dictionary<int, (int Success, int Failed)>> GetHourlyEmailTrendAsync(int days = 7)
         {
             var startTime = DateTime.UtcNow.AddDays(-days);
-            
+
             var hourlyData = await _context.EmailNotifications
                 .Where(en => en.CreatedAt >= startTime)
                 .GroupBy(en => en.CreatedAt.Hour)
