@@ -1,4 +1,5 @@
 using CampusTrade.API.Data;
+using CampusTrade.API.Models.DTOs;
 using CampusTrade.API.Models.DTOs.Review;
 using CampusTrade.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -9,11 +10,14 @@ namespace CampusTrade.API.Services.Review
     public class ReviewService : IReviewService
     {
         private readonly CampusTradeDbContext _context;
+        private readonly ICreditService _creditService;
 
-        public ReviewService(CampusTradeDbContext context)
+        public ReviewService(CampusTradeDbContext context, ICreditService creditService)
         {
             _context = context;
+            _creditService = creditService;
         }
+        
 
         /// <summary>
         /// 创建新评论（仅允许订单买家，订单必须已完成，且不可重复评论）
@@ -61,6 +65,33 @@ namespace CampusTrade.API.Services.Review
             // 第六步：添加评论到数据库上下文并保存
             _context.Reviews.Add(review);
             var saved = await _context.SaveChangesAsync();
+
+            // 第七步：根据评分更新卖家信用
+            //差评扣分
+            if (dto.Rating <= 2)
+            {
+                var sellerId = order.SellerId;
+
+                await _creditService.ApplyCreditChangeAsync(new CreditEvent
+                {
+                    UserId = sellerId,
+                    EventType = CreditEventType.NegativeReviewPenalty,
+                    Description = $"订单 {order.OrderId} 收到差评，卖家信用扣分"
+                });
+            }
+            
+            //好评加分
+            if (dto.Rating >= 4)
+            {
+                var sellerId = order.SellerId;
+
+                await _creditService.ApplyCreditChangeAsync(new CreditEvent
+                {
+                    UserId = sellerId,
+                    EventType = CreditEventType.PositiveReviewReward,
+                    Description = $"订单 {order.OrderId} 收到好评，卖家信用加分"
+                });
+            }
 
             // 第七步：返回是否保存成功（保存记录数大于0）
             return saved > 0;
