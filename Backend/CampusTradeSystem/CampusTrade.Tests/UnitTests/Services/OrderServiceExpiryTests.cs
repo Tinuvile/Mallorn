@@ -39,7 +39,7 @@ namespace CampusTrade.Tests.UnitTests.Services
 
             // 设置 UnitOfWork
             _mockUnitOfWork.Setup(u => u.Orders).Returns(_mockOrderRepository.Object);
-
+            
             _orderService = new OrderService(
                 _mockOrderRepository.Object,
                 _mockProductRepository.Object,
