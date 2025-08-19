@@ -2,6 +2,7 @@ using CampusTrade.API.Models.DTOs.Order;
 using CampusTrade.API.Models.DTOs.Payment;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
+using CampusTrade.API.Services;
 using CampusTrade.API.Services.Interfaces;
 using CampusTrade.API.Services.Order;
 using Microsoft.Extensions.Logging;
@@ -23,6 +24,8 @@ namespace CampusTrade.Tests.UnitTests.Services
         private readonly Mock<IUnitOfWork> _mockUnitOfWork;
         private readonly Mock<ILogger<OrderService>> _mockLogger;
         private readonly OrderService _orderService;
+        private readonly Mock<ICreditService> _mockCreditService;
+
 
         public OrderServiceTests()
         {
@@ -33,6 +36,7 @@ namespace CampusTrade.Tests.UnitTests.Services
             _mockVirtualAccountRepository = new Mock<IVirtualAccountsRepository>();
             _mockUnitOfWork = new Mock<IUnitOfWork>();
             _mockLogger = new Mock<ILogger<OrderService>>();
+            _mockCreditService = new Mock<ICreditService>();
 
             _orderService = new OrderService(
                 _mockOrderRepository.Object,
@@ -42,6 +46,8 @@ namespace CampusTrade.Tests.UnitTests.Services
                 _mockVirtualAccountRepository.Object,
                 _mockUnitOfWork.Object,
                 _mockLogger.Object
+                ,_mockCreditService.Object
+
             );
         }
 

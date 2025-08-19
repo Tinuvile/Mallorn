@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using CampusTrade.API.Models.DTOs.Report;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
+using CampusTrade.API.Services;
 using CampusTrade.API.Services.Report;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -17,6 +18,8 @@ public class ReportServiceTests
     private readonly Mock<IUnitOfWork> _mockUow;
     private readonly Mock<ILogger<ReportService>> _mockLogger;
     private readonly ReportService _service;
+    private readonly Mock<ICreditService> _mockCreditService;
+
 
     public ReportServiceTests()
     {
@@ -25,6 +28,7 @@ public class ReportServiceTests
         _mockLogger = new Mock<ILogger<ReportService>>();
         _mockUow.Setup(x => x.Reports).Returns(_mockRepo.Object);
         _service = new ReportService(_mockRepo.Object, _mockUow.Object, _mockLogger.Object);
+        _mockCreditService = new Mock<ICreditService>();
     }
 
     [Fact]

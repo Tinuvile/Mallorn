@@ -4,7 +4,8 @@ using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Services.Review;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
-
+using Moq;
+using CampusTrade.API.Services;
 namespace CampusTrade.Tests.UnitTests.Services
 {
     /// <summary>
@@ -23,7 +24,12 @@ namespace CampusTrade.Tests.UnitTests.Services
                 .Options;
 
             _context = new CampusTradeDbContext(options);
-            _reviewService = new ReviewService(_context);
+            //创建 ICreditService 的 mock
+            var mockCreditService = new Mock<ICreditService>();
+
+            _reviewService = new ReviewService(_context, mockCreditService.Object);
+
+
 
             // 初始化测试数据
             SeedTestData();
