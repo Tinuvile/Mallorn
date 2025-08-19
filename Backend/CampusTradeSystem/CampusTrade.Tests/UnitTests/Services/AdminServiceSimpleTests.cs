@@ -3,6 +3,7 @@ using CampusTrade.API.Models.DTOs.Admin;
 using CampusTrade.API.Models.DTOs.Product;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
+using CampusTrade.API.Services;
 using CampusTrade.API.Services.Admin;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -25,6 +26,7 @@ namespace CampusTrade.Tests.UnitTests.Services
         private readonly Mock<ICategoriesRepository> _mockCategoriesRepository;
         private readonly Mock<ILogger<AdminService>> _mockLogger;
         private readonly AdminService _adminService;
+        private readonly Mock<ICreditService> _mockCreditService;
 
         public AdminServiceTests()
         {
@@ -40,6 +42,7 @@ namespace CampusTrade.Tests.UnitTests.Services
 
             // 设置UnitOfWork返回模拟的Categories仓储
             _mockUnitOfWork.Setup(u => u.Categories).Returns(_mockCategoriesRepository.Object);
+            _mockCreditService = new Mock<ICreditService>();
 
             _adminService = new AdminService(
                 _mockAdminRepository.Object,
@@ -49,7 +52,9 @@ namespace CampusTrade.Tests.UnitTests.Services
                 _mockProductRepository.Object,
                 _mockCategoryRepository.Object,
                 _mockUnitOfWork.Object,
-                _mockLogger.Object);
+                _mockLogger.Object,
+                _mockCreditService.Object
+                );
         }
 
         [Fact]

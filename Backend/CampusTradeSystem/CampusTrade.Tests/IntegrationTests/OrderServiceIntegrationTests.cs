@@ -3,6 +3,7 @@ using CampusTrade.API.Models.DTOs.Order;
 using CampusTrade.API.Models.DTOs.Payment;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
+using CampusTrade.API.Services;
 using CampusTrade.API.Services.Interfaces;
 using CampusTrade.API.Services.Order;
 using Microsoft.EntityFrameworkCore;
@@ -21,6 +22,8 @@ namespace CampusTrade.Tests.IntegrationTests
         private readonly CampusTradeDbContext _context;
         private readonly OrderService _orderService;
         private readonly Mock<ILogger<OrderService>> _mockLogger;
+        private readonly Mock<ICreditService> _mockCreditService;
+
 
         public OrderServiceIntegrationTests()
         {
@@ -40,6 +43,7 @@ namespace CampusTrade.Tests.IntegrationTests
             var mockVirtualAccountRepository = new Mock<IVirtualAccountsRepository>();
             var mockUnitOfWork = new Mock<IUnitOfWork>();
             _mockLogger = new Mock<ILogger<OrderService>>();
+            _mockCreditService = new Mock<ICreditService>();
 
             // 配置Mock的基本行为
             SetupMockRepositories(mockOrderRepository, mockProductRepository, mockUserRepository,
@@ -52,7 +56,8 @@ namespace CampusTrade.Tests.IntegrationTests
                 mockAbstractOrderRepository.Object,
                 mockVirtualAccountRepository.Object,
                 mockUnitOfWork.Object,
-                _mockLogger.Object
+                _mockLogger.Object,
+                _mockCreditService.Object
             );
         }
 
