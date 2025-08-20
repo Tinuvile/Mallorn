@@ -56,6 +56,49 @@ namespace CampusTrade.API.Repositories.Interfaces
         /// </summary>
         /// <returns>统计信息字典</returns>
         Task<Dictionary<string, int>> GetAdminStatisticsAsync();
+
+        /// <summary>
+        /// 获取管理员详细信息（包含用户和分类信息）
+        /// </summary>
+        /// <param name="adminId">管理员ID</param>
+        /// <returns>管理员详细信息</returns>
+        Task<Admin?> GetAdminWithDetailsAsync(int adminId);
+
+        /// <summary>
+        /// 分页获取管理员列表
+        /// </summary>
+        /// <param name="pageIndex">页索引</param>
+        /// <param name="pageSize">页大小</param>
+        /// <param name="role">角色筛选</param>
+        /// <param name="searchKeyword">搜索关键字</param>
+        /// <returns>管理员列表和总数</returns>
+        Task<(IEnumerable<Admin> Admins, int TotalCount)> GetPagedAdminsAsync(
+            int pageIndex,
+            int pageSize,
+            string? role = null,
+            string? searchKeyword = null);
+
+        /// <summary>
+        /// 检查用户是否已经是管理员
+        /// </summary>
+        /// <param name="userId">用户ID</param>
+        /// <returns>是否已是管理员</returns>
+        Task<bool> IsUserAdminAsync(int userId);
+
+        /// <summary>
+        /// 检查分类是否已分配给其他管理员
+        /// </summary>
+        /// <param name="categoryId">分类ID</param>
+        /// <param name="excludeAdminId">排除的管理员ID</param>
+        /// <returns>是否已分配</returns>
+        Task<bool> IsCategoryAssignedAsync(int categoryId, int? excludeAdminId = null);
+
+        /// <summary>
+        /// 获取管理员管理的分类列表
+        /// </summary>
+        /// <param name="adminId">管理员ID</param>
+        /// <returns>分类列表</returns>
+        Task<IEnumerable<Category>> GetManagedCategoriesAsync(int adminId);
         #endregion
 
         #region 更新操作

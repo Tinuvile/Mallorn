@@ -29,6 +29,8 @@ namespace CampusTrade.API.Data
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<NotificationTemplate> NotificationTemplates { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<SignalRNotification> SignalRNotifications { get; set; }
+        public DbSet<EmailNotification> EmailNotifications { get; set; }
         public DbSet<Review> Reviews { get; set; }
         public DbSet<Reports> Reports { get; set; }
         public DbSet<ReportEvidence> ReportEvidences { get; set; }
@@ -721,11 +723,12 @@ namespace CampusTrade.API.Data
                 });
                 entity.HasKey(e => e.AbstractOrderId);
 
-                // 主键配置 - 由ORDER_SEQ序列生成
+                // 主键配置 - 由ABSTRACT_ORDER_SEQ序列生成
                 entity.Property(e => e.AbstractOrderId)
                     .HasColumnName("ABSTRACT_ORDER_ID")
                     .HasColumnType("NUMBER")
-                    .ValueGeneratedOnAdd();
+                    .ValueGeneratedOnAdd()
+                    .HasDefaultValueSql("ABSTRACT_ORDER_SEQ.NEXTVAL");
 
                 // 订单类型配置
                 entity.Property(e => e.OrderType)
@@ -1536,6 +1539,239 @@ namespace CampusTrade.API.Data
                     .HasConstraintName("FK_NOTIFICATION_ORDER");
 
                 // Template关系已在NotificationTemplate实体中配置
+            });
+
+            // 配置SignalR通知表
+            modelBuilder.Entity<SignalRNotification>(entity =>
+            {
+                entity.ToTable("SIGNALR_NOTIFICATIONS", t =>
+                {
+                    t.HasCheckConstraint("CK_SIGNALR_NOTIFICATIONS_SEND_STATUS",
+                        "SEND_STATUS IN ('待发送','成功','失败')");
+                    t.HasCheckConstraint("CK_SIGNALR_NOTIFICATIONS_RETRY_COUNT",
+                        "RETRY_COUNT >= 0");
+                });
+                entity.HasKey(e => e.SignalRNotificationId);
+
+                // 主键配置 - 自增ID
+                entity.Property(e => e.SignalRNotificationId)
+                    .HasColumnName("SIGNALR_NOTIFICATION_ID")
+                    .HasColumnType("NUMBER")
+                    .ValueGeneratedOnAdd();
+
+                // 通知ID外键配置
+                entity.Property(e => e.NotificationId)
+                    .HasColumnName("NOTIFICATION_ID")
+                    .HasColumnType("NUMBER")
+                    .IsRequired();
+
+                // 连接ID配置
+                entity.Property(e => e.ConnectionId)
+                    .HasColumnName("CONNECTION_ID")
+                    .HasColumnType("VARCHAR2(100)")
+                    .HasMaxLength(100);
+
+                // 用户组配置
+                entity.Property(e => e.GroupName)
+                    .HasColumnName("GROUP_NAME")
+                    .HasColumnType("VARCHAR2(50)")
+                    .HasMaxLength(50);
+
+                // 发送状态配置
+                entity.Property(e => e.SendStatus)
+                    .HasColumnName("SEND_STATUS")
+                    .HasColumnType("VARCHAR2(20)")
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasDefaultValue("待发送");
+
+                // 重试次数配置
+                entity.Property(e => e.RetryCount)
+                    .HasColumnName("RETRY_COUNT")
+                    .HasColumnType("NUMBER")
+                    .IsRequired()
+                    .HasDefaultValue(0);
+
+                // 最后尝试时间配置
+                entity.Property(e => e.LastAttemptTime)
+                    .HasColumnName("LAST_ATTEMPT_TIME")
+                    .HasColumnType("TIMESTAMP")
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                // 创建时间配置
+                entity.Property(e => e.CreatedAt)
+                    .HasColumnName("CREATED_AT")
+                    .HasColumnType("TIMESTAMP")
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                // 发送成功时间配置
+                entity.Property(e => e.SentAt)
+                    .HasColumnName("SENT_AT")
+                    .HasColumnType("TIMESTAMP");
+
+                // 错误信息配置
+                entity.Property(e => e.ErrorMessage)
+                    .HasColumnName("ERROR_MESSAGE")
+                    .HasColumnType("VARCHAR2(500)")
+                    .HasMaxLength(500);
+
+                // 索引配置
+                entity.HasIndex(e => e.NotificationId)
+                    .HasDatabaseName("IX_SIGNALR_NOTIFICATIONS_NOTIFICATION_ID");
+
+                entity.HasIndex(e => e.SendStatus)
+                    .HasDatabaseName("IX_SIGNALR_NOTIFICATIONS_SEND_STATUS");
+
+                entity.HasIndex(e => e.ConnectionId)
+                    .HasDatabaseName("IX_SIGNALR_NOTIFICATIONS_CONNECTION_ID");
+
+                entity.HasIndex(e => e.CreatedAt)
+                    .HasDatabaseName("IX_SIGNALR_NOTIFICATIONS_CREATED_AT");
+
+                // 配置与Notification的多对一关系
+                entity.HasOne(e => e.Notification)
+                    .WithMany(n => n.SignalRNotifications)
+                    .HasForeignKey(e => e.NotificationId)
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .HasConstraintName("FK_SIGNALR_NOTIFICATION_NOTIFICATION");
+            });
+
+            // 配置邮件通知表
+            modelBuilder.Entity<EmailNotification>(entity =>
+            {
+                entity.ToTable("EMAIL_NOTIFICATIONS", t =>
+                {
+                    t.HasCheckConstraint("CK_EMAIL_NOTIFICATIONS_EMAIL_TYPE",
+                        "EMAIL_TYPE IN ('通知','验证码')");
+                    t.HasCheckConstraint("CK_EMAIL_NOTIFICATIONS_SEND_STATUS",
+                        "SEND_STATUS IN ('待发送','成功','失败')");
+                    t.HasCheckConstraint("CK_EMAIL_NOTIFICATIONS_RETRY_COUNT",
+                        "RETRY_COUNT >= 0");
+                });
+                entity.HasKey(e => e.EmailNotificationId);
+
+                // 主键配置 - 自增ID
+                entity.Property(e => e.EmailNotificationId)
+                    .HasColumnName("EMAIL_NOTIFICATION_ID")
+                    .HasColumnType("NUMBER")
+                    .ValueGeneratedOnAdd();
+
+                // 邮件类型配置
+                entity.Property(e => e.EmailType)
+                    .HasColumnName("EMAIL_TYPE")
+                    .HasColumnType("VARCHAR2(20)")
+                    .IsRequired()
+                    .HasMaxLength(20);
+
+                // 通知ID外键配置（可选）
+                entity.Property(e => e.NotificationId)
+                    .HasColumnName("NOTIFICATION_ID")
+                    .HasColumnType("NUMBER");
+
+                // 收件人邮箱配置
+                entity.Property(e => e.RecipientEmail)
+                    .HasColumnName("RECIPIENT_EMAIL")
+                    .HasColumnType("VARCHAR2(100)")
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                // 邮件主题配置
+                entity.Property(e => e.Subject)
+                    .HasColumnName("SUBJECT")
+                    .HasColumnType("VARCHAR2(200)")
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                // 邮件内容配置
+                entity.Property(e => e.Content)
+                    .HasColumnName("CONTENT")
+                    .HasColumnType("CLOB")
+                    .IsRequired();
+
+                // 验证码配置
+                entity.Property(e => e.VerificationCode)
+                    .HasColumnName("VERIFICATION_CODE")
+                    .HasColumnType("VARCHAR2(10)")
+                    .HasMaxLength(10);
+
+                // 验证码过期时间配置
+                entity.Property(e => e.CodeExpiresAt)
+                    .HasColumnName("CODE_EXPIRES_AT")
+                    .HasColumnType("TIMESTAMP");
+
+                // 发送状态配置
+                entity.Property(e => e.SendStatus)
+                    .HasColumnName("SEND_STATUS")
+                    .HasColumnType("VARCHAR2(20)")
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasDefaultValue("待发送");
+
+                // 重试次数配置
+                entity.Property(e => e.RetryCount)
+                    .HasColumnName("RETRY_COUNT")
+                    .HasColumnType("NUMBER")
+                    .IsRequired()
+                    .HasDefaultValue(0);
+
+                // 最后尝试时间配置
+                entity.Property(e => e.LastAttemptTime)
+                    .HasColumnName("LAST_ATTEMPT_TIME")
+                    .HasColumnType("TIMESTAMP")
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                // 创建时间配置
+                entity.Property(e => e.CreatedAt)
+                    .HasColumnName("CREATED_AT")
+                    .HasColumnType("TIMESTAMP")
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                // 发送成功时间配置
+                entity.Property(e => e.SentAt)
+                    .HasColumnName("SENT_AT")
+                    .HasColumnType("TIMESTAMP");
+
+                // 错误信息配置
+                entity.Property(e => e.ErrorMessage)
+                    .HasColumnName("ERROR_MESSAGE")
+                    .HasColumnType("VARCHAR2(500)")
+                    .HasMaxLength(500);
+
+                // 索引配置
+                entity.HasIndex(e => e.NotificationId)
+                    .HasDatabaseName("IX_EMAIL_NOTIFICATIONS_NOTIFICATION_ID");
+
+                entity.HasIndex(e => e.EmailType)
+                    .HasDatabaseName("IX_EMAIL_NOTIFICATIONS_EMAIL_TYPE");
+
+                entity.HasIndex(e => e.SendStatus)
+                    .HasDatabaseName("IX_EMAIL_NOTIFICATIONS_SEND_STATUS");
+
+                entity.HasIndex(e => e.RecipientEmail)
+                    .HasDatabaseName("IX_EMAIL_NOTIFICATIONS_RECIPIENT_EMAIL");
+
+                entity.HasIndex(e => e.CreatedAt)
+                    .HasDatabaseName("IX_EMAIL_NOTIFICATIONS_CREATED_AT");
+
+                entity.HasIndex(e => e.VerificationCode)
+                    .HasDatabaseName("IX_EMAIL_NOTIFICATIONS_VERIFICATION_CODE");
+
+                entity.HasIndex(e => e.CodeExpiresAt)
+                    .HasDatabaseName("IX_EMAIL_NOTIFICATIONS_CODE_EXPIRES");
+
+                // 复合索引
+                entity.HasIndex(e => new { e.EmailType, e.SendStatus })
+                    .HasDatabaseName("IX_EMAIL_NOTIFICATIONS_TYPE_STATUS");
+
+                entity.HasIndex(e => new { e.RecipientEmail, e.EmailType })
+                    .HasDatabaseName("IX_EMAIL_NOTIFICATIONS_RECIPIENT_EMAIL_TYPE");
+
+                // 配置与Notification的多对一关系（可选）
+                entity.HasOne(e => e.Notification)
+                    .WithMany(n => n.EmailNotifications)
+                    .HasForeignKey(e => e.NotificationId)
+                    .OnDelete(DeleteBehavior.SetNull)
+                    .HasConstraintName("FK_EMAIL_NOTIFICATION_NOTIFICATION");
             });
 
             // 配置评价表

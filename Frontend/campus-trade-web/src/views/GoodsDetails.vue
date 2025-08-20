@@ -27,9 +27,6 @@
           <v-btn icon color="indigo" @click="goToHome" style="margin-left: 50px;">
             <v-icon>mdi-home</v-icon>
           </v-btn>
-          <v-btn icon color="indigo" @click="goToCart" style="margin-left: 50px;">
-            <v-icon>mdi-cart</v-icon>
-          </v-btn>
         </v-col>
         <v-col cols="6">
           <v-text-field :loading="loading" append-inner-icon="mdi-magnify" density="compact" label="搜索" variant="solo"
@@ -57,7 +54,7 @@
           <!-- 标题及店铺信息 -->
           <div class="d-flex justify-space-between align-center mb-2">
             <h2 class="text-h5 font-weight-bold">
-              New Balance NB 530 单层 春季 经典复古 网布织物人造革减震耐磨透气 低帮跑步鞋 男女同款 白银色 D宽
+              {{ productName }}
             </h2>
           </div>
           <!-- 销量 -->
@@ -71,7 +68,7 @@
           </div>
           <!-- 价格显示区域 -->
           <div class="mb-3">
-            <span class="text-h4 font-weight-bold" style="color: red;">¥152.15起</span>
+            <span class="text-h4 font-weight-bold" style="color: red;">￥{{ productPrice }}</span>
           </div>
           <!-- 活动信息 -->
           <div class="mb-3">
@@ -107,17 +104,47 @@
               <v-radio v-for="(color, index) in colorList" :key="index" :label="color" :value="color"></v-radio>
             </v-radio-group>
           </div>
-          <!-- 加入购物车及购买按钮 -->
+          <!-- 议价及购买按钮 -->
           <div class="d-flex">
-            <v-btn color="orange" text-color="white" class="mr-3">
-              加入购物车
+            <v-btn color="orange" text-color="white" class="mr-3"  @click="showNegotiateModal = true"> 
+              议价
             </v-btn>
             <v-btn color="red" text-color="white">
-              领券购买
+              购买
             </v-btn>
           </div>
         </v-col>
       </v-row>
+
+   <!-- 议价浮窗 -->
+   <div class="negotiate-modal-mask" v-if="showNegotiateModal">
+     <div class="negotiate-modal">
+      <!-- 议价标题 -->
+      <h2 class="negotiate-title">商品议价</h2>
+      
+      <!-- 商品信息区域 -->
+      <div class="product-info-section">
+        <p class="product-name" style="color: #666;">商品名称: {{ productName }}</p>
+        <p class="product-size">所选鞋码: {{ selectedColor || '未选择型号' }}</p>
+      </div>
+      
+      <!-- 分隔线 -->
+      <div class="divider"></div>
+      
+      <!-- 价格区域 -->
+      <div class="price-section">
+        <p class="original-price">原价: ¥{{ productPrice }}</p>
+        <p class="seller-price">卖家出价:</p>
+        <input type="number" v-model="userOffer" class="offer-input" placeholder="请输入您的出价">
+      </div>
+      
+      <!-- 出价按钮 -->
+      <button class="confirm-offer-btn" @click="submitOffer">确定出价</button>
+      
+      <!-- 关闭按钮 -->
+      <button class="close-btn" @click="showNegotiateModal = false">×</button>
+    </div>
+  </div>
 
       <!-- 商品参数等扩展内容，可按需完善 -->
       <!-- 导航栏 -->
@@ -172,7 +199,7 @@
                       </div>
                     </div>
                     <div class="d-flex flex-column align-center ml-5">
-                      <!-- 修改点赞按钮样式 -->
+                      <!-- 点赞按钮样式 -->
                       <v-btn icon bg-transparent @click="toggleLike(index)" elevation="0" class="like-btn">
                         <v-icon :color="review.isLiked ? 'red' : 'gray'">mdi-thumb-up</v-icon>
                       </v-btn>
@@ -202,7 +229,7 @@
             </div>
 
             <!-- 价格 -->
-            <div class="mt-2 text-h6 font-weight-bold text-red">¥152.15起</div>
+            <div class="mt-2 text-h6 font-weight-bold text-red">¥{{ productPrice }}</div>
 
             <!-- 按钮组 -->
             <div class="d-flex mt-3">
@@ -234,10 +261,9 @@ const imgList = ref([
 ]);
 
 const colorList = ref([
-  '【现货】1965英国绿-前盖可开',
-  '【现货】1965古典红-前盖可开',
-  '【现货】1965中古蓝-前盖可开',
-  '【现货】1965蓝银色双拼-前盖可开'
+  '【现货】44码',
+  '【现货】45码',
+  '【现货】46码',
 ]);
 
 const selectedColor = ref('');
@@ -250,7 +276,11 @@ const goToHome = () => {
   router.push('/'); // 跳转到首页路由，确保与你的路由配置一致
 };
 
-// 商品参数数据（名称和值分离存储）
+// 商品名称和价格数据
+const productName = ref('New Balance NB 530');
+const productPrice = ref(152.15);
+
+// 商品参数数据
 const productParams = ref([
   { name: '主货号', value: 'MR530SG' },
   { name: '发售价格', value: '¥699' },
@@ -269,6 +299,28 @@ const productParams = ref([
   { name: '鞋身重量（约）', value: '290g' },
   { name: '适用场景', value: '休闲,城市通勤' }
 ]);
+
+
+
+// 修改议价相关状态
+const showNegotiateModal = ref(false);
+const sellerPrice = ref(0);
+const userOffer = ref('');
+
+// 提交议价
+const submitOffer = () => {
+  if (!selectedColor.value) {
+    alert('请先选择商品型号');
+    return;
+  }
+  if (!userOffer.value || userOffer.value <= 0) {
+    alert('请输入有效的出价金额');
+    return;
+  }
+  // 这里可以添加实际的提交逻辑
+  alert(`您的出价 ¥${userOffer.value} 已提交，请等待卖家回复`);
+  showNegotiateModal.value = false;
+};
 
 // 模拟评价数据
 const reviews = ref([
@@ -356,7 +408,7 @@ const scrollToSection = (sectionId) => {
   }
 };
 
-// 新增：固定购买卡片相关状态
+// 固定购买卡片相关状态
 const showFixedBuyCard = ref(false);
 const scrollPosition = ref(0);
 
@@ -470,6 +522,109 @@ onUnmounted(() => {
 .v-radio-group::-webkit-scrollbar-thumb {
   background-color: #ddd;
   border-radius: 2px;
+}
+
+
+/* 议价浮窗样式 */
+.negotiate-modal-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.negotiate-modal {
+  width: 500px;
+  background-color: white;
+  border-radius: 8px;
+  padding: 25px;
+  position: relative;
+}
+
+.negotiate-title {
+  text-align: center;
+  font-size: 30px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.product-info-section {
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+}
+
+.product-name {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.product-size {
+  font-size: 16px;
+  color: #666;
+}
+
+.divider {
+  height: 1px;
+  background-color: #eee;
+  margin: 15px 0;
+}
+
+.price-section {
+  margin-bottom: 25px;
+}
+
+.original-price {
+  font-size: 14px;
+  color: #999;
+  text-decoration: line-through;
+  margin-bottom: 8px;
+}
+
+.seller-price {
+  font-size: 16px;
+  margin-bottom: 15px;
+}
+
+.offer-input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+  margin-bottom: 20px;
+}
+
+.confirm-offer-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.confirm-offer-btn:hover {
+  background-color: #0056b3;
+}
+
+.close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  font-size: 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #999;
 }
 
 /* 顶部导航栏 */

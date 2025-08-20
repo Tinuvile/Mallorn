@@ -68,6 +68,11 @@ const router = createRouter({
     props: true  // 允许将路由参数作为props传递
     }
   ],
+   // 添加滚动行为配置
+  scrollBehavior(to, from, savedPosition) {
+    // 始终滚动到顶部
+    return { top: 0 }
+  }
 })
 
 // 路由守卫

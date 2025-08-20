@@ -141,12 +141,16 @@
         <p style="font-size: 40px; font-weight: bold; color: #E1BEE7;">促销</p>
         <v-slide-group show-arrows>
           <v-slide-group-item v-for="(product, index) in saleProducts" :key="index">
-            <v-card class="ma-3" height="200" width="250" rounded @click="goToProductDetail(product.id)">
-              <v-img :src="product.imageUrl" :alt="product.name" height="150" contain placeholder="加载中..." />
-              <v-card-title class="text-center pt-2">{{ product.name }}</v-card-title>
-            </v-card>
+          <v-card class="ma-3" height="200" width="250" rounded @click="goToProductDetail(product.id)" elevation="0">
+          <v-img class="product-img" :src="product.imageUrl" :alt="product.name" height="150" contain placeholder="加载中..." />
+          <v-card-title class="text-center">
+          <div class="product-name">{{ product.name }}</div>
+          <div class="product-price" style="margin-top: -5px;">¥{{ product.price }}</div>
+          </v-card-title>
+          </v-card>
           </v-slide-group-item>
-        </v-slide-group>
+          
+          </v-slide-group>
       </v-sheet>
 
       <!-- 热销商品 -->
@@ -158,36 +162,49 @@
           <v-slide-group-item v-for="product in hotProducts" :key="product.id">
 
             <v-card class="ma-3" elevation="0" @click="goToProductDetail(product.id)">
-              <v-img :width="product.id === 1 ? 300 : 150"
-                :src="'https://picsum.photos/'+(product.id === 1 ? '300/200' : '150/200')+'?random='+product.id" 
-                :alt="product.name" 
-                height="200" 
-                rounded 
-                contain 
-                loading="lazy" 
-              />
-              <v-card-item>
-                <v-card-title class="text-center">{{ product.name }}</v-card-title> 
-              </v-card-item>
+            <v-img class="product-img" :width="product.id === 100 ? 300 : 200"
+            :src="product.imageUrl" 
+            :alt="product.name" 
+            height="200" 
+            rounded 
+            contain 
+            loading="lazy" 
+            />
+            <v-card-item>
+            <v-card-title class="text-center pt-2">
+            <div class="product-name">{{ product.name }}</div>
+            <div class="product-price">¥{{ product.price }}</div>
+            </v-card-title>
+            </v-card-item>
             </v-card>
           </v-slide-group-item>
         </v-slide-group>
 
         <v-container fluid>
-          <v-row>
-        <v-col v-for="product in recommendedProducts" :key="product.id" cols="2">
-          <v-card class="ma-3" elevation="0" @click="goToProductDetail(product.id)">
-            <v-img 
-              :src="product.imageUrl" 
-              :alt="product.name" 
-              height="200" 
-              rounded 
-              contain 
-              loading="lazy" 
+        <v-icon color="red">mdi-store</v-icon>
+        <p style="font-size: 40px;font-weight: bold; color: rgb(167, 54, 54);">更多推荐</p>
+
+        <v-row>
+        <v-col v-for="product in recommendedProducts" :key="product.id" cols="3">
+          <v-card class="ma-1" elevation="0" @click="goToProductDetail(product.id)">
+            <!-- 推荐商品区域 -->
+            <v-card class="pa-2" elevation="0" @click="goToProductDetail(product.id)">
+            <v-img class="product-img" 
+            :src="product.imageUrl" 
+            :alt="product.name" 
+            height="200" 
+            rounded 
+            contain 
+            loading="lazy" 
             />
             <v-card-item>
-              <v-card-title class="text-center">{{ product.name }}</v-card-title> 
+
+            <v-card-title class="text-center">
+              <div class="product-name">{{ product.name }}</div>
+              <div class="product-price">¥{{ product.price }}</div>
+            </v-card-title>
             </v-card-item>
+            </v-card>
           </v-card>
         </v-col>
       </v-row>
@@ -290,47 +307,42 @@ const goToProductDetail = (id) => {
 
 // 模拟促销商品数据 (ID范围: 1-9)
 const saleProducts = ref([
-  { id: 1, name: '商品1', imageUrl: '/images/shoe1.jpg' },
-  { id: 2, name: '商品2', imageUrl: '/images/shoe2.jpg' },
-  { id: 3, name: '商品3', imageUrl: '/images/shoe3.jpg' },
-  { id: 4, name: '商品4', imageUrl: '/images/shoe4.jpg' },
-  { id: 5, name: '商品5', imageUrl: '/images/shoe5.jpg' },
-  { id: 6, name: '商品6', imageUrl: 'https://picsum.photos/250/150?random=6' },
-  { id: 7, name: '商品7', imageUrl: 'https://picsum.photos/250/150?random=7' },
-  { id: 8, name: '商品8', imageUrl: 'https://picsum.photos/250/150?random=8' },
-  { id: 9, name: '商品9', imageUrl: 'https://picsum.photos/250/150?random=9' },
+  { id: 1, name: 'Nike1', imageUrl: '/images/shoe1.jpg', price: 399 },
+  { id: 2, name: '商品2', imageUrl: '/images/shoe2.jpg', price: 299 },
+  { id: 3, name: '商品3', imageUrl: '/images/shoe3.jpg', price: 499 },
+  { id: 4, name: '商品4', imageUrl: '/images/shoe4.jpg', price: 199 },
+  { id: 5, name: '商品5', imageUrl: '/images/shoe5.jpg', price: 599 },
+  { id: 6, name: '商品6', imageUrl: '/images/shoe6.jpg', price: 349 },
+  { id: 7, name: '商品7', imageUrl: '/images/shoe7.jpg', price: 459 },
 ])
 
 // 模拟热销商品数据 (ID范围: 100-108)
 const hotProducts = ref([
-  { id: 100, name: '热销商品1', imageUrl: 'https://picsum.photos/300/200?random=1' },
-  { id: 101, name: '热销商品2', imageUrl: 'https://picsum.photos/150/200?random=2' },
-  { id: 102, name: '热销商品3', imageUrl: 'https://picsum.photos/150/200?random=3' },
-  { id: 103, name: '热销商品4', imageUrl: 'https://picsum.photos/150/200?random=4' },
-  { id: 104, name: '热销商品5', imageUrl: 'https://picsum.photos/150/200?random=5' },
-  { id: 105, name: '热销商品6', imageUrl: 'https://picsum.photos/150/200?random=6' },
-  { id: 106, name: '热销商品7', imageUrl: 'https://picsum.photos/150/200?random=7' },
-  { id: 107, name: '热销商品8', imageUrl: 'https://picsum.photos/150/200?random=8' },
-  { id: 108, name: '热销商品9', imageUrl: 'https://picsum.photos/150/200?random=9' },
-  // 可按需添加更多商品
+  { id: 100, name: '热销商品1', imageUrl: '/images/hot1.webp', price: 699 },
+  { id: 101, name: '热销商品2', imageUrl: '/images/hot2.webp', price: 599 },
+  { id: 102, name: '热销商品3', imageUrl: '/images/hot3.webp', price: 799 },
+  { id: 103, name: '热销商品4', imageUrl: '/images/hot4.webp', price: 499 },
+  { id: 104, name: '热销商品5', imageUrl: '/images/hot5.webp', price: 899 },
+  { id: 105, name: '热销商品6', imageUrl: '/images/hot6.webp', price: 549 },
+  { id: 106, name: '热销商品7', imageUrl: '/images/hot7.webp', price: 649 },
+  { id: 107, name: '热销商品8', imageUrl: '/images/hot8.webp', price: 749 },
 ])
 
 // 添加推荐商品数据 (ID范围: 200-211)
 const recommendedProducts = ref([
-  { id: 200, name: '推荐商品1', imageUrl: 'https://picsum.photos/200/200?random=200' },
-  { id: 201, name: '推荐商品2', imageUrl: 'https://picsum.photos/200/200?random=201' },
-  { id: 202, name: '推荐商品3', imageUrl: 'https://picsum.photos/200/200?random=202' },
-  { id: 203, name: '推荐商品4', imageUrl: 'https://picsum.photos/200/200?random=203' },
-  { id: 204, name: '推荐商品5', imageUrl: 'https://picsum.photos/200/200?random=204' },
-  { id: 205, name: '推荐商品6', imageUrl: 'https://picsum.photos/200/200?random=205' },
-  { id: 206, name: '推荐商品7', imageUrl: 'https://picsum.photos/200/200?random=206' },
-  { id: 207, name: '推荐商品8', imageUrl: 'https://picsum.photos/200/200?random=207' },
-  { id: 208, name: '推荐商品9', imageUrl: 'https://picsum.photos/200/200?random=208' },
-  { id: 209, name: '推荐商品10', imageUrl: 'https://picsum.photos/200/200?random=209' },
-  { id: 210, name: '推荐商品11', imageUrl: 'https://picsum.photos/200/200?random=210' },
-  { id: 211, name: '推荐商品12', imageUrl: 'https://picsum.photos/200/200?random=211' },
+  { id: 200, name: '推荐商品1', imageUrl: '/images/rec1.webp', price: 329 },
+  { id: 201, name: '推荐商品2', imageUrl: '/images/rec2.webp', price: 279 },
+  { id: 202, name: '推荐商品3', imageUrl: '/images/rec3.webp', price: 359 },
+  { id: 203, name: '推荐商品4', imageUrl: '/images/rec4.webp', price: 299 },
+  { id: 204, name: '推荐商品5', imageUrl: '/images/rec5.webp', price: 399 },
+  { id: 205, name: '推荐商品6', imageUrl: '/images/rec6.webp', price: 429 },
+  { id: 206, name: '推荐商品7', imageUrl: '/images/rec7.webp', price: 319 },
+  { id: 207, name: '推荐商品8', imageUrl: '/images/rec8.webp', price: 289 },
+  { id: 208, name: '推荐商品9', imageUrl: '/images/rec9.webp', price: 369 },
+  { id: 209, name: '推荐商品10', imageUrl: '/images/rec10.webp', price: 349 },
+  { id: 210, name: '推荐商品11', imageUrl: '/images/rec11.webp', price: 419 },
+  { id: 211, name: '推荐商品12', imageUrl: '/images/rec12.webp', price: 389 },
 ])
-
 
 // 轮播图数据
 const carouselImages = ref([
@@ -353,3 +365,34 @@ const carouselImages = ref([
 
 const loading = ref(false)
 </script>
+
+<style scoped>
+
+.v-card:hover {
+  box-shadow: var(--v-shadow-key-1) !important; /* 强制使用默认阴影值 */
+}
+
+/* 商品图片悬浮放大效果 */
+.product-img {
+  transition: transform 0.3s ease;
+}
+
+.product-img:hover {
+  transform: scale(1.05); /* 放大5% */
+}
+
+.product-name {
+  color: black;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+/* 商品价格样式 */
+.product-price {
+  color: rgb(167, 54, 54);
+  font-size: 18px;
+  font-weight: bold;
+}
+
+</style>

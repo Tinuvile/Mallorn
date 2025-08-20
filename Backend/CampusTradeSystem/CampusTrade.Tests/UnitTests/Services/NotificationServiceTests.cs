@@ -5,6 +5,7 @@ using CampusTrade.API.Data;
 using CampusTrade.API.Infrastructure.Utils.Notificate;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Services.Auth;
+using CampusTrade.API.Services.Notification;
 using CampusTrade.Tests.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;

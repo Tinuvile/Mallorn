@@ -21,10 +21,15 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
+      - name: Configure Git line endings
+        run: |
+          git config --global core.autocrlf true
+          git config --global core.eol crlf
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "9.0.x"
+          dotnet-version: "8.0.x"
 
       - name: Restore dependencies
         run: dotnet restore Backend/CampusTradeSystem/CampusTradeSystem.sln
@@ -66,6 +71,11 @@ jobs:
       - name: Pull latest changes
         run: |
           git pull origin ${{ github.ref_name }}
+
+      - name: Configure Git line endings
+        run: |
+          git config --global core.autocrlf true
+          git config --global core.eol crlf
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
