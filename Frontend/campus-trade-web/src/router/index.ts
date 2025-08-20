@@ -7,7 +7,8 @@ import DataWatchingView from '@/views/dataWatchingView.vue'
 import Welcome from '@/views/Welcome.vue'
 import OrderView from '@/views/order.vue'
 import GoodsDetails from '@/views/GoodsDetails.vue'
-
+import ConfirmOrderView from '@/views/ConfirmOrderView.vue'
+import GoodsReleaseView from '@/views/GoodsReleaseView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -38,6 +39,16 @@ const router = createRouter({
       path: '/datawatchingview',
       name: 'datawatchingview',
       component: DataWatchingView,
+    },
+    {
+      path: '/confirmorderview',
+      name: 'confirmorderview',
+      component: ConfirmOrderView,
+    },
+    {
+      path: '/goodsreleaseview',
+      name: 'goodsreleaseview',
+      component: GoodsReleaseView,
     },
     {
       path: '/about',
