@@ -299,7 +299,94 @@
                 <div class="text-h6 mb-3">买家评价：</div>
                 <v-card variant="outlined" class="pa-4">
                   <div class="text-body-1">{{ selectedOrder?.review || '暂无评价' }}</div>
+                  <div v-if="selectedOrder?.reviewDate" class="text-caption text-grey mt-2">
+                    评价时间：{{ formatDate(selectedOrder.reviewDate) }}
+                  </div>
                 </v-card>
+
+                <!-- 卖家回应区域 -->
+                <div v-if="selectedOrder?.review" class="mt-4">
+                  <div v-if="selectedOrder?.sellerResponse" class="mb-3">
+                    <div class="text-h6 mb-2">卖家回应：</div>
+                    <v-card variant="outlined" class="pa-4" color="blue-grey-lighten-5">
+                      <div class="text-body-1">{{ selectedOrder.sellerResponse }}</div>
+                      <div class="text-caption text-grey mt-2">
+                        回应时间：{{ formatDate(selectedOrder.sellerResponseDate) }}
+                      </div>
+                    </v-card>
+                  </div>
+
+                  <!-- 卖家回应输入框（仅卖家且48小时内可见） -->
+                  <div v-else-if="currentUserRoleInOrder === 'seller' && canRespondToReview" class="mb-3">
+                    <div class="text-h6 mb-2">回应评价：</div>
+                    <v-textarea
+                      v-model="responseText"
+                      label="请输入您的回应"
+                      placeholder="感谢客户的反馈..."
+                      rows="3"
+                      variant="outlined"
+                      counter="300"
+                      maxlength="300"
+                      :rules="responseRules"
+                    ></v-textarea>
+                    <div class="d-flex justify-end mt-2">
+                      <v-btn
+                        color="primary"
+                        @click="submitResponse"
+                        :disabled="!responseText.trim()"
+                        :loading="isSubmittingResponse"
+                        size="small"
+                      >
+                        提交回应
+                      </v-btn>
+                    </div>
+                  </div>
+
+                  <!-- 超时提示 -->
+                  <div v-else-if="currentUserRoleInOrder === 'seller' && !canRespondToReview" class="mb-3">
+                    <v-alert type="info" variant="tonal">
+                      回应时间已过期（超过48小时）
+                    </v-alert>
+                  </div>
+
+                  <!-- 争议评价按钮 -->
+                  <div class="mt-4">
+                    <v-btn
+                      v-if="canDispute"
+                      color="warning"
+                      variant="outlined"
+                      @click="showDisputeDialog"
+                      size="small"
+                      prepend-icon="mdi-alert-circle"
+                    >
+                      申请争议评价
+                    </v-btn>
+                    
+                    <v-chip
+                      v-if="selectedOrder?.disputeStatus === 'pending'"
+                      color="warning"
+                      size="small"
+                      class="ml-2"
+                    >
+                      争议处理中
+                    </v-chip>
+                    
+                    <v-chip
+                      v-if="selectedOrder?.disputeStatus === 'resolved'"
+                      color="success"
+                      size="small"
+                      class="ml-2"
+                    >
+                      争议已解决
+                    </v-chip>
+
+                    <div v-if="!canDispute && selectedOrder?.disputeStatus !== 'pending' && selectedOrder?.disputeStatus !== 'resolved'" class="mt-2">
+                      <v-alert type="info" variant="tonal" density="compact">
+                        争议申请时间已过期（超过48小时）
+                      </v-alert>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <!-- 编辑模式 -->
@@ -339,12 +426,236 @@
             </v-card-actions>
           </v-card>
         </v-dialog>
+
+        <!-- 争议评价对话框 -->
+        <v-dialog v-model="showDisputeDialogState" max-width="700">
+          <v-card rounded="xl">
+            <v-card-title class="text-h5 pl-6 pt-6">
+              申请争议评价
+              <v-spacer></v-spacer>
+              <v-btn
+                icon="mdi-close"
+                @click="closeDisputeDialog"
+                class="position-absolute"
+                style="top: 8px; right: 8px;"
+                size="small"
+              ></v-btn>
+            </v-card-title>
+            
+            <v-card-text>
+              <!-- 争议说明 -->
+              <v-alert
+                type="info"
+                variant="tonal"
+                class="mb-4"
+                title="争议评价说明"
+              >
+                如果您认为收到的评价不实或恶意，可以申请争议。管理员将在3个工作日内处理您的申请。
+              </v-alert>
+
+              <!-- 原始评价信息 -->
+              <div v-if="selectedOrder" class="mb-4">
+                <div class="text-h6 mb-2">原始评价：</div>
+                <v-card variant="outlined" class="pa-3">
+                  <div class="text-body-1">{{ selectedOrder.review }}</div>
+                  <div class="text-caption text-grey mt-1">
+                    评价时间：{{ formatDate(selectedOrder.reviewDate) }}
+                  </div>
+                </v-card>
+              </div>
+
+              <!-- 争议表单 -->
+              <v-form ref="disputeFormRef" v-model="disputeFormValid">
+                <div class="text-h6 mb-3">争议信息：</div>
+                
+                <v-select
+                  v-model="disputeForm.reason"
+                  :items="disputeReasons"
+                  label="争议原因"
+                  placeholder="请选择争议原因"
+                  variant="outlined"
+                  :rules="[v => !!v || '请选择争议原因']"
+                  class="mb-4"
+                ></v-select>
+
+                <v-textarea
+                  v-model="disputeForm.description"
+                  label="详细说明"
+                  placeholder="请详细说明争议原因，提供相关证据（最多1000字）"
+                  rows="5"
+                  variant="outlined"
+                  counter="1000"
+                  maxlength="1000"
+                  :rules="disputeDescriptionRules"
+                  class="mb-4"
+                ></v-textarea>
+
+                <div class="text-subtitle-1 mb-2">证据文件（可选）：</div>
+                <v-file-input
+                  v-model="disputeForm.evidenceFiles"
+                  label="选择证据文件"
+                  placeholder="支持jpg/png/pdf文件，单个文件不超过5MB"
+                  variant="outlined"
+                  accept="image/jpeg,image/png,application/pdf"
+                  multiple
+                  prepend-icon="mdi-paperclip"
+                  show-size
+                  class="mb-2"
+                ></v-file-input>
+                <div class="text-caption text-grey">
+                  支持jpg/png/pdf文件，单个文件不超过5MB，最多上传5个文件
+                </div>
+              </v-form>
+            </v-card-text>
+
+            <v-card-actions class="px-6 pb-6">
+              <v-spacer></v-spacer>
+              <v-btn
+                color="grey"
+                variant="outlined"
+                @click="closeDisputeDialog"
+              >
+                取消
+              </v-btn>
+              <v-btn
+                color="warning"
+                @click="submitDispute"
+                :disabled="!disputeFormValid"
+                :loading="isSubmittingDispute"
+              >
+                提交申请
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+
+        <!-- 举报对话框 -->
+        <v-dialog v-model="showReportDialogState" max-width="800">
+          <v-card rounded="xl">
+            <v-card-title class="text-h5 pl-6 pt-6">
+              举报投诉
+              <v-spacer></v-spacer>
+              <v-btn
+                icon="mdi-close"
+                @click="closeReportDialog"
+                class="position-absolute"
+                style="top: 8px; right: 8px;"
+                size="small"
+              ></v-btn>
+            </v-card-title>
+
+            <v-card-text class="px-6 py-4">
+              <v-form ref="reportForm" v-model="reportFormValid">
+                <div class="text-subtitle-1 mb-2">举报类型：</div>
+                <v-select
+                  v-model="reportFormData.type"
+                  :items="reportTypes"
+                  item-title="text"
+                  item-value="value"
+                  label="请选择举报类型"
+                  variant="outlined"
+                  :rules="[v => !!v || '请选择举报类型']"
+                  class="mb-4"
+                ></v-select>
+
+                <div class="text-subtitle-1 mb-2">举报用户：</div>
+                <v-text-field
+                  v-model="reportFormData.targetUser"
+                  label="请输入被举报用户ID或用户名"
+                  variant="outlined"
+                  :rules="[v => !!v || '请输入被举报用户']"
+                  class="mb-4"
+                ></v-text-field>
+
+                <div class="text-subtitle-1 mb-2">相关订单（可选）：</div>
+                <v-select
+                  v-model="reportFormData.relatedOrder"
+                  :items="orderOptions"
+                  item-title="text"
+                  item-value="value"
+                  label="请选择相关订单（如果适用）"
+                  variant="outlined"
+                  clearable
+                  class="mb-4"
+                ></v-select>
+
+                <div class="text-subtitle-1 mb-2">举报原因：</div>
+                <v-textarea
+                  v-model="reportFormData.reason"
+                  label="请详细描述举报原因"
+                  variant="outlined"
+                  rows="4"
+                  :rules="[
+                    v => !!v || '请输入举报原因',
+                    v => (v && v.length >= 10) || '举报原因至少需要10个字符',
+                    v => (v && v.length <= 500) || '举报原因不能超过500个字符'
+                  ]"
+                  counter="500"
+                  class="mb-4"
+                ></v-textarea>
+
+                <div class="text-subtitle-1 mb-2">举报材料：</div>
+                <v-file-input
+                  v-model="reportFormData.evidenceFiles"
+                  label="选择举报材料"
+                  placeholder="支持jpg/png/pdf文件，单个文件不超过10MB"
+                  variant="outlined"
+                  accept="image/jpeg,image/png,application/pdf"
+                  multiple
+                  prepend-icon="mdi-upload"
+                  show-size
+                  class="mb-2"
+                ></v-file-input>
+                <div class="text-caption text-grey">
+                  支持jpg/png/pdf文件，单个文件不超过10MB，最多上传10个文件
+                </div>
+
+                <v-alert
+                  type="info"
+                  variant="tonal"
+                  class="mt-4"
+                >
+                  <div class="text-subtitle-2 mb-2">举报须知：</div>
+                  <ul class="text-body-2">
+                    <li>请确保举报内容真实有效，恶意举报将承担相应责任</li>
+                    <li>我们会在3个工作日内处理您的举报</li>
+                    <li>处理结果将通过站内信通知您</li>
+                    <li>如需紧急处理，请联系客服热线：400-123-4567</li>
+                  </ul>
+                </v-alert>
+              </v-form>
+            </v-card-text>
+
+            <v-card-actions class="px-6 pb-6">
+              <v-spacer></v-spacer>
+              <v-btn
+                color="grey"
+                variant="outlined"
+                @click="closeReportDialog"
+              >
+                取消
+              </v-btn>
+              <v-btn
+                color="error"
+                @click="submitReport"
+                :disabled="!reportFormValid"
+                :loading="isSubmittingReport"
+              >
+                提交举报
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
       </v-container>
     </v-main>
 
     <!-- 交互式小宠物 -->
     <div class="pet-container" ref="petContainer">
-      <div class="pet" ref="pet" @mouseenter="onPetHover" @mouseleave="onPetLeave">
+      <div class="pet" ref="pet" 
+           @mouseenter="onPetHover" 
+           @mouseleave="onPetLeave" 
+           @click="showReportDialog"
+           title="点击举报">
         <!-- 猫咪身体 -->
         <div class="pet-body">
           <!-- 猫耳朵 -->
@@ -376,9 +687,9 @@
         <!-- 尾巴 -->
         <div class="tail"></div>
         
-        <!-- 爱心气泡（hover时显示） -->
-        <div class="love-bubble" ref="loveBubble">
-          <span>💕</span>
+        <!-- 举报提示气泡（hover时显示） -->
+        <div class="report-bubble" ref="reportBubble">
+          <span>我要举报</span>
         </div>
       </div>
     </div>
@@ -407,11 +718,85 @@ const reviewText = ref('')
 const isViewingReview = ref(false)
 const isSubmittingReview = ref(false)
 
+// 回应评价相关变量
+const responseText = ref('')
+const isSubmittingResponse = ref(false)
+
+// 争议评价相关变量
+const showDisputeDialogState = ref(false)
+const isSubmittingDispute = ref(false)
+const disputeFormValid = ref(false)
+const disputeFormRef = ref(null)
+
+// 争议表单数据
+const disputeForm = ref({
+  reason: '',
+  description: '',
+  evidenceFiles: []
+})
+
+// 争议原因选项
+const disputeReasons = [
+  { title: '评价内容不实', value: 'false_content' },
+  { title: '恶意评价', value: 'malicious' },
+  { title: '与实际交易不符', value: 'mismatch' },
+  { title: '其他原因', value: 'other' }
+]
+
+// 举报相关变量
+const showReportDialogState = ref(false)
+const isSubmittingReport = ref(false)
+const reportFormValid = ref(false)
+const reportForm = ref(null)
+const reportBubble = ref(null)
+
+// 举报表单数据
+const reportFormData = ref({
+  type: '',
+  targetUser: '',
+  relatedOrder: null,
+  reason: '',
+  evidenceFiles: []
+})
+
+// 举报类型选项
+const reportTypes = [
+  { text: '虚假交易', value: 'fake_transaction' },
+  { text: '欺诈行为', value: 'fraud' },
+  { text: '恶意评价', value: 'malicious_review' },
+  { text: '商品质量问题', value: 'quality_issue' },
+  { text: '服务态度恶劣', value: 'bad_service' },
+  { text: '违规商品', value: 'illegal_goods' },
+  { text: '其他问题', value: 'other' }
+]
+
+// 订单选项（用于举报表单）
+const orderOptions = computed(() => {
+  return orders.value.map(order => ({
+    text: `${order.orderNumber} - ${order.productName}`,
+    value: order.id
+  }))
+})
+
 // 评价输入验证规则
 const reviewRules = [
   v => !!v || '请输入评价内容',
   v => (v && v.length >= 5) || '评价内容至少需要5个字符',
   v => (v && v.length <= 500) || '评价内容不能超过500个字符'
+]
+
+// 回应验证规则
+const responseRules = [
+  v => !!v || '请输入回应内容',
+  v => (v && v.length >= 5) || '回应内容至少需要5个字符',
+  v => (v && v.length <= 300) || '回应内容不能超过300个字符'
+]
+
+// 争议描述验证规则
+const disputeDescriptionRules = [
+  v => !!v || '请输入详细说明',
+  v => (v && v.length >= 20) || '说明内容至少需要20个字符',
+  v => (v && v.length <= 1000) || '说明内容不能超过1000个字符'
 ]
 
 // 状态项配置
@@ -487,7 +872,11 @@ const orders = ref([
     totalAmount: 8999.00,
     receiverName: '张三',
     receiverPhone: '13800138000',
-    review: null // 买家评价
+    review: null, // 买家评价
+    reviewDate: null,
+    sellerResponse: null,
+    sellerResponseDate: null,
+    disputeStatus: 'none'
   },
   {
     id: 2,
@@ -502,7 +891,11 @@ const orders = ref([
     totalAmount: 12999.00,
     receiverName: '李四',
     receiverPhone: '13900139000',
-    review: null
+    review: null,
+    reviewDate: null,
+    sellerResponse: null,
+    sellerResponseDate: null,
+    disputeStatus: 'none'
   },
   {
     id: 3,
@@ -517,7 +910,11 @@ const orders = ref([
     totalAmount: 1299.00,
     receiverName: '王五',
     receiverPhone: '13700137000',
-    review: null
+    review: null,
+    reviewDate: null,
+    sellerResponse: null,
+    sellerResponseDate: null,
+    disputeStatus: 'none'
   },
   {
     id: 4,
@@ -532,7 +929,11 @@ const orders = ref([
     totalAmount: 899.00,
     receiverName: '赵六',
     receiverPhone: '13600136000',
-    review: null
+    review: null,
+    reviewDate: null,
+    sellerResponse: null,
+    sellerResponseDate: null,
+    disputeStatus: 'none'
   },
   {
     id: 5,
@@ -547,7 +948,49 @@ const orders = ref([
     totalAmount: 4599.00,
     receiverName: '钱七',
     receiverPhone: '13500135000',
-    review: '商品质量很好，卖家发货很快！'
+    review: '商品质量很好，卖家发货很快！',
+    reviewDate: '2025-07-20T10:30:00Z',
+    sellerResponse: '谢谢您的好评，欢迎下次光临！',
+    sellerResponseDate: '2025-07-20T14:20:00Z',
+    disputeStatus: 'none'
+  },
+  {
+    id: 6,
+    orderNumber: 'ORD20250823001',
+    orderDate: '2025-08-23 09:00:00',
+    status: 'completed',
+    productName: 'iPad Air',
+    productDescription: 'M1芯片，256GB，天蓝色',
+    productImage: '/path/to/ipad.jpg',
+    price: 3999.00,
+    quantity: 1,
+    totalAmount: 3999.00,
+    receiverName: '测试用户',
+    receiverPhone: '13888888888',
+    review: '产品很不错，但是包装可以再仔细一些。',
+    reviewDate: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2小时前的评价
+    sellerResponse: null,
+    sellerResponseDate: null,
+    disputeStatus: 'none'
+  },
+  {
+    id: 7,
+    orderNumber: 'ORD20250820001',
+    orderDate: '2025-08-20 15:30:00',
+    status: 'completed',
+    productName: '机械键盘',
+    productDescription: '樱桃轴，RGB背光',
+    productImage: '/path/to/keyboard.jpg',
+    price: 299.00,
+    quantity: 1,
+    totalAmount: 299.00,
+    receiverName: '买家李明',
+    receiverPhone: '13777777777',
+    review: '键盘手感不错，但有一个按键有点松动。',
+    reviewDate: new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString(), // 72小时前（超过48小时）
+    sellerResponse: null,
+    sellerResponseDate: null,
+    disputeStatus: 'none'
   }
 ])
 
@@ -555,6 +998,32 @@ const orders = ref([
 const filteredOrders = computed(() => {
   if (activeTab.value === 'all') return orders.value
   return orders.value.filter(order => order.status === activeTab.value)
+})
+
+// 计算是否可以回应评价（卖家48小时内）
+const canRespondToReview = computed(() => {
+  if (!selectedOrder.value || !selectedOrder.value.reviewDate || currentUserRoleInOrder.value !== 'seller') {
+    return false
+  }
+  
+  const reviewDate = new Date(selectedOrder.value.reviewDate)
+  const now = new Date()
+  const diffHours = (now - reviewDate) / (1000 * 60 * 60)
+  
+  return diffHours <= 48 && !selectedOrder.value.sellerResponse
+})
+
+// 计算是否可以申请争议（48小时内，且没有已处理的争议）
+const canDispute = computed(() => {
+  if (!selectedOrder.value || !selectedOrder.value.reviewDate) {
+    return false
+  }
+  
+  const reviewDate = new Date(selectedOrder.value.reviewDate)
+  const now = new Date()
+  const diffHours = (now - reviewDate) / (1000 * 60 * 60)
+  
+  return diffHours <= 48 && (!selectedOrder.value.disputeStatus || selectedOrder.value.disputeStatus === 'none')
 })
 
 // 获取状态显示文本
@@ -817,11 +1286,13 @@ const submitReview = async () => {
     const orderIndex = orders.value.findIndex(order => order.id === selectedOrder.value.id)
     if (orderIndex !== -1) {
       orders.value[orderIndex].review = reviewText.value
+      orders.value[orderIndex].reviewDate = new Date().toISOString()
     }
     
     // 更新选中订单的评价
     if (selectedOrder.value) {
       selectedOrder.value.review = reviewText.value
+      selectedOrder.value.reviewDate = new Date().toISOString()
     }
     
     // 关闭对话框
@@ -832,6 +1303,165 @@ const submitReview = async () => {
     console.error('提交评价失败:', error)
   } finally {
     isSubmittingReview.value = false
+  }
+}
+
+// 提交回应
+const submitResponse = async () => {
+  if (!responseText.value.trim() || !selectedOrder.value) return
+  
+  isSubmittingResponse.value = true
+  try {
+    // 模拟API调用
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    // 更新订单的回应信息
+    const orderIndex = orders.value.findIndex(order => order.id === selectedOrder.value.id)
+    if (orderIndex !== -1) {
+      orders.value[orderIndex].sellerResponse = responseText.value
+      orders.value[orderIndex].sellerResponseDate = new Date().toISOString()
+    }
+    
+    // 更新选中订单的回应
+    if (selectedOrder.value) {
+      selectedOrder.value.sellerResponse = responseText.value
+      selectedOrder.value.sellerResponseDate = new Date().toISOString()
+    }
+    
+    responseText.value = ''
+    console.log('回应提交成功:', responseText.value)
+  } catch (error) {
+    console.error('提交回应失败:', error)
+  } finally {
+    isSubmittingResponse.value = false
+  }
+}
+
+// 显示争议对话框
+const showDisputeDialog = () => {
+  disputeForm.value = {
+    reason: '',
+    description: '',
+    evidenceFiles: []
+  }
+  showDisputeDialogState.value = true
+}
+
+// 关闭争议对话框
+const closeDisputeDialog = () => {
+  showDisputeDialogState.value = false
+  disputeForm.value = {
+    reason: '',
+    description: '',
+    evidenceFiles: []
+  }
+  isSubmittingDispute.value = false
+}
+
+// 提交争议申请
+const submitDispute = async () => {
+  if (!disputeFormRef.value) return
+  
+  const { valid } = await disputeFormRef.value.validate()
+  if (!valid) return
+  
+  isSubmittingDispute.value = true
+  try {
+    // 模拟API调用
+    await new Promise(resolve => setTimeout(resolve, 1500))
+    
+    // 更新订单的争议状态
+    const orderIndex = orders.value.findIndex(order => order.id === selectedOrder.value.id)
+    if (orderIndex !== -1) {
+      orders.value[orderIndex].disputeStatus = 'pending'
+      orders.value[orderIndex].disputeReason = disputeForm.value.reason
+      orders.value[orderIndex].disputeDescription = disputeForm.value.description
+      orders.value[orderIndex].disputeDate = new Date().toISOString()
+    }
+    
+    // 更新选中订单的争议信息
+    if (selectedOrder.value) {
+      selectedOrder.value.disputeStatus = 'pending'
+      selectedOrder.value.disputeReason = disputeForm.value.reason
+      selectedOrder.value.disputeDescription = disputeForm.value.description
+      selectedOrder.value.disputeDate = new Date().toISOString()
+    }
+    
+    closeDisputeDialog()
+    console.log('争议申请提交成功:', disputeForm.value)
+  } catch (error) {
+    console.error('提交争议申请失败:', error)
+  } finally {
+    isSubmittingDispute.value = false
+  }
+}
+
+// 格式化日期显示
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+// 举报相关方法
+const showReportDialog = () => {
+  showReportDialogState.value = true
+  // 重置表单
+  reportFormData.value = {
+    type: '',
+    targetUser: '',
+    relatedOrder: null,
+    reason: '',
+    evidenceFiles: []
+  }
+}
+
+const closeReportDialog = () => {
+  showReportDialogState.value = false
+  reportFormData.value = {
+    type: '',
+    targetUser: '',
+    relatedOrder: null,
+    reason: '',
+    evidenceFiles: []
+  }
+}
+
+// 提交举报
+const submitReport = async () => {
+  if (!reportFormValid.value) return
+  
+  isSubmittingReport.value = true
+  
+  try {
+    // 模拟API调用
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
+    // 这里应该调用实际的API
+    console.log('举报信息:', {
+      type: reportFormData.value.type,
+      targetUser: reportFormData.value.targetUser,
+      relatedOrder: reportFormData.value.relatedOrder,
+      reason: reportFormData.value.reason,
+      evidenceFiles: reportFormData.value.evidenceFiles,
+      reportTime: new Date().toISOString()
+    })
+    
+    // 显示成功消息
+    alert('举报已提交，我们会在3个工作日内处理您的举报并通过站内信通知处理结果')
+    
+    closeReportDialog()
+  } catch (error) {
+    console.error('提交举报失败:', error)
+    alert('提交失败，请稍后重试')
+  } finally {
+    isSubmittingReport.value = false
   }
 }
 
@@ -1082,16 +1712,16 @@ const trackMouse = (event) => {
 }
 
 const onPetHover = () => {
-  if (loveBubble.value) {
-    loveBubble.value.style.opacity = '1'
-    loveBubble.value.style.transform = 'translateY(-10px) scale(1)'
+  if (reportBubble.value) {
+    reportBubble.value.style.opacity = '1'
+    reportBubble.value.style.transform = 'translateY(-10px) scale(1)'
   }
 }
 
 const onPetLeave = () => {
-  if (loveBubble.value) {
-    loveBubble.value.style.opacity = '0'
-    loveBubble.value.style.transform = 'translateY(0) scale(0.8)'
+  if (reportBubble.value) {
+    reportBubble.value.style.opacity = '0'
+    reportBubble.value.style.transform = 'translateY(0) scale(0.8)'
   }
 }
 
@@ -1215,11 +1845,15 @@ onUnmounted(() => {
   cursor: pointer;
   pointer-events: all;
   transition: transform 0.3s ease;
-
+  user-select: none;
 }
 
 .pet:hover {
   transform: scale(1.1);
+}
+
+.pet:active {
+  transform: scale(0.95);
 }
 
 .pet-body {
@@ -1391,6 +2025,41 @@ onUnmounted(() => {
   transition: all 0.3s ease;
   font-size: 20px;
   animation: float 2s ease-in-out infinite;
+}
+
+/* 举报气泡 */
+.report-bubble {
+  position: absolute;
+  top: -50px;
+  left: 50%;
+  transform: translateX(-50%) translateY(0) scale(0.8);
+  opacity: 0;
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+  cursor: pointer;
+  z-index: 10;
+}
+
+.report-bubble::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #ee5a52;
+}
+
+.report-bubble:hover {
+  transform: translateX(-50%) translateY(-5px) scale(1.05);
+  box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
 }
 
 @keyframes float {
