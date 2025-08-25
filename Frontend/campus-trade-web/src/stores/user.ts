@@ -223,7 +223,127 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  const sendVerificationCode = async (email: string): Promise<{ success: boolean; message: string }> => {
+  try {
+    if (!user.value?.userId) {
+      return { success: false, message: '用户未登录' }
+    }
 
+    const response = await authApi.sendVerificationCode(user.value.userId, email)
+
+    if (response.success) {
+      return { success: true, message: response.message || '验证码发送成功' }
+    }
+
+    return { success: false, message: response.message || '发送验证码失败' }
+  } catch (error: unknown) {
+    console.error('发送验证码失败:', error)
+    let message = '发送验证码失败，请重试'
+
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as { response?: { data?: { message?: string } } }
+      if (err.response?.data?.message) {
+        message = err.response.data.message
+      }
+    }
+
+    return { success: false, message }
+  }
+}
+
+// 验证邮箱验证码
+const verifyCode = async (code: string): Promise<{ success: boolean; message: string }> => {
+  try {
+    if (!user.value?.userId) {
+      return { success: false, message: '用户未登录' }
+    }
+
+    const response = await authApi.verifyCode(user.value.userId, code)
+
+    if (response.success) {
+      // 更新本地用户信息的邮箱验证状态
+      if (user.value) {
+        user.value.emailVerified = true
+        localStorage.setItem('user', JSON.stringify(user.value))
+      }
+      return { success: true, message: response.message || '验证成功' }
+    }
+
+    return { success: false, message: response.message || '验证失败' }
+  } catch (error: unknown) {
+    console.error('验证码验证失败:', error)
+    let message = '验证失败，请重试'
+
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as { response?: { data?: { message?: string } } }
+      if (err.response?.data?.message) {
+        message = err.response.data.message
+      }
+    }
+
+    return { success: false, message }
+  }
+}
+
+// 验证邮箱链接
+const verifyEmailLink = async (token: string): Promise<{ success: boolean; message: string }> => {
+  try {
+    const response = await authApi.verifyEmail(token)
+
+    if (response.success) {
+      // 更新本地用户信息的邮箱验证状态
+      if (user.value) {
+        user.value.emailVerified = true
+        localStorage.setItem('user', JSON.stringify(user.value))
+      }
+      return { success: true, message: response.message || '邮箱验证成功' }
+    }
+
+    return { success: false, message: response.message || '邮箱验证失败' }
+  } catch (error: unknown) {
+    console.error('邮箱验证失败:', error)
+    let message = '邮箱验证失败，请重试'
+
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as { response?: { data?: { message?: string } } }
+      if (err.response?.data?.message) {
+        message = err.response.data.message
+      }
+    }
+
+    return { success: false, message }
+  }
+}
+
+// 退出所有设备
+const logoutAll = async (): Promise<{ success: boolean; message: string; revokedCount?: number }> => {
+  try {
+    const response = await authApi.logoutAll()
+
+    if (response.success && response.data) {
+      // 清除本地状态（可选，根据需求决定是否立即退出当前会话）
+      return { 
+        success: true, 
+        message: response.message || '已退出所有设备',
+        revokedCount: response.data.revokedTokens
+      }
+    }
+
+    return { success: false, message: response.message || '退出所有设备失败' }
+  } catch (error: unknown) {
+    console.error('退出所有设备失败:', error)
+    let message = '退出所有设备失败，请重试'
+
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as { response?: { data?: { message?: string } } }
+      if (err.response?.data?.message) {
+        message = err.response.data.message
+      }
+    }
+
+    return { success: false, message }
+  }
+}
 
   return {
     user,
@@ -236,5 +356,9 @@ export const useUserStore = defineStore('user', () => {
     validateStudent,
     logout,
     fetchUserInfo,
+    sendVerificationCode,    
+    verifyCode,              
+    verifyEmailLink,         
+    logoutAll       
   }
 })

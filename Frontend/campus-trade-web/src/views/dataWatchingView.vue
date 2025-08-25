@@ -5,7 +5,7 @@
       <div class="navbar-content">
         <div class="left-section">
           <span class="icon">
-            <svg width="24px" height="24px" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" color="#000000">
+            <svg width="48px" height="48px" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" color="#000000">
               <circle cx="12" cy="12" r="10" stroke="#000000" stroke-width="1.5"></circle>
               <path d="M7.63262 3.06689C8.98567 3.35733 9.99999 4.56025 9.99999 6.00007C9.99999 7.65693 8.65685 9.00007 6.99999 9.00007C5.4512 9.00007 4.17653 7.82641 4.01685 6.31997" stroke="#000000" stroke-width="1.5"></path>
               <path d="M22 13.0505C21.3647 12.4022 20.4793 12 19.5 12C17.567 12 16 13.567 16 15.5C16 17.2632 17.3039 18.7219 19 18.9646" stroke="#000000" stroke-width="1.5"></path>
@@ -13,7 +13,7 @@
               <path d="M10 17C11.1046 17 12 16.1046 12 15C12 13.8954 11.1046 13 10 13C8.89543 13 8 13.8954 8 15C8 16.1046 8.89543 17 10 17Z" stroke="#000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
             </svg>
           </span>
-          <span class="title">Campus Secondhand</span>
+          <span class="title"  style="font-size: 28px;">Campus Secondhand</span>
         </div>
         
         <div class="right-section">
@@ -40,151 +40,327 @@
             </div>
           </div>
         </div>
-      </div>
-
-      <div class="stats-container">
-        <div class="stat-card">
-          <div class="stat-title">总用户数</div>
-          <div class="stat-value">8,742</div>
-          <div class="stat-desc">较上月增长 12.5%</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-title">活跃用户</div>
-          <div class="stat-value">5,283</div>
-          <div class="stat-desc">较上月增长 8.3%</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-title">总订单数</div>
-          <div class="stat-value">12,647</div>
-          <div class="stat-desc">较上月增长 15.2%</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-title">本月交易额</div>
-          <div class="stat-value">¥385,642</div>
-          <div class="stat-desc">较上月增长 10.8%</div>
-        </div>
-      </div>
-
-      <div class="charts-container">
-        <div class="chart-wrapper">
-          <div class="chart-title">用户活跃度趋势</div>
-          <div class="chart-container">
-            <canvas id="activityChart"></canvas>
-          </div>
-        </div>
-        <div class="chart-wrapper">
-          <div class="chart-title">月度交易量</div>
-          <div class="chart-container">
-            <canvas id="transactionChart"></canvas>
+        
+        <!-- 年份选择器 -->
+        <div class="year-selector">
+          <label for="year-select">选择年份: </label>
+          <select id="year-select" v-model="selectedYear" @change="loadDashboardData">
+            <option v-for="year in availableYears" :key="year" :value="year">{{ year }}</option>
+          </select>
+          
+          <!-- 导出按钮 -->
+          <div class="export-buttons">
+            <button class="export-btn" @click="exportToExcel">
+              <v-icon size="18">mdi-microsoft-excel</v-icon>
+              导出Excel
+            </button>
+            <button class="export-btn" @click="exportToPdf">
+              <v-icon size="18">mdi-file-pdf-box</v-icon>
+              导出PDF
+            </button>
           </div>
         </div>
       </div>
 
-      <div class="table-container">
-        <div class="table-title">热销商品排行</div>
-        <table class="hot-products">
-          <thead>
-            <tr>
-              <th>排名</th>
-              <th>商品名称</th>
-              <th>分类</th>
-              <th>销量</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><span class="rank top1">1</span></td>
-              <td class="product-name">考研英语历年真题</td>
-              <td class="product-category">学习资料</td>
-              <td class="sales-count">156</td>
-            </tr>
-            <tr>
-              <td><span class="rank top2">2</span></td>
-              <td class="product-name">机械工程原理（二手）</td>
-              <td class="product-category">教材</td>
-              <td class="sales-count">128</td>
-            </tr>
-            <tr>
-              <td><span class="rank top3">3</span></td>
-              <td class="product-name">惠普暗影精灵游戏本</td>
-              <td class="product-category">电子产品</td>
-              <td class="sales-count">95</td>
-            </tr>
-            <tr>
-              <td><span class="rank">4</span></td>
-              <td class="product-name">Nike Air运动鞋</td>
-              <td class="product-category">运动装备</td>
-              <td class="sales-count">87</td>
-            </tr>
-            <tr>
-              <td><span class="rank">5</span></td>
-              <td class="product-name">华为MateBook 14</td>
-              <td class="product-category">电子产品</td>
-              <td class="sales-count">76</td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- 加载状态 -->
+      <div v-if="loading" class="loading-container">
+        <div class="loading-spinner"></div>
+        <p>数据加载中...</p>
       </div>
 
-      <div class="footer">
-        校园交易平台 © 2023 数据更新时间: 2023-06-15
+      <!-- 错误状态 -->
+      <div v-if="error" class="error-container">
+        <p>数据加载失败: {{ error }}</p>
+        <button @click="loadDashboardData">重试</button>
+      </div>
+
+      <!-- 数据展示 - 即使没有数据也显示结构 -->
+      <div>
+        <div class="stats-container">
+          <div class="stat-card">
+            <div class="stat-title">总用户数</div>
+            <div class="stat-value">{{ totalUsers || '--' }}</div>
+            <div class="stat-desc" v-if="hasData">较上月增长 {{ userGrowthRate }}%</div>
+            <div class="stat-desc" v-else>暂无数据</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-title">活跃用户</div>
+            <div class="stat-value">{{ activeUsers || '--' }}</div>
+            <div class="stat-desc" v-if="hasData">较上月增长 {{ activeUserGrowthRate }}%</div>
+            <div class="stat-desc" v-else>暂无数据</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-title">总订单数</div>
+            <div class="stat-value">{{ totalOrders || '--' }}</div>
+            <div class="stat-desc" v-if="hasData">较上月增长 {{ orderGrowthRate }}%</div>
+            <div class="stat-desc" v-else>暂无数据</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-title">本月交易额</div>
+            <div class="stat-value" v-if="hasData">¥{{ monthlySales.toLocaleString() }}</div>
+            <div class="stat-value" v-else>--</div>
+            <div class="stat-desc" v-if="hasData">较上月增长 {{ salesGrowthRate }}%</div>
+            <div class="stat-desc" v-else>暂无数据</div>
+          </div>
+        </div>
+
+        <div class="charts-container">
+          <div class="chart-wrapper">
+            <div class="chart-title">用户活跃度趋势</div>
+            <div class="chart-container">
+              <canvas id="activityChart"></canvas>
+              <div v-if="!hasData" class="no-data-placeholder">
+                <v-icon size="48" color="#ccc">mdi-chart-line</v-icon>
+                <p>暂无数据</p>
+              </div>
+            </div>
+          </div>
+          <div class="chart-wrapper">
+            <div class="chart-title">月度交易量</div>
+            <div class="chart-container">
+              <canvas id="transactionChart"></canvas>
+              <div v-if="!hasData" class="no-data-placeholder">
+                <v-icon size="48" color="#ccc">mdi-chart-bar</v-icon>
+                <p>暂无数据</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <div class="table-title">热销商品排行</div>
+          <table class="hot-products">
+            <thead>
+              <tr>
+                <th>排名</th>
+                <th>商品名称</th>
+                <th>销量</th>
+              </tr>
+            </thead>
+            <tbody v-if="hasData && popularProducts.length">
+              <tr v-for="(product, index) in popularProducts" :key="product.productId">
+                <td><span :class="['rank', getRankClass(index + 1)]">{{ index + 1 }}</span></td>
+                <td class="product-name">{{ product.productTitle }}</td>
+                <td class="sales-count">{{ product.orderCount }}</td>
+              </tr>
+            </tbody>
+            <tbody v-else>
+              <tr>
+                <td colspan="3" class="no-data-row">
+                  <div class="no-data-placeholder">
+                    <v-icon size="48" color="#ccc">mdi-package-variant</v-icon>
+                    <p>暂无热销商品数据</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="footer">
+          校园交易平台 © 2023 数据更新时间: {{ lastUpdated }}
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { Chart, registerables } from 'chart.js'
+import axios from 'axios'
 
 // 注册Chart.js的所有功能
 Chart.register(...registerables)
 
-// 模拟数据
-const stats = ref({
-  totalUsers: 8742,
-  activeUsers: 5283,
-  totalOrders: 12647,
-  monthlySales: 385642
+// 响应式数据
+const selectedYear = ref(new Date().getFullYear())
+const availableYears = ref([2022, 2023, 2024])
+const loading = ref(false)
+const error = ref(null)
+const lastUpdated = ref(new Date().toLocaleDateString())
+
+// 统计数据
+const dashboardData = ref({
+  monthlyTransactions: [],
+  popularProducts: [],
+  userActivities: []
 })
 
-const popularProducts = ref([
-  { id: 1, name: "考研英语历年真题", category: "学习资料", salesCount: 156 },
-  { id: 2, name: "机械工程原理（二手）", category: "教材", salesCount: 128 },
-  { id: 3, name: "惠普暗影精灵游戏本", category: "电子产品", salesCount: 95 },
-  { id: 4, name: "Nike Air运动鞋", category: "运动装备", salesCount: 87 },
-  { id: 5, name: "华为MateBook 14", category: "电子产品", salesCount: 76 }
-])
+// 计算属性
+const hasData = computed(() => {
+  return dashboardData.value.monthlyTransactions.length > 0 || 
+         dashboardData.value.popularProducts.length > 0 || 
+         dashboardData.value.userActivities.length > 0
+})
+
+const totalUsers = computed(() => {
+  if (!dashboardData.value.userActivities.length) return 0
+  return dashboardData.value.userActivities.reduce((sum, activity) => sum + activity.newUserCount, 0)
+})
+
+const activeUsers = computed(() => {
+  if (!dashboardData.value.userActivities.length) return 0
+  return dashboardData.value.userActivities.reduce((sum, activity) => sum + activity.activeUserCount, 0)
+})
+
+const totalOrders = computed(() => {
+  if (!dashboardData.value.monthlyTransactions.length) return 0
+  return dashboardData.value.monthlyTransactions.reduce((sum, transaction) => sum + transaction.orderCount, 0)
+})
+
+const monthlySales = computed(() => {
+  if (!dashboardData.value.monthlyTransactions.length) return 0
+  const currentMonth = new Date().getMonth() + 1
+  const currentMonthData = dashboardData.value.monthlyTransactions.find(t => t.month === `${currentMonth}月`)
+  return currentMonthData ? currentMonthData.totalAmount : 0
+})
+
+const popularProducts = computed(() => {
+  return dashboardData.value.popularProducts || []
+})
+
+// 增长率计算（简化处理，实际应根据上月数据计算）
+const userGrowthRate = computed(() => 12.5)
+const activeUserGrowthRate = computed(() => 8.3)
+const orderGrowthRate = computed(() => 15.2)
+const salesGrowthRate = computed(() => 10.8)
+
+// 图表实例引用
+let activityChartInstance = null
+let transactionChartInstance = null
 
 onMounted(() => {
-  // 初始化图表
-  initCharts()
+  loadDashboardData()
 })
 
+// 加载仪表板数据
+async function loadDashboardData() {
+  try {
+    loading.value = true
+    error.value = null
+    
+    const response = await axios.get(`/api/dashboard/statistics?year=${selectedYear.value}&activityDays=30`)
+    
+    if (response.data && response.data.success) {
+      dashboardData.value = response.data.data
+      lastUpdated.value = new Date().toLocaleDateString()
+      
+      // 销毁旧图表（如果存在）
+      if (activityChartInstance) {
+        activityChartInstance.destroy()
+      }
+      if (transactionChartInstance) {
+        transactionChartInstance.destroy()
+      }
+      
+      // 初始化新图表
+      initCharts()
+    } else {
+      throw new Error(response.data.message || '获取数据失败')
+    }
+  } catch (err) {
+    console.error('加载仪表板数据失败:', err)
+    error.value = err.message || '网络错误，请稍后重试'
+    // 即使出错，也保持页面结构显示
+  } finally {
+    loading.value = false
+  }
+}
+
+// 导出Excel
+async function exportToExcel() {
+  try {
+    const response = await axios.get(`/api/dashboard/export/excel?year=${selectedYear.value}`, {
+      responseType: 'blob'
+    })
+    
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `校园交易统计_${selectedYear.value}.xlsx`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  } catch (err) {
+    console.error('导出Excel失败:', err)
+    alert('导出Excel失败，请稍后重试')
+  }
+}
+
+// 导出PDF
+async function exportToPdf() {
+  try {
+    const response = await axios.get(`/api/dashboard/export/pdf?year=${selectedYear.value}`, {
+      responseType: 'blob'
+    })
+    
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `校园交易统计_${selectedYear.value}.pdf`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  } catch (err) {
+    console.error('导出PDF失败:', err)
+    alert('导出PDF失败，请稍后重试')
+  }
+}
+
+// 获取排名样式类
+function getRankClass(rank) {
+  if (rank === 1) return 'top1'
+  if (rank === 2) return 'top2'
+  if (rank === 3) return 'top3'
+  return ''
+}
+
+// 初始化图表
 function initCharts() {
   // 用户活跃度趋势图
   const activityCtx = document.getElementById('activityChart')?.getContext('2d')
-  if (activityCtx) {
-    new Chart(activityCtx, {
+  if (activityCtx && dashboardData.value.userActivities.length) {
+    const labels = dashboardData.value.userActivities.map(a => {
+      const date = new Date(a.date)
+      return `${date.getMonth() + 1}/${date.getDate()}`
+    })
+    
+    const activeData = dashboardData.value.userActivities.map(a => a.activeUserCount)
+    const newUserData = dashboardData.value.userActivities.map(a => a.newUserCount)
+    
+    activityChartInstance = new Chart(activityCtx, {
       type: 'line',
       data: {
-        labels: ['1月', '2月', '3月', '4月', '5月', '6月'],
-        datasets: [{
-          label: '日活跃用户',
-          data: [1200, 1900, 3000, 5000, 4500, 5283],
-          borderColor: '#FF85A2',
-          backgroundColor: 'rgba(255, 209, 220, 0.3)',
-          tension: 0.4,
-          fill: true,
-          pointBackgroundColor: '#FF85A2',
-          pointRadius: 4,
-          pointHoverRadius: 6
-        }]
+        labels: labels,
+        datasets: [
+          {
+            label: '日活跃用户',
+            data: activeData,
+            borderColor: '#FF85A2',
+            backgroundColor: 'rgba(255, 209, 220, 0.3)',
+            tension: 0.4,
+            fill: true,
+            pointBackgroundColor: '#FF85A2',
+            pointRadius: 4,
+            pointHoverRadius: 6
+          },
+          {
+            label: '新注册用户',
+            data: newUserData,
+            borderColor: '#4DA6FF',
+            backgroundColor: 'rgba(77, 166, 255, 0.1)',
+            tension: 0.4,
+            fill: true,
+            pointBackgroundColor: '#4DA6FF',
+            pointRadius: 4,
+            pointHoverRadius: 6
+          }
+        ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        animation: false,
         plugins: {
           legend: {
             position: 'top',
@@ -201,12 +377,7 @@ function initCharts() {
             borderWidth: 1,
             padding: 10,
             boxPadding: 5,
-            usePointStyle: true,
-            callbacks: {
-              label: function(context) {
-                return `活跃用户: ${context.raw}`
-              }
-            }
+            usePointStyle: true
           }
         },
         scales: {
@@ -236,38 +407,37 @@ function initCharts() {
 
   // 月度交易量图
   const transactionCtx = document.getElementById('transactionChart')?.getContext('2d')
-  if (transactionCtx) {
-    new Chart(transactionCtx, {
+  if (transactionCtx && dashboardData.value.monthlyTransactions.length) {
+    const labels = dashboardData.value.monthlyTransactions.map(t => t.month)
+    const orderData = dashboardData.value.monthlyTransactions.map(t => t.orderCount)
+    const amountData = dashboardData.value.monthlyTransactions.map(t => t.totalAmount / 10000) // 转换为万元
+    
+    transactionChartInstance = new Chart(transactionCtx, {
       type: 'bar',
       data: {
-        labels: ['1月', '2月', '3月', '4月', '5月', '6月'],
+        labels: labels,
         datasets: [{
-          label: '月度交易量(万元)',
-          data: [45, 59, 80, 81, 56, 38.5],
-          backgroundColor: [
-            'rgba(179, 224, 255, 0.6)',
-            'rgba(179, 224, 255, 0.7)',
-            'rgba(179, 224, 255, 0.8)',
-            'rgba(179, 224, 255, 0.9)',
-            'rgba(179, 224, 255, 0.7)',
-            'rgba(179, 224, 255, 0.8)'
-          ],
-          borderColor: [
-            'rgba(77, 166, 255, 1)',
-            'rgba(77, 166, 255, 1)',
-            'rgba(77, 166, 255, 1)',
-            'rgba(77, 166, 255, 1)',
-            'rgba(77, 166, 255, 1)',
-            'rgba(77, 166, 255, 1)'
-          ],
+          label: '订单数量',
+          data: orderData,
+          backgroundColor: 'rgba(179, 224, 255, 0.6)',
+          borderColor: 'rgba(77, 166, 255, 1)',
           borderWidth: 1,
-          borderRadius: 4
+          borderRadius: 4,
+          yAxisID: 'y'
+        }, {
+          label: '交易金额(万元)',
+          data: amountData,
+          backgroundColor: 'rgba(255, 209, 220, 0.6)',
+          borderColor: 'rgba(255, 133, 162, 1)',
+          borderWidth: 1,
+          borderRadius: 4,
+          type: 'line',
+          yAxisID: 'y1'
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        animation: false,
         plugins: {
           legend: {
             position: 'top',
@@ -282,19 +452,38 @@ function initCharts() {
             bodyColor: '#666',
             borderColor: '#ddd',
             borderWidth: 1,
-            padding: 10,
-            callbacks: {
-              label: function(context) {
-                return `交易量: ${context.raw}万元`
-              }
-            }
+            padding: 10
           }
         },
         scales: {
           y: {
+            type: 'linear',
+            display: true,
+            position: 'left',
+            title: {
+              display: true,
+              text: '订单数量'
+            },
             beginAtZero: true,
             grid: {
               color: 'rgba(0, 0, 0, 0.05)'
+            },
+            ticks: {
+              color: '#666',
+              fontSize: 11
+            }
+          },
+          y1: {
+            type: 'linear',
+            display: true,
+            position: 'right',
+            title: {
+              display: true,
+              text: '交易金额(万元)'
+            },
+            beginAtZero: true,
+            grid: {
+              drawOnChartArea: false
             },
             ticks: {
               color: '#666',
@@ -399,12 +588,119 @@ function initCharts() {
   justify-content: space-between;
   padding: 20px 0;
   margin-bottom: 30px;
+  flex-wrap: wrap;
 }
 
 .logo {
   display: flex;
   align-items: center;
   gap: 15px;
+}
+
+/* 年份选择器样式 */
+.year-selector {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.year-selector label {
+  font-weight: bold;
+  color: #555;
+}
+
+.year-selector select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+  font-size: 14px;
+}
+
+.export-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.export-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 12px;
+  background-color: #4DA6FF;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.export-btn:hover {
+  background-color: #3B89D3;
+}
+
+/* 加载状态样式 */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #4DA6FF;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 15px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 错误状态样式 */
+.error-container {
+  text-align: center;
+  padding: 40px;
+  color: #ff4757;
+}
+
+.error-container button {
+  margin-top: 15px;
+  padding: 8px 16px;
+  background-color: #4DA6FF;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* 无数据占位符样式 */
+.no-data-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #999;
+  text-align: center;
+}
+
+.no-data-row {
+  height: 200px;
+}
+
+.chart-container {
+  position: relative;
+  height: 350px;
+  width: 100%;
 }
 
 /* 新增页面标题样式 */
@@ -492,11 +788,6 @@ function initCharts() {
   color: #333;
   margin-bottom: 15px;
   font-weight: bold;
-}
-
-.chart-container {
-  height: 350px;
-  width: 100%;
 }
 
 .table-container {
@@ -589,4 +880,30 @@ function initCharts() {
   src: url('https://lf-coze-web-cdn.coze.cn/obj/eden-cn/lm-lgvj/ljhwZthlaukjlkulzlp/fonts/image-canvas-fonts/1-中等-思源黑体.woff2') format('woff2');
   font-display: swap;
 }
-</style>      
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .year-selector {
+    margin-top: 15px;
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .stats-container {
+    flex-direction: column;
+  }
+  
+  .charts-container {
+    flex-direction: column;
+  }
+  
+  .chart-wrapper {
+    min-width: 100%;
+  }
+}
+</style>

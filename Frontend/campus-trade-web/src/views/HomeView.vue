@@ -6,8 +6,8 @@
       <v-btn icon color="indigo" @click="goToUserDetail" class="mx-2">
         <v-icon size="40">mdi-account-circle</v-icon>
       </v-btn>
-      <v-btn icon @click="goToCart" class="mx-2">
-        <v-icon size="40">mdi-cart</v-icon>
+      <v-btn icon @click="goToMessage" class="mx-2">
+        <v-icon size="40">mdi-view-list</v-icon>
       </v-btn>
 
       <v-btn class="me-2" color="black" height="40" variant="text" width="100" style="margin-left: 100px;" @click="goToLogin"
@@ -24,14 +24,25 @@
         >
           我的订单
         </v-btn>
-         <v-btn
+
+      <v-btn
+        class="submit-btn-class mx-2"
+        size="large"
+        to="/goodsreleaseview"
+        variant="text"
+        height="40"
+      >
+         <img src="/images/ReleaseProduct.png" alt="发布商品" class="btn-icon" />
+        发布商品
+      </v-btn>
+               <v-btn
         class="mx-2"
         to="/datawatchingview"
         height="40"
         variant="text"
         style="min-width: 40px; padding: 0;"
       >
-        <v-img
+              <v-img
           src="/images/DataAnalyze.png"
           alt="数据看板"
           width="30"
@@ -259,9 +270,9 @@ const userInfo = ref({
 // 模拟购物车商品数量
 const cartItemsCount = ref(3)
 
-// 点击购物车图标时的跳转方法(还需要根据实际路由调整)
-const goToCart = () => {
-  //router.push({ name: 'Cart' }) // 跳转到名为'Cart'的路由
+// 点击消息图标时的跳转方法
+const goToMessage = () => {
+  router.push({ name: 'message' })
 }
 
 //点击用户图标的跳转
@@ -395,4 +406,27 @@ const loading = ref(false)
   font-weight: bold;
 }
 
+/* 新增按钮图标样式 */
+.btn-icon {
+  width: 24px;
+  height: 24px;
+  margin-right: 8px;
+}
+
+/* 调整按钮样式以适配图标 */
+.submit-btn-class {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1976d2 !important; /* 使用与导航栏其他按钮相似的颜色 */
+  font-weight: 500 !important;
+  border-radius: 4px !important;
+  transition: all 0.2s ease !important;
+  padding: 0 16px !important;
+}
+
+/* 按钮悬停效果 */
+.submit-btn-class:hover {
+  background-color: rgba(25, 118, 210, 0.08) !important;
+}
 </style>

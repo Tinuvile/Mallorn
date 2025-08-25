@@ -24,9 +24,12 @@
       <!-- 返回按钮和搜索栏 -->
       <v-row class="mt-3">
         <v-col cols="4">
-          <v-btn icon color="indigo" @click="goToHome" style="margin-left: 50px;">
+          <v-btn icon color="indigo" @click="goToHome" style="margin-left: 50px;margin-right: 20px;">
             <v-icon>mdi-home</v-icon>
           </v-btn>
+          <v-btn icon @click="goToMessage" class="mx-8">
+        <v-icon size="40">mdi-view-list</v-icon>
+        </v-btn>
         </v-col>
         <v-col cols="6">
           <v-text-field :loading="loading" append-inner-icon="mdi-magnify" density="compact" label="搜索" variant="solo"
@@ -104,12 +107,15 @@
               <v-radio v-for="(color, index) in colorList" :key="index" :label="color" :value="color"></v-radio>
             </v-radio-group>
           </div>
-          <!-- 议价及购买按钮 -->
+          <!-- 议价、换物及购买按钮 -->
           <div class="d-flex">
             <v-btn color="orange" text-color="white" class="mr-3"  @click="showNegotiateModal = true"> 
               议价
             </v-btn>
-            <v-btn color="red" text-color="white">
+             <v-btn color="green" text-color="white" class="mr-3" @click="showSwapModal = true">
+              换物
+            </v-btn>
+            <v-btn color="red" text-color="white"  @click="navigateToConfirmOrder">
               购买
             </v-btn>
           </div>
@@ -134,15 +140,74 @@
       <!-- 价格区域 -->
       <div class="price-section">
         <p class="original-price">原价: ¥{{ productPrice }}</p>
-        <p class="seller-price">卖家出价:</p>
+        <p class="seller-price">我的出价:</p>
         <input type="number" v-model="userOffer" class="offer-input" placeholder="请输入您的出价">
       </div>
-      
+
+        <!-- 留言区域 -->
+      <div class="reason-section">
+        <p class="seller-price">出价理由（可选）:</p>
+        <textarea v-model="userReason" class="reason-input" placeholder="请输入您的出价理由"></textarea>
+      </div>
       <!-- 出价按钮 -->
       <button class="confirm-offer-btn" @click="submitOffer">确定出价</button>
       
       <!-- 关闭按钮 -->
       <button class="close-btn" @click="showNegotiateModal = false">×</button>
+    </div>
+  </div>
+
+    <!-- 换物浮窗 -->
+  <div class="negotiate-modal-mask" v-if="showSwapModal">
+    <div class="negotiate-modal">
+      <!-- 换物标题 -->
+      <h2 class="negotiate-title">商品换物</h2>
+      
+      <!-- 商品信息区域 -->
+      <div class="product-info-section">
+        <p class="product-name" style="color: #666;">目标商品: {{ productName }}</p>
+        <p class="product-size">所选鞋码: {{ selectedColor || '未选择型号' }}</p>
+      </div>
+      
+      <!-- 分隔线 -->
+      <div class="divider"></div>
+      
+      <!-- 换物商品选择区域 -->
+      <div class="price-section">
+        <p class="seller-price">选择您的商品:</p>
+         <!-- 空状态判断 -->
+        <div v-if="userGoods.length === 0" class="no-goods-tip">
+          你没有发布的产品，请先去发布产品
+          <v-btn text color="primary" small @click="navigateToRelease">去发布</v-btn>
+        </div>
+        <v-radio-group v-model="selectedSwapGoods" class="mb-3" v-else>
+          <v-radio 
+            v-for="(goods, index) in userGoods" 
+            :key="index" 
+            :label="goods.name" 
+            :value="goods"
+            class="mb-2"
+          >
+            <template v-slot:label>
+              <div class="d-flex align-center">
+                <span class="ml-2">{{ goods.name }}（¥{{ goods.price }}）</span>
+              </div>
+            </template>
+          </v-radio>
+        </v-radio-group>
+      </div>
+      
+      <!-- 留言区域 -->
+      <div class="reason-section">
+        <p class="seller-price">换物说明（可选）:</p>
+        <textarea v-model="swapReason" class="reason-input" placeholder="请输入换物说明"></textarea>
+      </div>
+
+      <!-- 提交按钮 -->
+      <button class="confirm-offer-btn" @click="submitSwap">提交换物</button>
+      
+      <!-- 关闭按钮 -->
+      <button class="close-btn" @click="showSwapModal = false">×</button>
     </div>
   </div>
 
@@ -236,7 +301,7 @@
               <v-btn color="orange" text-color="white" class="flex-grow-1 mr-2" small>
                 加入购物车
               </v-btn>
-              <v-btn color="red" text-color="white" class="flex-grow-1" small>
+              <v-btn color="red" text-color="white" class="flex-grow-1" small  @click="navigateToConfirmOrder">
                 购买
               </v-btn>
             </div>
@@ -249,10 +314,40 @@
 
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
-const router = useRouter();
+import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 
+const router = useRouter();
+const route = useRoute();
+
+
+// 获取商品ID（从路由参数）
+const productId = ref(route.params.id || 0);
+
+// 导航到确认订单页面
+const navigateToConfirmOrder = () => {
+  if (!selectedColor.value) {
+    alert('请先选择商品型号');
+    return;
+  }
+  
+  // 传递商品信息到确认订单页面
+  router.push({
+    name: 'confirmorderview',
+    query: {
+      productId: productId.value,
+      productName: productName.value,
+      productPrice: productPrice.value,
+      selectedColor: selectedColor.value,
+      productImage: imgList.value[0],
+      quantity: 1
+    }
+  });
+};
+// 点击消息图标时的跳转方法
+const goToMessage = () => {
+  router.push({ name: 'message' })
+}
 // 使用 ref 创建响应式数据
 const imgList = ref([
   '/images/n1.jpg',
@@ -302,12 +397,14 @@ const productParams = ref([
 
 
 
-// 修改议价相关状态
+// 议价相关状态
 const showNegotiateModal = ref(false);
 const sellerPrice = ref(0);
 const userOffer = ref('');
 
-// 提交议价
+// 议价留言状态
+const userReason = ref('');
+// 修改提交议价方法（包含留言信息）
 const submitOffer = () => {
   if (!selectedColor.value) {
     alert('请先选择商品型号');
@@ -317,10 +414,70 @@ const submitOffer = () => {
     alert('请输入有效的出价金额');
     return;
   }
-  // 这里可以添加实际的提交逻辑
-  alert(`您的出价 ¥${userOffer.value} 已提交，请等待卖家回复`);
+
+  // 构造包含留言的提示信息
+  const reasonText = userReason.value ? `\n出价理由：${userReason.value}` : '';
+  alert(`您的出价 ¥${userOffer.value} 已提交，请等待卖家回复${reasonText}`);
+  
+  // 清空状态
+  userOffer.value = '';
+  userReason.value = '';
   showNegotiateModal.value = false;
 };
+
+// 换物相关状态
+const showSwapModal = ref(false);  // 控制换物弹窗显示
+const selectedSwapGoods = ref(null);  // 记录选择的换物商品
+const swapReason = ref('');  // 换物说明
+
+// 模拟用户自己发布的未售出商品数据（实际应从接口获取）
+const userGoods = ref([
+  {
+    id: 1,
+    name: '闲置相机',
+    price: 800,
+    status: 'unsold'
+  },
+  {
+    id: 2,
+    name: '二手书籍',
+    price: 150,
+    status: 'unsold'
+  },
+  {
+    id: 3,
+    name: '运动背包',
+    price: 200,
+    status: 'unsold'
+  }
+]);
+
+// 换物提交方法
+const submitSwap = () => {
+  if (!selectedColor.value) {
+    alert('请先选择目标商品型号');
+    return;
+  }
+  if (!selectedSwapGoods.value) {
+    alert('请选择您要交换的商品');
+    return;
+  }
+
+  // 构造提示信息
+  const reasonText = swapReason.value ? `\n换物说明：${swapReason.value}` : '';
+  alert(`已提交换物请求：用【${selectedSwapGoods.value.name}】交换【${productName.value}】${reasonText}`);
+  
+  // 清空状态
+  selectedSwapGoods.value = null;
+  swapReason.value = '';
+  showSwapModal.value = false;
+};
+
+
+// 跳转到商品发布页面方法
+const navigateToRelease = () => {
+  router.push({ name: 'goodsreleaseview' })
+}
 
 // 模拟评价数据
 const reviews = ref([
@@ -625,6 +782,33 @@ onUnmounted(() => {
   border: none;
   cursor: pointer;
   color: #999;
+}
+
+.reason-section {
+  margin-bottom: 20px;
+}
+
+.reason-input {
+  width: 100%;
+  height: 80px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+  resize: vertical; /* 允许垂直调整大小 */
+  margin-bottom: 10px;
+}
+
+.no-goods-tip {
+  text-align: center;
+  color: #666;
+  font-size: 16px;
+  padding: 20px 0;
+}
+
+.no-goods-tip .v-btn {
+  margin-left: 8px;
+  vertical-align: middle;
 }
 
 /* 顶部导航栏 */
