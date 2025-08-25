@@ -9,6 +9,9 @@ import OrderView from '@/views/order.vue'
 import GoodsDetails from '@/views/GoodsDetails.vue'
 import ConfirmOrderView from '@/views/ConfirmOrderView.vue'
 import GoodsReleaseView from '@/views/GoodsReleaseView.vue'
+import AdminModeratorView from '@/views/AdminModeratorView.vue'
+import SystemAuditView from '@/views/SystemAuditView.vue'
+import AdminDashboardView from '@/views/AdminDashboardView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -66,6 +69,24 @@ const router = createRouter({
     name: 'goodsDetails',
     component: GoodsDetails,
     props: true  // 允许将路由参数作为props传递
+    },
+    {
+      path: '/admin',
+      name: 'adminDashboard', 
+      component: AdminDashboardView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/admin/moderator',
+      name: 'adminModerator',
+      component: AdminModeratorView,
+      meta: { requiresAuth: true, requiresRole: 'moderator' }
+    },
+    {
+      path: '/admin/system-audit',
+      name: 'systemAudit',
+      component: SystemAuditView,
+      meta: { requiresAuth: true, requiresRole: 'system_admin' }
     }
   ],
    // 添加滚动行为配置
