@@ -6,6 +6,9 @@ import {
   type TokenResponse,
   type UserInfo,
   type ApiResponse,
+  type UserProfileResponse,
+  type UpdateUserProfileData,
+  type ChangePasswordData,
 } from '@/services/api'
 
 export interface User {
@@ -16,7 +19,22 @@ export interface User {
   phone?: string
   studentId?: string
   creditScore?: number
-  emailVerified?: boolean // 新增字段
+  emailVerified?: boolean
+  isActive?: boolean
+  createdAt?: string
+  lastLoginAt?: string
+  lastLoginIp?: string
+  loginCount?: number
+  student?: {
+    studentId: string
+    name: string
+    department: string
+  }
+  virtualAccount?: {
+    accountId: number
+    balance: number
+    createdAt: string
+  }
 }
 
 export const useUserStore = defineStore('user', () => {
@@ -62,7 +80,7 @@ export const useUserStore = defineStore('user', () => {
           email: tokenData.email,
           studentId: tokenData.student_id,
           creditScore: tokenData.credit_score,
-          emailVerified: tokenData.email_verified || false // 新增字段，默认为 false
+          emailVerified: tokenData.email_verified || false, // 新增字段，默认为 false
         }
 
         isLoggedIn.value = true
@@ -200,7 +218,7 @@ export const useUserStore = defineStore('user', () => {
           phone: userData.phone,
           studentId: userData.studentId,
           creditScore: userData.creditScore,
-          emailVerified: userData.emailVerified || false // 新增字段
+          emailVerified: userData.emailVerified || false, // 新增字段
         }
         localStorage.setItem('user', JSON.stringify(user.value))
 
@@ -223,127 +241,250 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  const sendVerificationCode = async (email: string): Promise<{ success: boolean; message: string }> => {
-  try {
-    if (!user.value?.userId) {
-      return { success: false, message: '用户未登录' }
-    }
-
-    const response = await authApi.sendVerificationCode(user.value.userId, email)
-
-    if (response.success) {
-      return { success: true, message: response.message || '验证码发送成功' }
-    }
-
-    return { success: false, message: response.message || '发送验证码失败' }
-  } catch (error: unknown) {
-    console.error('发送验证码失败:', error)
-    let message = '发送验证码失败，请重试'
-
-    if (error && typeof error === 'object' && 'response' in error) {
-      const err = error as { response?: { data?: { message?: string } } }
-      if (err.response?.data?.message) {
-        message = err.response.data.message
+  const sendVerificationCode = async (
+    email: string
+  ): Promise<{ success: boolean; message: string }> => {
+    try {
+      if (!user.value?.userId) {
+        return { success: false, message: '用户未登录' }
       }
-    }
 
-    return { success: false, message }
+      const response = await authApi.sendVerificationCode(user.value.userId, email)
+
+      if (response.success) {
+        return { success: true, message: response.message || '验证码发送成功' }
+      }
+
+      return { success: false, message: response.message || '发送验证码失败' }
+    } catch (error: unknown) {
+      console.error('发送验证码失败:', error)
+      let message = '发送验证码失败，请重试'
+
+      if (error && typeof error === 'object' && 'response' in error) {
+        const err = error as { response?: { data?: { message?: string } } }
+        if (err.response?.data?.message) {
+          message = err.response.data.message
+        }
+      }
+
+      return { success: false, message }
+    }
   }
-}
 
-// 验证邮箱验证码
-const verifyCode = async (code: string): Promise<{ success: boolean; message: string }> => {
-  try {
-    if (!user.value?.userId) {
-      return { success: false, message: '用户未登录' }
+  // 验证邮箱验证码
+  const verifyCode = async (code: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      if (!user.value?.userId) {
+        return { success: false, message: '用户未登录' }
+      }
+
+      const response = await authApi.verifyCode(user.value.userId, code)
+
+      if (response.success) {
+        // 更新本地用户信息的邮箱验证状态
+        if (user.value) {
+          user.value.emailVerified = true
+          localStorage.setItem('user', JSON.stringify(user.value))
+        }
+        return { success: true, message: response.message || '验证成功' }
+      }
+
+      return { success: false, message: response.message || '验证失败' }
+    } catch (error: unknown) {
+      console.error('验证码验证失败:', error)
+      let message = '验证失败，请重试'
+
+      if (error && typeof error === 'object' && 'response' in error) {
+        const err = error as { response?: { data?: { message?: string } } }
+        if (err.response?.data?.message) {
+          message = err.response.data.message
+        }
+      }
+
+      return { success: false, message }
     }
+  }
 
-    const response = await authApi.verifyCode(user.value.userId, code)
+  // 验证邮箱链接
+  const verifyEmailLink = async (token: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      const response = await authApi.verifyEmail(token)
 
-    if (response.success) {
-      // 更新本地用户信息的邮箱验证状态
-      if (user.value) {
-        user.value.emailVerified = true
+      if (response.success) {
+        // 更新本地用户信息的邮箱验证状态
+        if (user.value) {
+          user.value.emailVerified = true
+          localStorage.setItem('user', JSON.stringify(user.value))
+        }
+        return { success: true, message: response.message || '邮箱验证成功' }
+      }
+
+      return { success: false, message: response.message || '邮箱验证失败' }
+    } catch (error: unknown) {
+      console.error('邮箱验证失败:', error)
+      let message = '邮箱验证失败，请重试'
+
+      if (error && typeof error === 'object' && 'response' in error) {
+        const err = error as { response?: { data?: { message?: string } } }
+        if (err.response?.data?.message) {
+          message = err.response.data.message
+        }
+      }
+
+      return { success: false, message }
+    }
+  }
+
+  // 退出所有设备
+  const logoutAll = async (): Promise<{
+    success: boolean
+    message: string
+    revokedCount?: number
+  }> => {
+    try {
+      const response = await authApi.logoutAll()
+
+      if (response.success && response.data) {
+        // 清除本地状态（可选，根据需求决定是否立即退出当前会话）
+        return {
+          success: true,
+          message: response.message || '已退出所有设备',
+          revokedCount: response.data.revokedTokens,
+        }
+      }
+
+      return { success: false, message: response.message || '退出所有设备失败' }
+    } catch (error: unknown) {
+      console.error('退出所有设备失败:', error)
+      let message = '退出所有设备失败，请重试'
+
+      if (error && typeof error === 'object' && 'response' in error) {
+        const err = error as { response?: { data?: { message?: string } } }
+        if (err.response?.data?.message) {
+          message = err.response.data.message
+        }
+      }
+
+      return { success: false, message }
+    }
+  }
+
+  // 获取用户详细信息（包含虚拟账户等）
+  const getUserProfile = async () => {
+    try {
+      const response = await authApi.getUserProfile()
+
+      if (response.success && response.data) {
+        // 更新用户信息
+        user.value = {
+          userId: response.data.userId,
+          username: response.data.username,
+          email: response.data.email,
+          fullName: response.data.fullName,
+          phone: response.data.phone,
+          studentId: response.data.studentId,
+          creditScore: response.data.creditScore,
+          emailVerified: response.data.emailVerified,
+          isActive: response.data.isActive,
+          createdAt: response.data.createdAt,
+          lastLoginAt: response.data.lastLoginAt,
+          lastLoginIp: response.data.lastLoginIp,
+          loginCount: response.data.loginCount,
+          student: response.data.student,
+          virtualAccount: response.data.virtualAccount,
+        }
+
+        // 保存到本地存储
         localStorage.setItem('user', JSON.stringify(user.value))
+
+        return {
+          success: true,
+          message: response.message || '获取用户信息成功',
+          data: response.data,
+        }
       }
-      return { success: true, message: response.message || '验证成功' }
-    }
 
-    return { success: false, message: response.message || '验证失败' }
-  } catch (error: unknown) {
-    console.error('验证码验证失败:', error)
-    let message = '验证失败，请重试'
+      return { success: false, message: response.message || '获取用户信息失败' }
+    } catch (error: unknown) {
+      console.error('获取用户详细信息失败:', error)
+      let message = '获取用户信息失败'
 
-    if (error && typeof error === 'object' && 'response' in error) {
-      const err = error as { response?: { data?: { message?: string } } }
-      if (err.response?.data?.message) {
-        message = err.response.data.message
+      if (error && typeof error === 'object' && 'response' in error) {
+        const err = error as { response?: { data?: { message?: string } } }
+        if (err.response?.data?.message) {
+          message = err.response.data.message
+        }
       }
-    }
 
-    return { success: false, message }
+      return { success: false, message }
+    }
   }
-}
 
-// 验证邮箱链接
-const verifyEmailLink = async (token: string): Promise<{ success: boolean; message: string }> => {
-  try {
-    const response = await authApi.verifyEmail(token)
+  // 更新用户信息
+  const updateUserProfile = async (updateData: {
+    username?: string
+    fullName?: string
+    phone?: string
+  }) => {
+    try {
+      const response = await authApi.updateUserProfile(updateData)
 
-    if (response.success) {
-      // 更新本地用户信息的邮箱验证状态
-      if (user.value) {
-        user.value.emailVerified = true
-        localStorage.setItem('user', JSON.stringify(user.value))
+      if (response.success) {
+        // 更新本地用户信息
+        if (user.value) {
+          if (updateData.username) user.value.username = updateData.username
+          if (updateData.fullName) user.value.fullName = updateData.fullName
+          if (updateData.phone) user.value.phone = updateData.phone
+          localStorage.setItem('user', JSON.stringify(user.value))
+        }
+
+        return { success: true, message: response.message || '用户信息更新成功' }
       }
-      return { success: true, message: response.message || '邮箱验证成功' }
-    }
 
-    return { success: false, message: response.message || '邮箱验证失败' }
-  } catch (error: unknown) {
-    console.error('邮箱验证失败:', error)
-    let message = '邮箱验证失败，请重试'
+      return { success: false, message: response.message || '用户信息更新失败' }
+    } catch (error: unknown) {
+      console.error('更新用户信息失败:', error)
+      let message = '更新用户信息失败'
 
-    if (error && typeof error === 'object' && 'response' in error) {
-      const err = error as { response?: { data?: { message?: string } } }
-      if (err.response?.data?.message) {
-        message = err.response.data.message
+      if (error && typeof error === 'object' && 'response' in error) {
+        const err = error as { response?: { data?: { message?: string } } }
+        if (err.response?.data?.message) {
+          message = err.response.data.message
+        }
       }
-    }
 
-    return { success: false, message }
+      return { success: false, message }
+    }
   }
-}
 
-// 退出所有设备
-const logoutAll = async (): Promise<{ success: boolean; message: string; revokedCount?: number }> => {
-  try {
-    const response = await authApi.logoutAll()
+  // 修改密码
+  const changePassword = async (passwordData: {
+    currentPassword: string
+    newPassword: string
+    confirmPassword: string
+  }) => {
+    try {
+      const response = await authApi.changePassword(passwordData)
 
-    if (response.success && response.data) {
-      // 清除本地状态（可选，根据需求决定是否立即退出当前会话）
-      return { 
-        success: true, 
-        message: response.message || '已退出所有设备',
-        revokedCount: response.data.revokedTokens
+      if (response.success) {
+        return { success: true, message: response.message || '密码修改成功' }
       }
-    }
 
-    return { success: false, message: response.message || '退出所有设备失败' }
-  } catch (error: unknown) {
-    console.error('退出所有设备失败:', error)
-    let message = '退出所有设备失败，请重试'
+      return { success: false, message: response.message || '密码修改失败' }
+    } catch (error: unknown) {
+      console.error('修改密码失败:', error)
+      let message = '修改密码失败'
 
-    if (error && typeof error === 'object' && 'response' in error) {
-      const err = error as { response?: { data?: { message?: string } } }
-      if (err.response?.data?.message) {
-        message = err.response.data.message
+      if (error && typeof error === 'object' && 'response' in error) {
+        const err = error as { response?: { data?: { message?: string } } }
+        if (err.response?.data?.message) {
+          message = err.response.data.message
+        }
       }
-    }
 
-    return { success: false, message }
+      return { success: false, message }
+    }
   }
-}
 
   return {
     user,
@@ -356,9 +497,12 @@ const logoutAll = async (): Promise<{ success: boolean; message: string; revoked
     validateStudent,
     logout,
     fetchUserInfo,
-    sendVerificationCode,    
-    verifyCode,              
-    verifyEmailLink,         
-    logoutAll       
+    sendVerificationCode,
+    verifyCode,
+    verifyEmailLink,
+    logoutAll,
+    getUserProfile,
+    updateUserProfile,
+    changePassword,
   }
 })
