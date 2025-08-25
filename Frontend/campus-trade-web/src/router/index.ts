@@ -65,6 +65,11 @@ const router = createRouter({
       component: OrderView,
     },
     {
+      path: '/message',
+      name: 'message',
+      component: () => import('@/views/Message.vue'),
+    },
+    {
     path: '/goods/:id',  // 动态路由参数:商品ID
     name: 'goodsDetails',
     component: GoodsDetails,

@@ -6,8 +6,8 @@
       <v-btn icon color="indigo" @click="goToUserDetail" class="mx-2">
         <v-icon size="40">mdi-account-circle</v-icon>
       </v-btn>
-      <v-btn icon @click="goToCart" class="mx-2">
-        <v-icon size="40">mdi-cart</v-icon>
+      <v-btn icon @click="goToMessage" class="mx-2">
+        <v-icon size="40">mdi-view-list</v-icon>
       </v-btn>
 
       <v-btn class="me-2" color="black" height="40" variant="text" width="100" style="margin-left: 100px;" @click="goToLogin"
@@ -270,9 +270,9 @@ const userInfo = ref({
 // 模拟购物车商品数量
 const cartItemsCount = ref(3)
 
-// 点击购物车图标时的跳转方法(还需要根据实际路由调整)
-const goToCart = () => {
-  //router.push({ name: 'Cart' }) // 跳转到名为'Cart'的路由
+// 点击消息图标时的跳转方法
+const goToMessage = () => {
+  router.push({ name: 'message' })
 }
 
 //点击用户图标的跳转
