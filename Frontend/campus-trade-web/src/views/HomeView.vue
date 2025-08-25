@@ -24,14 +24,25 @@
         >
           我的订单
         </v-btn>
-         <v-btn
+
+      <v-btn
+        class="submit-btn-class mx-2"
+        size="large"
+        to="/goodsreleaseview"
+        variant="text"
+        height="40"
+      >
+         <img src="/images/ReleaseProduct.png" alt="发布商品" class="btn-icon" />
+        发布商品
+      </v-btn>
+               <v-btn
         class="mx-2"
         to="/datawatchingview"
         height="40"
         variant="text"
         style="min-width: 40px; padding: 0;"
       >
-        <v-img
+              <v-img
           src="/images/DataAnalyze.png"
           alt="数据看板"
           width="30"
@@ -395,4 +406,27 @@ const loading = ref(false)
   font-weight: bold;
 }
 
+/* 新增按钮图标样式 */
+.btn-icon {
+  width: 24px;
+  height: 24px;
+  margin-right: 8px;
+}
+
+/* 调整按钮样式以适配图标 */
+.submit-btn-class {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1976d2 !important; /* 使用与导航栏其他按钮相似的颜色 */
+  font-weight: 500 !important;
+  border-radius: 4px !important;
+  transition: all 0.2s ease !important;
+  padding: 0 16px !important;
+}
+
+/* 按钮悬停效果 */
+.submit-btn-class:hover {
+  background-color: rgba(25, 118, 210, 0.08) !important;
+}
 </style>

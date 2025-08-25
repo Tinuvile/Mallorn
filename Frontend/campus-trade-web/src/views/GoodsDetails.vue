@@ -109,7 +109,7 @@
             <v-btn color="orange" text-color="white" class="mr-3"  @click="showNegotiateModal = true"> 
               议价
             </v-btn>
-            <v-btn color="red" text-color="white">
+            <v-btn color="red" text-color="white"  @click="navigateToConfirmOrder">
               购买
             </v-btn>
           </div>
@@ -236,7 +236,7 @@
               <v-btn color="orange" text-color="white" class="flex-grow-1 mr-2" small>
                 加入购物车
               </v-btn>
-              <v-btn color="red" text-color="white" class="flex-grow-1" small>
+              <v-btn color="red" text-color="white" class="flex-grow-1" small  @click="navigateToConfirmOrder">
                 购买
               </v-btn>
             </div>
@@ -249,9 +249,35 @@
 
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+
 const router = useRouter();
+const route = useRoute();
+
+// 获取商品ID（从路由参数）
+const productId = ref(route.params.id || 0);
+
+// 导航到确认订单页面
+const navigateToConfirmOrder = () => {
+  if (!selectedColor.value) {
+    alert('请先选择商品型号');
+    return;
+  }
+  
+  // 传递商品信息到确认订单页面
+  router.push({
+    name: 'confirmorderview',
+    query: {
+      productId: productId.value,
+      productName: productName.value,
+      productPrice: productPrice.value,
+      selectedColor: selectedColor.value,
+      productImage: imgList.value[0],
+      quantity: 1
+    }
+  });
+};
 
 // 使用 ref 创建响应式数据
 const imgList = ref([

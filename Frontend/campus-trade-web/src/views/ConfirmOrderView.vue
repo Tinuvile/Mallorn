@@ -46,9 +46,15 @@
                   </span>
                 </v-card-title>
               <v-card-text class="py-6 px-6 flex-grow-1">
-                <p class="mb-3 text-body-1" style="font-weight: 450"><strong>收件人：</strong>{{ address.recipient }}</p>
-                <p class="mb-3 text-body-1" style="font-weight: 450"><strong>电话：</strong>{{ address.phone }}</p>
-                <p class="text-body-1" style="font-weight: 450"><strong>地址：</strong>{{ address.location }}</p>
+                <div v-if="!address.recipient" class="text-center text-grey py-8">
+                  <v-icon size="48" color="grey" class="mb-2">mdi-map-marker-off</v-icon>
+                  <p>请添加收货地址</p>
+                </div>
+                <div v-else>
+                  <p class="mb-3 text-body-1" style="font-weight: 450"><strong>收件人：</strong>{{ address.recipient }}</p>
+                  <p class="mb-3 text-body-1" style="font-weight: 450"><strong>电话：</strong>{{ address.phone }}</p>
+                  <p class="text-body-1" style="font-weight: 450"><strong>地址：</strong>{{ address.location }}</p>
+                </div>
               </v-card-text>
             </v-card>
           </v-col>
@@ -268,7 +274,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { useOrderStore } from '@/stores/order';
+import type { CreateOrderRequest, OrderAddressResponse } from '@/services/api';
+
+const route = useRoute();
+const router = useRouter();
+const orderStore = useOrderStore();
 
 // 地址类型定义
 interface Address {
@@ -287,63 +300,64 @@ interface OrderItem {
   imageUrl: string;
 }
 
-const currentBalance = ref(5000.00); // 示例余额
-const paymentConfirm = ref(false); // 支付确认对话框状态
-const insufficientBalance = ref(false);
+// 从路由参数获取商品信息
+const productFromRoute = computed(() => {
+  return {
+    id: Number(route.query.productId) || 0,
+    name: route.query.productName as string || '未知商品',
+    specification: route.query.selectedColor as string || '默认规格',
+    price: Number(route.query.productPrice) || 0,
+    quantity: Number(route.query.quantity) || 1,
+    imageUrl: route.query.productImage as string || ''
+  };
+});
 
-const confirmPayment = () => {
-  paymentConfirm.value = false;
-  // 再次检查余额（防止并发修改）
-  if (currentBalance.value >= finalPayment.value) {
-    setTimeout(() => {
-      currentBalance.value -= finalPayment.value;
-      orderSubmitted.value = true;
-    }, 500);
+// 订单项数据 - 根据路由参数动态生成
+const orderItems = ref<OrderItem[]>([]);
+
+// 初始化订单数据
+const initializeOrderData = () => {
+  if (productFromRoute.value.id) {
+    // 如果有商品信息，使用路由参数
+    orderItems.value = [productFromRoute.value];
   } else {
-    insufficientBalance.value = true;
+    // 如果没有商品信息，使用默认数据（用于直接访问页面时）
+    orderItems.value = [
+      {
+        id: 1,
+        name: '请选择商品',
+        specification: '默认规格',
+        price: 0,
+        quantity: 1,
+        imageUrl: ''
+      }
+    ];
   }
 };
 
-const deferPayment = () => {
-  paymentConfirm.value = false;
-  setTimeout(() => {
-    orderSubmitted.value = true; // 显示成功消息但不扣款
-  }, 500);
-};
+// 组件挂载时初始化数据
+onMounted(() => {
+  initializeOrderData();
+});
 
-// 收货地址数据
+// 监听路由变化
+watch(() => route.query, () => {
+  initializeOrderData();
+});
+
+// 收货地址数据 - 初始为空
 const address = ref<Address>({
-  recipient: '张三',
-  phone: '138****5678',
-  location: 'XX大学学生公寓3号楼502室'
+  recipient: '',
+  phone: '',
+  location: ''
 });
 
 // 临时地址数据（用于编辑）
 const tempAddress = ref<Address>({ ...address.value });
 
-// 订单项数据
-const orderItems = ref<OrderItem[]>([
-  {
-    id: 1,
-    name: '华硕笔记本电脑',
-    specification: 'i5-10210U/8GB/512GB SSD/14英寸',
-    price: 4999.00,
-    quantity: 1,
-    imageUrl: 'https://picsum.photos/seed/laptop/200/200'
-  },
-  {
-    id: 2,
-    name: '小米无线鼠标',
-    specification: '白色/无线2.4G',
-    price: 59.00,
-    quantity: 1,
-    imageUrl: 'https://picsum.photos/seed/mouse/200/200'
-  }
-]);
-
 // 费用相关数据
-const discountAmount = ref(100.00);
-const shippingFee = ref(0.00);
+const discountAmount = ref(0);
+const shippingFee = ref(0);
 
 // 计算总金额
 const totalAmount = computed(() => {
@@ -360,6 +374,9 @@ const finalPayment = computed(() => {
 // 对话框状态
 const editAddress = ref(false);
 const orderSubmitted = ref(false);
+const paymentConfirm = ref(false);
+const insufficientBalance = ref(false);
+const currentBalance = ref(5000.00);
 
 // 保存地址
 const saveAddress = () => {
@@ -367,11 +384,108 @@ const saveAddress = () => {
   editAddress.value = false;
 };
 
-const submitOrder = () => {
+const submitOrder = async () => {
+  // 检查地址是否填写完整
+  if (!address.value.recipient || !address.value.phone || !address.value.location) {
+    alert('请先完善收货地址信息');
+    editAddress.value = true;
+    return;
+  }
+  
   if (currentBalance.value >= finalPayment.value) {
-    paymentConfirm.value = true; // 余额足够，显示支付确认
+    paymentConfirm.value = true;
   } else {
-    insufficientBalance.value = true; // 余额不足，显示提示
+    insufficientBalance.value = true;
+  }
+};
+
+const confirmPayment = async () => {
+  paymentConfirm.value = false;
+  
+  try {
+    // 构建订单请求数据
+    const orderRequest: CreateOrderRequest = {
+      productId: orderItems.value[0].id,
+      productName: orderItems.value[0].name,
+      productImage: orderItems.value[0].imageUrl,
+      specification: orderItems.value[0].specification,
+      price: orderItems.value[0].price,
+      quantity: orderItems.value[0].quantity,
+      address: {
+        recipient: address.value.recipient,
+        phone: address.value.phone,
+        location: address.value.location
+      } as OrderAddressResponse,
+      totalAmount: totalAmount.value,
+      discountAmount: discountAmount.value,
+      shippingFee: shippingFee.value,
+      finalPayment: finalPayment.value
+    };
+
+    // 调用创建订单API
+    const result = await orderStore.createOrder(orderRequest);
+    
+    if (result.success) {
+      // 支付成功，扣除余额
+      currentBalance.value -= finalPayment.value;
+      
+      // 显示成功提示
+      orderSubmitted.value = true;
+      
+      // 3秒后跳转到订单页面
+      setTimeout(() => {
+        router.push('/order');
+      }, 3000);
+    } else {
+      alert(`创建订单失败: ${result.message}`);
+    }
+  } catch (error) {
+    console.error('创建订单错误:', error);
+    alert('创建订单失败，请重试');
+  }
+};
+
+
+const deferPayment = async () => {
+  paymentConfirm.value = false;
+  
+  try {
+    // 构建订单请求数据（不支付）
+    const orderRequest: CreateOrderRequest = {
+      productId: orderItems.value[0].id,
+      productName: orderItems.value[0].name,
+      productImage: orderItems.value[0].imageUrl,
+      specification: orderItems.value[0].specification,
+      price: orderItems.value[0].price,
+      quantity: orderItems.value[0].quantity,
+      address: {
+        recipient: address.value.recipient,
+        phone: address.value.phone,
+        location: address.value.location
+      } as OrderAddressResponse,
+      totalAmount: totalAmount.value,
+      discountAmount: discountAmount.value,
+      shippingFee: shippingFee.value,
+      finalPayment: finalPayment.value
+    };
+
+    // 调用创建订单API
+    const result = await orderStore.createOrder(orderRequest);
+    
+    if (result.success) {
+      // 显示成功提示
+      orderSubmitted.value = true;
+      
+      // 3秒后跳转到订单页面
+      setTimeout(() => {
+        router.push('/order');
+      }, 3000);
+    } else {
+      alert(`创建订单失败: ${result.message}`);
+    }
+  } catch (error) {
+    console.error('创建订单错误:', error);
+    alert('创建订单失败，请重试');
   }
 };
 
@@ -451,7 +565,6 @@ body, .v-application {
   align-items: center;
 }
 
-
 .title-bar .v-btn {
   min-width: 80px;
   height: 32px;
@@ -517,7 +630,6 @@ body, .v-application {
   box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
 }
 
-
 .confirm-btn {
   background-color: #cadefc !important;
   border-radius: 4px !important;
@@ -557,5 +669,24 @@ body, .v-application {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+/* 添加空状态样式 */
+.text-center.text-grey {
+  color: #9e9e9e;
+}
+
+/* 商品图片占位符 */
+.v-img {
+  background-color: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.v-img:before {
+  content: "🛒";
+  font-size: 24px;
+  color: #bdbdbd;
 }
 </style>

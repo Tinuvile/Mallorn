@@ -1,5 +1,6 @@
 <template>
   <div class="full-page">
+    <!-- 头部导航栏保持不变 -->
     <header class="navbar">
       <span class="icon">
         <svg width="48px" height="48px" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" color="#ffffff">
@@ -14,19 +15,20 @@
       <v-btn 
         class="logout-btn ml-auto"
         icon
-        to="/order"
+        to="/"
       >
         <v-icon color="black">mdi-exit-to-app</v-icon>
       </v-btn>
     </header>
-    <v-card flat class="full-height">
+    
+    <v-card flat class="content-card">
       <div class="title-container">
         <v-card-title class="product-title">发布商品</v-card-title>
       </div>
       
       <v-divider class="my-3 custom-divider"></v-divider>
 
-      <v-row class="ma-0 full-height">
+      <v-row class="ma-0 content-row">
         <!-- 左侧：图片上传区域 -->
         <v-col cols="12" md="4" class="pa-6">
           <h2 class="text-h6 mb-4">上传商品图片</h2>
@@ -35,18 +37,20 @@
               color="#cadefc"
               size="large"
               class="mb-4 mx-auto d-block select-image-btn"
-              @click="fileInput?.$el.click()"
+              @click="triggerFileInput"
+              :loading="uploading"
             >
               选择图片
             </v-btn>
-            <v-file-input
+            <!-- 修改文件输入部分 -->
+            <input
               ref="fileInput"
-              v-model="images"
+              type="file"
               multiple
               accept="image/*"
               style="display: none"
               @change="handleImageUpload"
-            ></v-file-input>
+            >
             <div class="image-grid-container rounded-lg">
               <div class="image-grid">
                 <div 
@@ -54,10 +58,7 @@
                   :key="index" 
                   class="image-item dashed-border"
                 >
-                  <div class="placeholder-content">
-                    <v-icon size="48" color="grey">mdi-image</v-icon>
-                    <div class="placeholder-text">图片 {{ index + 1 }}</div>
-                  </div>
+                  <img :src="preview" class="preview-image" alt="商品图片">
                   <v-btn
                     icon
                     small
@@ -88,92 +89,264 @@
         <v-col cols="12" md="8" class="pa-0">
           <div class="d-flex h-100">
             <v-divider vertical class="mr-4 custom-vertical-divider"></v-divider>
-            <div class="pa-6 flex-grow-1">
-              <h2 class="text-h6 mb-4">商品标题</h2>
+            <div class="pa-6 flex-grow-1 form-content">
+              <h2 class="text-subtitle-2 mb-2">商品标题</h2>
               <v-text-field
-                v-model="productTitle"
+                v-model="productData.title"
                 label="请输入商品名称"
                 variant="outlined"
                 required
+                density="compact"
+                :error-messages="fieldErrors.title"
                 class="right-input-border" 
               ></v-text-field>
 
-              <h2 class="text-h6 mb-4 mt-6">商品描述</h2>
+              <h2 class="text-subtitle-2 mb-2 mt-4">商品描述</h2>
               <v-textarea
-                v-model="productDescription"
+                v-model="productData.description"
                 label="商品描述"
                 variant="outlined"
-                rows="3"
+                rows="2"
+                density="compact"
                 placeholder="请详细描述商品信息，包括新旧程度、使用情况等"
                 required
+                :error-messages="fieldErrors.description"
                 class="right-input-border" 
               ></v-textarea>
 
-              <h2 class="text-h6 mb-4 mt-6">基础价格</h2>
+              <h2 class="text-subtitle-2 mb-2 mt-4">基础价格</h2>
               <v-text-field
-                v-model="price"
+                v-model="productData.price"
                 label="价格"
                 variant="outlined"
                 type="number"
+                density="compact"
                 prefix="¥"
                 required
+                :error-messages="fieldErrors.price"
                 class="right-input-border" 
               ></v-text-field>
 
-              <h2 class="text-h6 mb-4 mt-6">商品分类</h2>
+              <h2 class="text-subtitle-2 mb-2 mt-4">商品分类</h2>
               <v-select
-                v-model="category"
-                :items="categories"
+                v-model="productData.categoryId"
+                :items="categoryOptions"
+                item-title="name"
+                item-value="id"
                 label="商品分类"
                 variant="outlined"
+                density="compact"
                 placeholder="请选择分类"
                 required
+                :error-messages="fieldErrors.categoryId"
                 class="right-input-border" 
               ></v-select>
 
-              <v-card-actions class="px-0 mt-8">
+              <h2 class="text-subtitle-2 mb-2 mt-4">商品成色</h2>
+              <v-select
+                v-model="productData.condition"
+                :items="conditionOptions"
+                label="商品成色"
+                variant="outlined"
+                density="compact"
+                placeholder="请选择商品成色"
+                required
+                :error-messages="fieldErrors.condition"
+                class="right-input-border" 
+              ></v-select>
+
+              <h2 class="text-subtitle-2 mb-2 mt-4">库存数量</h2>
+              <v-text-field
+                v-model="productData.stock"
+                label="库存数量"
+                variant="outlined"
+                type="number"
+                density="compact"
+                required
+                :error-messages="fieldErrors.stock"
+                class="right-input-border" 
+              ></v-text-field>
+
+              <!-- 联系方式部分已移除，使用用户信息中的联系方式 -->
+
+              <h2 class="text-subtitle-2 mb-2 mt-4">所在位置</h2>
+              <v-text-field
+                v-model="productData.location"
+                label="所在位置"
+                variant="outlined"
+                density="compact"
+                placeholder="请输入商品所在位置（如：XX校区XX宿舍）"
+                :error-messages="fieldErrors.location"
+                class="right-input-border" 
+              ></v-text-field>
+
+              <v-card-actions class="px-0 mt-6">
                 <v-spacer></v-spacer>
-                <v-btn color="primary" size="large" @click="submitProduct" class="submit-btn-class">发布商品</v-btn>
+                <v-btn 
+                  color="primary" 
+                  size="large" 
+                  @click="submitProduct" 
+                  :loading="submitting"
+                  class="submit-btn-class"
+                >
+                  发布商品
+                </v-btn>
               </v-card-actions>
             </div>
           </div>
         </v-col>
       </v-row>
     </v-card>
+
+    <!-- 成功提示对话框 -->
+    <v-dialog v-model="successDialog" max-width="400">
+      <v-card>
+        <v-card-title class="text-h5">发布成功</v-card-title>
+        <v-card-text>商品已成功发布！</v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="primary" @click="successDialog = false">确定</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import type { VFileInput } from 'vuetify/components';
+import { ref, reactive, onMounted, computed, watch } from 'vue';
+import { useProductStore } from '@/stores/product';
+import { useUserStore } from '@/stores/user';
+import { useRouter } from 'vue-router';
+import { type CreateProductRequest } from '@/services/api';
+
+const productStore = useProductStore();
+const userStore = useUserStore();
+const router = useRouter();
 
 // 图片上传相关
 const images = ref<File[]>([]);
 const imagePreviews = ref<string[]>([]);
-const fileInput = ref<InstanceType<typeof VFileInput>>();
+const fileInput = ref<HTMLInputElement>();
+const uploading = ref(false);
 
-// 商品信息
-const productTitle = ref('');
-const productDescription = ref('');
-const price = ref<number | null>(null);
-const category = ref('');
+// 商品表单数据 - 添加 contactMethod 属性
+const productData = reactive<CreateProductRequest>({
+  title: '',
+  description: '',
+  price: 0,
+  categoryId: 0,
+  condition: '',
+  stock: 1,
+  location: '',
+  tags: [],
+  specifications: [],
+  contactMethod: '' // 添加缺失的属性
+});
 
-// 商品分类选项
-const categories = ref([
-  '电子产品',
-  '书籍资料',
-  '服装配饰',
-  '生活用品',
-  '体育用品',
-  '其他'
+// 表单错误信息
+const fieldErrors = reactive({
+  title: '',
+  description: '',
+  price: '',
+  categoryId: '',
+  condition: '',
+  stock: '',
+  location: '',
+  contactMethod: ''
+});
+
+// 分类选项
+const categoryOptions = ref<{ id: number; name: string }[]>([]);
+const conditionOptions = ref([
+  { value: '全新', text: '全新' },
+  { value: '几乎全新', text: '几乎全新' },
+  { value: '轻微使用', text: '轻微使用' },
+  { value: '明显使用', text: '明显使用' },
+  { value: '需要维修', text: '需要维修' }
 ]);
 
+// 提交状态
+const submitting = ref(false);
+const successDialog = ref(false);
+
+// 计算用户是否有联系方式
+const hasContactInfo = computed(() => {
+  return !!(userStore.user?.phone || userStore.user?.email);
+});
+
+// 根据用户联系方式自动设置 contactMethod
+const setContactMethodFromUser = () => {
+  if (!userStore.user) return;
+  
+  const { phone, email } = userStore.user;
+  
+  if (phone && email) {
+    productData.contactMethod = 'both';
+  } else if (phone) {
+    productData.contactMethod = 'phone';
+  } else if (email) {
+    productData.contactMethod = 'email';
+  } else {
+    productData.contactMethod = '';
+  }
+};
+
+// 加载分类数据
+onMounted(async () => {
+  await loadCategories();
+  // 确保用户信息已加载
+  if (userStore.isLoggedIn && !userStore.user?.phone && !userStore.user?.email) {
+    await userStore.fetchUserInfo(userStore.user?.username || '');
+  }
+  
+  // 设置默认联系方式
+  setContactMethodFromUser();
+});
+
+// 监听用户信息变化，自动更新联系方式
+watch(() => userStore.user, setContactMethodFromUser, { deep: true });
+
+// 加载分类列表
+const loadCategories = async () => {
+  try {
+    const response = await productStore.getCategoryTree(true);
+    if (response.success && response.data) {
+      // 将分类树扁平化为选项列表
+      const flattenCategories = (categories: any[]): any[] => {
+        let result: any[] = [];
+        categories.forEach(category => {
+          result.push({
+            id: category.id,
+            name: category.name
+          });
+          if (category.children && category.children.length > 0) {
+            result = result.concat(flattenCategories(category.children));
+          }
+        });
+        return result;
+      };
+      
+      categoryOptions.value = flattenCategories(response.data);
+    }
+  } catch (error) {
+    console.error('加载分类失败:', error);
+  }
+};
+
+// 触发文件选择
+const triggerFileInput = () => {
+  fileInput.value?.click();
+};
+
 // 处理图片上传
-const handleImageUpload = (files: File[]) => {
-  imagePreviews.value = [];
-  if (files) {
+const handleImageUpload = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const files = target.files;
+  
+  if (files && files.length > 0) {
     // 限制最多上传4张图片
-    const filesToUpload = files.slice(0, 4);
+    const filesToUpload = Array.from(files).slice(0, 4);
+    
     filesToUpload.forEach(file => {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -184,6 +357,9 @@ const handleImageUpload = (files: File[]) => {
       reader.readAsDataURL(file);
     });
     images.value = filesToUpload;
+    
+    // 重置input，允许再次选择相同文件
+    target.value = '';
   }
 };
 
@@ -193,51 +369,206 @@ const removeImage = (index: number) => {
   images.value.splice(index, 1);
 };
 
-// 提交商品
-const submitProduct = () => {
-  if (!productTitle.value || !productDescription.value || price.value === null || !category.value) {
-    alert('请填写完整商品信息');
-    return;
+// 验证表单
+const validateForm = (): boolean => {
+  let isValid = true;
+  
+  // 重置错误信息
+  Object.keys(fieldErrors).forEach(key => {
+    fieldErrors[key as keyof typeof fieldErrors] = '';
+  });
+
+  if (!productData.title.trim()) {
+    fieldErrors.title = '请输入商品标题';
+    isValid = false;
+  }
+
+  if (!productData.description.trim()) {
+    fieldErrors.description = '请输入商品描述';
+    isValid = false;
+  }
+
+  if (!productData.price || productData.price <= 0) {
+    fieldErrors.price = '请输入有效的价格';
+    isValid = false;
+  }
+
+  if (!productData.categoryId) {
+    fieldErrors.categoryId = '请选择商品分类';
+    isValid = false;
+  }
+
+  if (!productData.condition) {
+    fieldErrors.condition = '请选择商品成色';
+    isValid = false;
+  }
+
+  if (!productData.stock || productData.stock <= 0) {
+    fieldErrors.stock = '请输入有效的库存数量';
+    isValid = false;
+  }
+
+  if (!productData.contactMethod) {
+    fieldErrors.contactMethod = '请确保您已设置联系方式';
+    isValid = false;
   }
 
   if (imagePreviews.value.length === 0) {
-    alert('请至少上传一张商品图片');
+    // 这里可以添加图片错误提示
+    isValid = false;
+  }
+
+  return isValid;
+};
+
+// 上传图片到服务器
+const uploadImages = async (): Promise<number[]> => {
+  // 这里需要实现图片上传逻辑
+  // 根据你的后端API，可能需要调用文件上传接口
+  // 返回上传成功的图片ID数组
+  console.log('需要实现图片上传逻辑');
+  return [1, 2, 3]; // 模拟返回的图片ID
+};
+
+// 提交商品
+const submitProduct = async () => {
+  if (!validateForm()) {
     return;
   }
 
-  const productData = {
-    title: productTitle.value,
-    description: productDescription.value,
-    price: price.value,
-    category: category.value,
-    images: images.value
-  };
+  submitting.value = true;
 
-  console.log('提交的商品数据:', productData);
-  alert('商品发布成功!');
+  try {
+    // 先上传图片（这里需要根据你的实际API实现）
+    const imageIds = await uploadImages();
+    
+    // 准备商品数据
+    const productRequest: CreateProductRequest = {
+      ...productData,
+      // 这里可以根据需要添加其他字段
+    };
+
+    // 调用Store方法创建商品
+    const response = await productStore.createProduct(productRequest);
+    
+    if (response.success) {
+      successDialog.value = true;
+      // 可以跳转到商品详情页或用户商品列表
+      setTimeout(() => {
+        router.push('/my-products');
+      }, 2000);
+    } else {
+      // 处理错误信息
+      console.error('发布失败:', response.message);
+    }
+  } catch (error) {
+    console.error('发布商品失败:', error);
+  } finally {
+    submitting.value = false;
+  }
 };
 </script>
 
 <style scoped>
-/* 全局字体设置 */
+/* 重置全局样式 */
 body, .v-application {
   font-family: "Microsoft YaHei", "微软雅黑", sans-serif !important;
+  margin: 0;
+  padding: 0;
+  overflow: auto !important; /* 允许全局滚动 */
 }
 
 /* 导航栏样式 */
 .navbar {
-  position: relative; 
-  width: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
   height: 60px;
-  margin:  0;
   padding: 0 16px;
-  background-color:#cadefc;
+  background-color: #cadefc;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  z-index: 1000; 
+  z-index: 1000;
   display: flex;
   align-items: center;
-  justify-content:flex-start;
-  font-family: "Microsoft YaHei", "微软雅黑", sans-serif;
+  justify-content: flex-start;
+}
+
+/* 主要内容容器 */
+.full-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #f5f5f5;
+}
+
+.content-wrapper {
+  flex: 1;
+  margin-top: 60px; /* 导航栏高度 */
+  overflow: visible; /* 允许内容溢出 */
+}
+
+.content-card {
+  min-height: calc(100vh - 60px);
+  border-radius: 0 !important;
+  margin-top: 60px;
+}
+
+/* 内容行 */
+.content-row {
+  min-height: calc(100vh - 140px);
+}
+
+/* 列样式 */
+.v-col {
+  overflow: visible; /* 允许内容溢出 */
+}
+
+.image-col {
+  max-height: none;
+}
+
+.form-col {
+  max-height: none;
+  overflow: visible;
+}
+
+/* 表单内容区域 */
+.form-content {
+  padding-bottom: 32px;
+}
+
+/* 图片上传区域 */
+.image-upload-card {
+  height: auto;
+  min-height: 400px;
+  background-color: #f0f2f6 !important;
+  border: 1px solid #cadefc !important;
+}
+
+/* 图片网格容器 */
+.image-grid-container {
+  height: 400px;
+  overflow: visible; /* 允许图片区域内容正常显示 */
+}
+
+/* 发布商品标题容器 */
+.title-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 60px;
+  padding-top: 16px;
+}
+
+/* 发布商品标题样式 */
+.product-title {
+  font-size: 1.8rem !important;
+  font-weight: 500;
+  width: 100%;
+  text-align: center;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 /* 图标和标题 */
@@ -251,25 +582,6 @@ body, .v-application {
   font-weight: bold;
   margin-left: 16px;
   color: white !important;
-  font-family: "Microsoft YaHei", "微软雅黑", sans-serif;
-}
-
-/* 发布商品标题容器 */
-.title-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 60px;
-}
-
-/* 发布商品标题样式 */
-.product-title {
-  font-size: 1.8rem !important;
-  font-weight: 500;
-  width: 100%;
-  text-align: center;
-  padding: 0 !important;
-  margin: 0 !important;
 }
 
 .select-image-btn {
@@ -285,13 +597,14 @@ body, .v-application {
   border-style: solid !important;
 }
 
-.submit-btn-class{
+.submit-btn-class {
   background-color: #cadefc !important;
   color: white !important;
   font-weight: bold !important;
   border-radius: 8px !important;
   box-shadow: 0 3px 5px rgba(76, 175, 80, 0.3) !important;
   transition: all 0.2s ease !important;
+  margin-bottom: 20px;
 }
 
 /* 分割线样式 */
@@ -309,38 +622,8 @@ body, .v-application {
   border-color: #1f1b1b !important;
   border-width: 1px !important;
   margin-right: 16px !important;
-  height: 100% !important;
+  height: auto !important;
   align-self: stretch !important;
-}
-
-/* 页面布局样式 */
-.full-page {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  overflow: auto;
-  background-color: #f5f5f5;
-}
-
-.full-height {
-  height: 100%;
-}
-
-.v-card {
-  height: 100%;
-  border-radius: 0 !important;
-}
-
-.v-col {
-  overflow-y: auto;
-}
-
-/* 移除所有默认边距 */
-body {
-  margin: 0;
-  padding: 0;
 }
 
 /* 右侧输入框统一边框样式 */
@@ -366,17 +649,13 @@ body {
   border-color: rgba(0, 0, 0, 0.12) !important;
 }
 
-/* 新增的图片网格样式 */
-.image-grid-container {
-  height: 400px;
-}
-
+/* 图片网格 */
 .image-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   grid-template-rows: repeat(2, 1fr);
-  gap: 12px; /* 增加网格项之间的间距 */
-  background-color: transparent; /* 移除背景色 */
+  gap: 12px;
+  background-color: transparent;
 }
 
 .image-item {
@@ -386,25 +665,20 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+}
+
+/* 预览图片样式 */
+.preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 /* 虚线边框样式 */
 .dashed-border {
   border: 2px dashed #c4c4c4;
   border-radius: 4px;
-}
-
-.placeholder-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.placeholder-text {
-  margin-top: 8px;
-  font-size: 0.8rem;
-  color: #757575;
 }
 
 .empty {
@@ -418,10 +692,92 @@ body {
   z-index: 2;
 }
 
-.image-upload-card {
-  height: auto !important; /* 覆盖原有的固定高度 */
-  min-height: 400px; /* 设置最小高度以确保良好的视觉效果 */
-  background-color: #f0f2f6 !important; 
-    border: 1px solid #cadefc !important; 
+/* 用户联系方式样式 */
+.user-contact-info {
+  background-color: #f5f5f5;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.contact-details div {
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.contact-details div:last-child {
+  margin-bottom: 0;
+}
+
+/* 响应式设计 */
+@media (max-width: 960px) {
+  .content-wrapper {
+    margin-top: 60px;
+  }
+  
+  .content-card {
+    min-height: calc(100vh - 60px);
+  }
+  
+  .form-content {
+    padding-bottom: 24px;
+  }
+  
+  .custom-vertical-divider {
+    display: none;
+  }
+  
+  .pa-6 {
+    padding: 16px !important;
+  }
+}
+
+/* 移动端优化 */
+@media (max-width: 600px) {
+  .title {
+    font-size: 24px;
+  }
+  
+  .product-title {
+    font-size: 1.5rem !important;
+  }
+  
+  .image-grid-container {
+    height: 300px;
+  }
+  
+  .submit-btn-class {
+    width: 100%;
+    margin-bottom: 16px;
+  }
+  
+  .content-row {
+    min-height: auto;
+  }
+}
+
+/* 确保Vuetify组件可以正常滚动 */
+:deep(.v-card__body) {
+  overflow: visible !important;
+}
+
+:deep(.v-col) {
+  overflow: visible !important;
+}
+
+:deep(.v-row) {
+  overflow: visible !important;
+}
+
+/* 右侧标题样式调整 */
+.text-subtitle-2 {
+  font-size: 0.875rem !important;
+  font-weight: 500;
+}
+
+/* 右侧输入框间距调整 */
+:deep(.v-input) {
+  margin-top: 0;
 }
 </style>

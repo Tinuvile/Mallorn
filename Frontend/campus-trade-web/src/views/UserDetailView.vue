@@ -1,590 +1,811 @@
 <template>
   <v-app>
-    <div class="profile-container">
-      <!-- Navigation Bar -->
-      <header class="navbar">
-        <span class="icon">
-          <svg width="24px" height="24px" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" color="#000000">
-            <circle cx="12" cy="12" r="10" stroke="#000000" stroke-width="1.5"></circle>
-            <path d="M7.63262 3.06689C8.98567 3.35733 9.99999 4.56025 9.99999 6.00007C9.99999 7.65693 8.65685 9.00007 6.99999 9.00007C5.4512 9.00007 4.17653 7.82641 4.01685 6.31997" stroke="#000000" stroke-width="1.5"></path>
-            <path d="M22 13.0505C21.3647 12.4022 20.4793 12 19.5 12C17.567 12 16 13.567 16 15.5C16 17.2632 17.3039 18.7219 19 18.9646" stroke="#000000" stroke-width="1.5"></path>
-            <path d="M14.5 8.51L14.51 8.49889" stroke="#000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
-            <path d="M10 17C11.1046 17 12 16.1046 12 15C12 13.8954 11.1046 13 10 13C8.89543 13 8 13.8954 8 15C8 16.1046 8.89543 17 10 17Z" stroke="#000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
-          </svg>
-        </span>
-        <span class="title">Campus Secondhand</span>
-      </header>
-
-      <!-- 退出按钮 -->
+    <header class="navbar">
+      <span class="icon">
+        <svg width="48px" height="48px" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" color="#ffffff">
+          <circle cx="12" cy="12" r="10" stroke="#ffffff" stroke-width="1.5"></circle>
+          <path d="M7.63262 3.06689C8.98567 3.35733 9.99999 4.56025 9.99999 6.00007C9.99999 7.65693 8.65685 9.00007 6.99999 9.00007C5.4512 9.00007 4.17653 7.82641 4.01685 6.31997" stroke="#ffffff" stroke-width="1.5"></path>
+          <path d="M22 13.0505C21.364 12.4022 20.4793 12 19.5 12C17.567 12 16 13.567 16 15.5C16 17.2632 17.3039 18.7219 19 18.9646" stroke="#ffffff" stroke-width="1.5" ></path>
+          <path d="M14.5 8.51L14.51 8.49889" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M10 17C11.1046 17 12 16.1046 12 15C12 13.8954 11.1046 13 10 13C8.89543 13 8 13.8954 8 15C8 16.1046 8.89543 17 10 17Z" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </span>
+      <span class="title">Campus Secondhand</span>
+      <!-- 新增退出按钮 -->
       <v-btn 
-        fab
+        class="logout-btn ml-auto"
+        icon
         to="/"
-        class="logout-btn"
-        color="white"
-        size="56"
       >
-        <v-icon size="32" color="red-darken-1">mdi-logout-variant</v-icon>
+        <v-icon color="black">mdi-exit-to-app</v-icon>
       </v-btn>
+    </header>
+    <v-main class="grey lighten-4">
+      <div class="pc-user-detail">
+        <v-container class="px-4" style="max-width: 1600px">
+          <div class="user-info-header">
+            <h1 class="text-h4 font-weight-bold text-center primary--text mb-2">个人信息中心</h1>
+            <v-divider thickness="4" color="#ffa5a5" class="mb-6"></v-divider>
+          </div>
+          <!-- 加载状态 -->
+          <v-row v-if="isLoading" justify="center" align="center" class="fill-height" style="height: 70vh">
+            <v-col cols="12" class="text-center">
+              <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
+              <p class="mt-4 grey--text">加载用户信息中...</p>
+            </v-col>
+          </v-row>
 
-      <!-- 加载状态 -->
-      <v-overlay
-        :model-value="isLoading"
-        class="align-center justify-center"
-      >
-        <v-progress-circular
-          color="primary"
-          indeterminate
-          size="64"
-        ></v-progress-circular>
-      </v-overlay>
+          <!-- 错误状态 -->
+          <v-row v-else-if="virtualAccountStore.error" justify="center" align="center" class="fill-height" style="height: 70vh">
+            <v-col cols="12" md="6" class="text-center">
+              <v-icon color="error" size="64" class="mb-4">mdi-alert-circle</v-icon>
+              <p class="error--text mb-4 text-h6">{{ virtualAccountStore.error }}</p>
+              <v-btn @click="retryLoading" color="primary" large>
+                重试
+              </v-btn>
+            </v-col>
+          </v-row>
 
-      <!-- 主内容区 -->
-      <template v-if="!isLoading">
-        <!-- 背景装饰图 -->
-        <div class="decorative-bg">
-          <img src="/images/UserBack1.png" class="top-image" alt="Decorative image">
-          <img src="/images/UserBack2.png" class="bottom-image" alt="Decorative image">
-        </div>
-        
-        <!-- 用户信息卡片 -->
-        <v-container class="content-wrapper py-2">
-          <v-row class="row-wrapper">
-            <v-col cols="12" md="8" lg="6" class="col-wrapper">
-              <v-card class="user-profile-card" elevation="12">
-                <v-card-title class="text-center pt-6">
-                  <v-avatar size="120" color="indigo-lighten-4" class="profile-avatar">
-                    <v-icon size="64" color="indigo-darken-3">mdi-account-circle</v-icon>
-                  </v-avatar>
-                </v-card-title>
-                
-                <v-card-text class="text-center px-6 pb-0">
-                  <div class="user-info-column">
-                    <p class="text-h4 font-weight-bold mb-6">个人信息</p>
-                    <v-divider class="my-4"></v-divider>
-                    
-                    <!-- 未登录提示 -->
-                    <div v-if="!userStore.user" class="text-center py-8">
-                      <v-icon size="64" color="grey-lighten-1" class="mb-4">mdi-account-off</v-icon>
-                      <h3 class="text-h5 mb-4">未登录</h3>
-                      <p class="text-body-1 mb-6">请登录后查看个人信息</p>
-                      <v-btn 
-                        color="primary" 
-                        to="/login"
-                        size="large"
-                      >
-                        <v-icon start>mdi-login</v-icon>
-                        前往登录
-                      </v-btn>
-                    </div>
-
-                    <!-- 已登录显示用户信息 -->
-                    <template v-else>
-                      <v-list lines="two" density="comfortable" class="text-left">
-                        <v-list-item prepend-icon="mdi-account" title="用户名">
-                          <template v-slot:append>
-                            <span class="text-body-1">{{ userStore.user.username }}</span>
-                          </template>
-                        </v-list-item>
-                        
-                        <v-list-item prepend-icon="mdi-identifier" title="用户ID">
-                          <template v-slot:append>
-                            <span class="text-body-1">{{ userStore.user.userId }}</span>
-                          </template>
-                        </v-list-item>
-                        
-                        <v-list-item prepend-icon="mdi-card-account-details" title="学号">
-                          <template v-slot:append>
-                            <span class="text-body-1">{{ userStore.user.studentId || '未填写' }}</span>
-                          </template>
-                        </v-list-item>
-                        
-                        <v-list-item prepend-icon="mdi-email" title="邮箱">
-                          <template v-slot:append>
-                            <span class="text-body-1">{{ userStore.user.email }}</span>
-                            <v-chip 
-                              :color="userStore.user.emailVerified ? 'success' : 'warning'" 
-                              size="small" 
-                              class="ml-2"
-                            >
-                              {{ userStore.user.emailVerified ? '已认证' : '未认证' }}
-                            </v-chip>
-                          </template>
-                        </v-list-item>
-                        
-                        <v-list-item prepend-icon="mdi-phone" title="电话">
-                          <template v-slot:append>
-                            <span class="text-body-1">{{ userStore.user.phone || '未填写' }}</span>
-                          </template>
-                        </v-list-item>
-                      </v-list>
-                      
-                      <!-- 信用评分 -->
-                      <div class="credit-score-container mt-6" v-if="userStore.user.creditScore !== undefined">
-                        <div class="d-flex justify-center align-center">
-                          <v-progress-circular
-                            :model-value="userStore.user.creditScore"
-                            :color="creditScoreColor"
-                            :size="120"
-                            :width="12"
-                            class="mr-4"
-                          >
-                            <span class="text-h5 font-weight-bold">{{ userStore.user.creditScore }}</span>
-                          </v-progress-circular>
-                          
-                          <div class="text-left">
-                            <h3 class="text-h6 mb-2">信用评分</h3>
-                            <p class="text-caption text-medium-emphasis">
-                              {{ creditScoreRemark }}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </template>
+          <!-- 主内容区 -->
+          <v-row v-else class="mt-6" style="align-items: stretch;">
+            <!-- 左侧用户信息区 -->
+            <v-col cols="12" md="4" class="pr-md-4 d-flex">
+              <v-card class="custom-card pa-6 d-flex flex-column" style="flex: 1;">
+                <div class="d-flex align-center mb-6">
+                <div class="user-avatar-container mr-4">
+                  <img 
+                    src="/images/userphoto.png" 
+                    alt="用户头像"
+                    class="user-avatar-image"
+                  >
+                </div>
+                  <div>
+                    <h2 class="text-h5 font-weight-bold">{{ userStore.user?.fullName || userStore.user?.username || '未命名用户' }}</h2>
+                    <p class="text--secondary">计算机科学与技术学院</p>
                   </div>
-                </v-card-text>
+                </div>
+
+                <v-row class="mt-4 flex-grow-1" style="align-content: flex-start;">
+                  <!-- 用户ID -->
+                  <v-col cols="12">
+                    <v-card class="pa-3 info-card rounded-lg">
+                      <div class="d-flex justify-space-between">
+                        <span class="font-weight-medium">用户ID:</span>
+                        <span>{{ userStore.user?.userId || 'N/A' }}</span>
+                      </div>
+                    </v-card>
+                  </v-col>
+                  
+                  <!-- 用户名 -->
+                  <v-col cols="12">
+                    <v-card class="pa-3 info-card rounded-lg">
+                      <div class="d-flex justify-space-between">
+                        <span class="font-weight-medium">用户名:</span>
+                        <span>{{ userStore.user?.username || 'N/A' }}</span>
+                      </div>
+                    </v-card>
+                  </v-col>
+                  
+                  <!-- 学号 -->
+                  <v-col cols="12">
+                    <v-card class="pa-3 info-card rounded-lg">
+                      <div class="d-flex justify-space-between">
+                        <span class="font-weight-medium">学号:</span>
+                        <span>{{ userStore.user?.studentId || 'N/A' }}</span>
+                      </div>
+                    </v-card>
+                  </v-col>
+                  
+                  <!-- 手机号 -->
+                  <v-col cols="12">
+                    <v-card class="pa-3 info-card rounded-lg">
+                      <div class="d-flex justify-space-between">
+                        <span class="font-weight-medium">手机:</span>
+                        <span>{{ userStore.user?.phone ? maskPhone(userStore.user.phone) : 'N/A' }}</span>
+                      </div>
+                    </v-card>
+                  </v-col>
+                  
+                  <!-- 邮箱 -->
+                  <v-col cols="12">
+                    <v-card class="pa-3 info-card rounded-lg">
+                      <div class="d-flex justify-space-between">
+                        <span class="font-weight-medium">邮箱:</span>
+                        <span>{{ userStore.user?.email || 'N/A' }}</span>
+                        <v-icon 
+                          v-if="userStore.user?.emailVerified" 
+                          color="success" 
+                          small
+                          title="邮箱已认证"
+                        >
+                          mdi-check-circle
+                        </v-icon>
+                      </div>
+                    </v-card>
+                  </v-col>
+                </v-row>
                 
-                <!-- 操作按钮 - 仅登录时显示 -->
-                <v-card-actions class="justify-center pb-6" v-if="userStore.user">
+                <!-- 修改后的按钮区域 - 垂直排列并水平居中 -->
+                <div class="vertical-button-container mt-4">
                   <v-btn 
-                    color="indigo" 
-                    variant="tonal" 
-                    class="mr-4" 
-                    @click="openEditDialog"
+                    class="action-btn edit-btn mb-2"
+                    @click="editInfo"
+                    block
                   >
-                    <v-icon start>mdi-pencil</v-icon>
-                    编辑资料
+                    编辑信息
                   </v-btn>
                   <v-btn 
-                    color="blue" 
-                    variant="tonal" 
-                    @click="handleEmailVerification"
-                    :disabled="!userStore.user.email"
+                    class="action-btn verify-btn"
+                    @click="handleVerifyEmail"
+                    block
+                    :loading="isVerifying"
                   >
-                    <v-icon start>mdi-email-check</v-icon>
-                    {{ userStore.user.emailVerified ? '重新验证' : '邮箱认证' }}
+                    <v-icon v-if="userStore.user?.emailVerified" left>mdi-check-circle</v-icon>
+                    {{ userStore.user?.emailVerified ? '已认证' : '邮箱认证' }}
                   </v-btn>
-                  <!-- 新增退出登录按钮 -->
-                  <v-btn 
-                    color="red" 
-                    variant="tonal" 
-                    class="ml-4"
-                    @click="handleLogout"
-                    :loading="loggingOut"
-                  >
-                    <v-icon start>mdi-logout</v-icon>
-                    退出登录
-                  </v-btn>
-                  <!-- 新增注销账户按钮 -->
-                  <v-btn 
-                    color="grey-darken-2" 
-                    variant="tonal" 
-                    class="ml-4"
-                    @click="showDeleteDialog = true"
-                    :loading="deletingAccount"
-                  >
-                    <v-icon start>mdi-account-remove</v-icon>
-                    注销账户
-                  </v-btn>
-                </v-card-actions>
+                </div>
+              </v-card>
+            </v-col>
+            <v-divider 
+              vertical 
+              thickness="4" 
+              color="#4d606e" 
+              class="mx-md-2 my-6 d-none d-md-flex"
+            ></v-divider>
+
+            <!-- 中间交易记录区 -->
+            <v-col cols="12" md="4" class="px-md-4 d-flex">
+              <v-card class="custom-card pa-6 d-flex flex-column" style="flex: 1;">
+                <div class="d-flex align-center mb-4">
+                  <v-icon color="primary" class="mr-2">mdi-history</v-icon>
+                  <h3 class="text-h5 font-weight-bold primary--text">交易记录</h3>
+                </div>
+                
+                <v-row class="flex-grow-1" style="align-content: flex-start;">
+                  <!-- 交易记录列表 -->
+                  <v-col cols="12" v-for="(transaction, index) in transactions" :key="index">
+                    <v-card class="pa-3 info-card rounded-lg">
+                      <div class="d-flex justify-space-between align-center mb-1">
+                        <span class="font-weight-medium">{{ transaction.title }}</span>
+                        <span :class="transaction.amount > 0 ? 'green--text' : 'red--text'">
+                          {{ transaction.amount > 0 ? '+' : '' }}¥{{ Math.abs(transaction.amount).toFixed(2) }}
+                        </span>
+                      </div>
+                      <div class="text-caption text--secondary">{{ transaction.date }}</div>
+                    </v-card>
+                  </v-col>
+                </v-row>
+                
+                <!-- 信用评分区域 -->
+                <v-card class="pa-4 mt-4 credit-score-card rounded-lg">
+                  <div class="d-flex justify-space-between align-center mb-3">
+                    <span class="font-weight-medium">信用评分:</span>
+                    <div class="d-flex align-center">
+                      <span class="text-h4 font-weight-bold mr-2">{{ userStore.user?.creditScore || 'N/A' }}</span>
+                      <v-icon color="amber">mdi-star</v-icon>
+                    </div>
+                  </div>
+                  <v-progress-linear
+                    :value="calculateCreditScorePercentage(userStore.user?.creditScore)"
+                    color="amber"
+                    height="10"
+                    rounded
+                    class="mb-2"
+                  ></v-progress-linear>
+                  <div class="d-flex justify-space-between text-caption text--secondary">
+                    <span>0</span>
+                    <span>5</span>
+                  </div>
+                </v-card>
+              </v-card>
+            </v-col>
+            <v-divider 
+              vertical 
+              thickness="4" 
+              color="#4d606e" 
+              class="mx-md-2 my-6 d-none d-md-flex"
+            ></v-divider>
+
+            <!-- 右侧区域 (账户信息和快捷功能) -->
+            <v-col cols="12" md="3" class="d-flex flex-column">
+              <!-- 账户信息卡片 -->
+              <v-card class="custom-card pa-6 mb-6 flex-grow-1">
+                <div class="d-flex align-center mb-4">
+                  <v-icon color="primary" class="mr-2">mdi-wallet</v-icon>
+                  <h3 class="text-h5 font-weight-bold primary--text">账户信息</h3>
+                </div>
+                
+                <v-row>
+                  <v-col cols="12">
+                    <v-card class="pa-4 balance-card rounded-lg">
+                      <div class="d-flex justify-space-between align-center">
+                        <span class="font-weight-medium">账户余额:</span>
+                        <span class="text-h4 font-weight-bold primary--text">¥{{ formatBalance(virtualAccountStore.account?.balance) }}</span>
+                      </div>
+                    </v-card>
+                  </v-col>
+                  
+                  <v-col cols="6">
+                    <v-card class="pa-3 info-card rounded-lg">
+                      <div class="d-flex justify-space-between align-center">
+                        <span class="font-weight-medium">账户ID:</span>
+                        <span>{{ virtualAccountStore.account?.accountId || 'N/A' }}</span>
+                      </div>
+                    </v-card>
+                  </v-col>
+                  
+                  <v-col cols="6">
+                    <v-card class="pa-3 info-card rounded-lg">
+                      <div class="d-flex justify-space-between align-center">
+                        <span class="font-weight-medium">用户ID:</span>
+                        <span>{{ virtualAccountStore.account?.userId || 'N/A' }}</span>
+                      </div>
+                    </v-card>
+                  </v-col>
+                  
+                  <v-col cols="6">
+                    <v-card class="pa-3 info-card rounded-lg">
+                      <div class="d-flex justify-space-between align-center">
+                        <span class="font-weight-medium">创建时间:</span>
+                        <span>{{ formatDate(virtualAccountStore.account?.createTime) }}</span>
+                      </div>
+                    </v-card>
+                  </v-col>
+                  
+                  <v-col cols="6">
+                    <v-card class="pa-3 info-card rounded-lg">
+                      <div class="d-flex justify-space-between align-center">
+                        <span class="font-weight-medium">最后更新:</span>
+                        <span>{{ formatDate(virtualAccountStore.account?.lastUpdateTime) }}</span>
+                      </div>
+                    </v-card>
+                  </v-col>
+                </v-row>
+              </v-card>
+              
+              <!-- 快捷功能卡片 - 修改为账号注销和退出登录 -->
+              <v-card class="custom-card pa-6 flex-grow-1">
+                <div class="d-flex align-center mb-4">
+                  <v-icon color="primary" class="mr-2">mdi-account-cog</v-icon>
+                  <h3 class="text-h5 font-weight-bold primary--text">账号管理</h3>
+                </div>
+                
+                <v-row class="justify-center">
+                  <v-col cols="12" class="text-center mb-4">
+                    <v-btn 
+                      color="error" 
+                      class="py-4 d-flex flex-column account-action-btn" 
+                      height="auto" 
+                      width="60%"
+                      @click="deleteAccount"
+                    >
+                      <v-icon size="28" class="mb-2">mdi-account-remove</v-icon>
+                      <span>退出所有设备</span>
+                    </v-btn>
+                  </v-col>
+                  <v-col cols="12" class="text-center">
+                    <v-btn 
+                      color="primary" 
+                      class="py-4 d-flex flex-column account-action-btn" 
+                      height="auto" 
+                      width="60%"
+                      @click="logout"
+                      :loading="isLoggingOut"
+                    >
+                      <v-icon size="28" class="mb-2">mdi-logout</v-icon>
+                      <span>退出登录</span>
+                    </v-btn>
+                  </v-col>
+                </v-row>
               </v-card>
             </v-col>
           </v-row>
         </v-container>
+      </div>
 
-        <!-- 编辑资料对话框 -->
-        <v-dialog v-model="editDialog" max-width="600" persistent>
-          <v-card>
-            <v-card-title class="text-h5">编辑个人资料</v-card-title>
-            <v-card-text>
-              <v-form ref="editForm">
-                <v-text-field
-                  v-model="editableUser.username"
-                  label="用户名"
-                  prepend-icon="mdi-account"
-                  :rules="[requiredRule]"
-                  required
-                ></v-text-field>
-                
-                <v-text-field
-                  v-model="editableUser.email"
-                  label="邮箱"
-                  prepend-icon="mdi-email"
-                  :rules="[requiredRule, emailRule]"
-                  required
-                ></v-text-field>
-                
-                <v-text-field
-                  v-model="editableUser.phone"
-                  label="电话"
-                  prepend-icon="mdi-phone"
-                  :rules="[phoneRule]"
-                ></v-text-field>
-              </v-form>
-            </v-card-text>
-            <v-card-actions>
-              <v-spacer></v-spacer>
-              <v-btn color="secondary" @click="editDialog = false">取消</v-btn>
-              <v-btn color="primary" @click="saveChanges" :loading="savingChanges">保存</v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-dialog>
+      <!-- 邮箱认证对话框 -->
+      <v-dialog v-model="emailVerifyDialog" max-width="500px" persistent>
+        <v-card>
+          <v-card-title class="text-h5 primary--text">
+            <v-icon color="primary" class="mr-2">mdi-email-check</v-icon>
+            邮箱认证
+          </v-card-title>
+          
+          <v-card-text class="pt-4">
+            <!-- 步骤1：发送验证码 -->
+            <div v-if="verifyStep === 1">
+              <p>我们将向您的邮箱 <strong>{{ userStore.user?.email }}</strong> 发送验证码</p>
+              <v-text-field
+                v-model="email"
+                label="邮箱地址"
+                type="email"
+                outlined
+                dense
+                class="mt-4"
+                :disabled="true"
+              ></v-text-field>
+            </div>
 
-        <!-- 邮箱验证对话框 -->
-        <v-dialog v-model="showVerificationDialog" max-width="500">
-          <v-card>
-            <v-card-title class="text-h5">邮箱认证</v-card-title>
-            <v-card-text>
-              <p>我们将发送验证邮件到：</p>
-              <p class="text-h6 text-primary">{{ userStore.user?.email }}</p>
-              <p class="mt-2">请检查您的邮箱并点击验证链接完成认证</p>
-            </v-card-text>
-            <v-card-actions>
-              <v-spacer></v-spacer>
-              <v-btn color="secondary" @click="showVerificationDialog = false">取消</v-btn>
-              <v-btn 
-                color="primary" 
-                @click="sendVerificationEmail"
-                :loading="sendingEmail"
-              >
-                发送验证邮件
-              </v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-dialog>
+            <!-- 步骤2：输入验证码 -->
+            <div v-if="verifyStep === 2">
+              <p>验证码已发送至 <strong>{{ email }}</strong>，请输入收到的6位验证码</p>
+              <v-otp-input
+                v-model="verificationCode"
+                length="6"
+                type="number"
+                outlined
+                class="mt-4 justify-center"
+              ></v-otp-input>
+              <div class="text-caption text--secondary mt-2">
+                <span v-if="countdown > 0">{{ countdown }}秒后可重新发送</span>
+                <v-btn 
+                  v-else 
+                  text 
+                  small 
+                  color="primary" 
+                  @click="sendVerificationCode"
+                  :loading="isSendingCode"
+                >
+                  重新发送验证码
+                </v-btn>
+              </div>
+            </div>
 
-        <!-- 注销账户确认对话框 -->
-        <v-dialog v-model="showDeleteDialog" max-width="500">
-          <v-card>
-            <v-card-title class="text-h5">确认注销账户</v-card-title>
-            <v-card-text>
-              <p class="text-body-1">您确定要注销账户吗？</p>
-              <p class="text-body-2 text-warning mt-2">此操作将永久删除您的账户和所有数据，且不可恢复！</p>
-            </v-card-text>
-            <v-card-actions>
-              <v-spacer></v-spacer>
-              <v-btn color="secondary" @click="showDeleteDialog = false">取消</v-btn>
-              <v-btn 
-                color="error" 
-                @click="handleDeleteAccount"
-                :loading="deletingAccount"
-              >
-                确认注销
-              </v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-dialog>
+            <!-- 步骤3：验证成功 -->
+            <div v-if="verifyStep === 3" class="text-center">
+              <v-icon color="success" size="64" class="mb-4">mdi-check-circle</v-icon>
+              <p class="text-h6 success--text">邮箱认证成功！</p>
+              <p class="text--secondary">您的邮箱已成功验证</p>
+            </div>
+          </v-card-text>
 
-        <!-- 全局消息提示 -->
-        <v-snackbar v-model="showSnackbar" :timeout="3000" :color="snackbarColor">
-          {{ snackbarMessage }}
-          <template v-slot:actions>
-            <v-btn variant="text" @click="showSnackbar = false">关闭</v-btn>
-          </template>
-        </v-snackbar>
-      </template>
-    </div>
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn 
+              v-if="verifyStep !== 3"
+              text 
+              @click="closeEmailVerifyDialog"
+              :disabled="isVerifying"
+            >
+              取消
+            </v-btn>
+            <v-btn 
+              v-if="verifyStep === 1"
+              color="primary" 
+              @click="sendVerificationCode"
+              :loading="isSendingCode"
+            >
+              发送验证码
+            </v-btn>
+            <v-btn 
+              v-if="verifyStep === 2"
+              color="primary" 
+              @click="verifyCode"
+              :disabled="verificationCode.length !== 6"
+              :loading="isVerifying"
+            >
+              验证
+            </v-btn>
+            <v-btn 
+              v-if="verifyStep === 3"
+              color="primary" 
+              @click="closeEmailVerifyDialog"
+            >
+              完成
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
+      <!-- 提示信息弹窗 -->
+      <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000">
+        {{ snackbar.message }}
+      </v-snackbar>
+    </v-main>
   </v-app>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
-import type { VForm } from 'vuetify/components'
-import { useUserStore } from '@/stores/user'
+import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { useUserStore } from '@/stores/user';
+import { useVirtualAccountStore } from '@/stores/virtualaccount';
 
-const userStore = useUserStore()
+// 路由
+const router = useRouter();
 
 // 状态管理
-const isLoading = ref(true)
-const editDialog = ref(false)
-const showVerificationDialog = ref(false)
-const showDeleteDialog = ref(false)
-const showSnackbar = ref(false)
-const snackbarMessage = ref('')
-const snackbarColor = ref('success')
-const sendingEmail = ref(false)
-const savingChanges = ref(false)
-const loggingOut = ref(false)
-const deletingAccount = ref(false)
+const userStore = useUserStore();
+const virtualAccountStore = useVirtualAccountStore();
+const isLoading = ref(true);
+const isLoggingOut = ref(false);
 
-// 表单引用
-const editForm = ref<VForm | null>(null)
+// 邮箱认证相关状态
+const emailVerifyDialog = ref(false);
+const verifyStep = ref(1); // 1: 发送验证码, 2: 输入验证码, 3: 验证成功
+const email = ref('');
+const verificationCode = ref('');
+const isSendingCode = ref(false);
+const isVerifying = ref(false);
+const countdown = ref(0);
 
-// 可编辑用户数据
-const editableUser = ref({
-  username: '',
-  email: '',
-  phone: ''
-})
+// 提示信息
+const snackbar = ref({
+  show: false,
+  message: '',
+  color: 'success'
+});
 
-// 验证规则
-const requiredRule = (v: string) => !!v || '必填项'
-const emailRule = (v: string) => /.+@.+\..+/.test(v) || '请输入有效的邮箱地址'
-const phoneRule = (v: string) => !v || /^1[3-9]\d{9}$/.test(v) || '请输入有效的手机号码'
+// 交易记录数据
+const transactions = ref([
+  { title: '二手教材', amount: 50.00, date: '2024-03-15 14:30' },
+  { title: '校园卡充值', amount: -100.00, date: '2024-03-10 09:15' },
+  { title: '代取快递', amount: 15.00, date: '2024-03-05 17:45' },
+  { title: '校园周边', amount: -35.00, date: '2024-02-28 13:20' }
+]);
 
-// 计算属性
-const creditScoreColor = computed(() => {
-  if (!userStore.user?.creditScore) return 'grey'
-  const score = userStore.user.creditScore
-  if (score >= 90) return 'success'
-  if (score >= 70) return 'info'
-  if (score >= 50) return 'warning'
-  return 'error'
-})
+// 计算信用评分百分比
+const calculateCreditScorePercentage = (score: number | undefined) => {
+  if (!score) return 0;
+  const maxScore = 5; // 假设满分是5分
+  return (score / maxScore) * 100;
+};
 
-const creditScoreRemark = computed(() => {
-  if (!userStore.user?.creditScore) return '登录后查看信用评分'
-  const score = userStore.user.creditScore
-  if (score >= 90) return '优秀 - 信用状况非常好'
-  if (score >= 70) return '良好 - 继续保持'
-  if (score >= 50) return '一般 - 有提升空间'
-  return '待提高 - 请注意信用行为'
-})
+// 手机号脱敏处理
+const maskPhone = (phone: string) => {
+  if (!phone || phone.length < 7) return phone;
+  return phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2');
+};
 
-// 生命周期钩子
-onMounted(async () => {
+// 格式化余额显示
+const formatBalance = (balance: number | undefined) => {
+  if (balance === undefined || balance === null) return '0.00';
+  return balance.toFixed(2);
+};
+
+// 格式化日期显示
+const formatDate = (dateString: string | undefined) => {
+  if (!dateString) return 'N/A';
   try {
-    await userStore.fetchUserInfo('current')
-    // 初始化可编辑数据
+    const date = new Date(dateString);
+    return date.toLocaleDateString('zh-CN');
+  } catch {
+    return 'N/A';
+  }
+};
+
+// 获取账户详情
+const fetchAccountDetails = async () => {
+  try {
+    await virtualAccountStore.fetchAccountDetails();
+  } catch (error) {
+    console.error('获取账户详情失败:', error);
+  }
+};
+
+// 重试加载
+const retryLoading = async () => {
+  isLoading.value = true;
+  virtualAccountStore.error = null;
+  await loadData();
+};
+
+// 加载数据
+const loadData = async () => {
+  try {
+    await userStore.fetchUserInfo('current');
     if (userStore.user) {
-      editableUser.value = {
-        username: userStore.user.username,
-        email: userStore.user.email,
-        phone: userStore.user.phone || ''
-      }
+      await virtualAccountStore.fetchBalance();
     }
   } catch (error) {
-    console.error('加载用户信息失败:', error)
+    console.error('加载用户信息失败:', error);
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
-})
+};
 
-// 方法定义
-const openEditDialog = () => {
-  if (userStore.user) {
-    editableUser.value = {
-      username: userStore.user.username,
-      email: userStore.user.email,
-      phone: userStore.user.phone || ''
-    }
+// 处理邮箱认证按钮点击
+const handleVerifyEmail = async () => {
+  if (userStore.user?.emailVerified) {
+    // 已认证，显示提示
+    showSnackbar('您的邮箱已通过认证', 'info');
+    return;
   }
-  editDialog.value = true
-}
 
-const saveChanges = async () => {
-  if (!editForm.value) return
-  
-  const { valid } = await editForm.value.validate()
-  if (!valid) return
+  // 未认证，打开认证对话框
+  email.value = userStore.user?.email || '';
+  verifyStep.value = 1;
+  emailVerifyDialog.value = true;
+};
 
-  savingChanges.value = true
-  try {
-    // 这里应该调用API更新用户信息
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // 更新store中的数据
-    if (userStore.user) {
-      userStore.user = {
-        ...userStore.user,
-        username: editableUser.value.username,
-        email: editableUser.value.email,
-        phone: editableUser.value.phone,
-        emailVerified: editableUser.value.email !== userStore.user.email 
-          ? false 
-          : userStore.user.emailVerified
-      }
-    }
-    
-    editDialog.value = false
-    showMessage('资料更新成功', 'success')
-  } catch (error) {
-    console.error('更新失败:', error)
-    showMessage('更新用户信息失败', 'error')
-  } finally {
-    savingChanges.value = false
-  }
-}
-
-const handleEmailVerification = () => {
+// 发送验证码
+const sendVerificationCode = async () => {
   if (!userStore.user?.email) {
-    showMessage('请先设置有效的邮箱地址', 'warning')
-    return
+    showSnackbar('邮箱地址不存在', 'error');
+    return;
   }
-  showVerificationDialog.value = true
-}
 
-const sendVerificationEmail = async () => {
-  sendingEmail.value = true
+  isSendingCode.value = true;
   try {
-    // 这里应该调用API发送验证邮件
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const result = await userStore.sendVerificationCode(userStore.user.email);
     
-    showVerificationDialog.value = false
-    showMessage('验证邮件已发送，请检查您的邮箱', 'success')
+    if (result.success) {
+      showSnackbar('验证码已发送，请查收邮箱', 'success');
+      verifyStep.value = 2;
+      startCountdown();
+    } else {
+      showSnackbar(result.message, 'error');
+    }
   } catch (error) {
-    console.error('发送失败:', error)
-    showMessage('发送验证邮件失败', 'error')
+    console.error('发送验证码失败:', error);
+    showSnackbar('发送验证码失败，请重试', 'error');
   } finally {
-    sendingEmail.value = false
+    isSendingCode.value = false;
   }
-}
+};
 
-// 在 UserDetailView.vue 的 script setup 部分修改 handleLogout 方法
-const handleLogout = async () => {
-  loggingOut.value = true
+// 验证验证码
+const verifyCode = async () => {
+  if (verificationCode.value.length !== 6) {
+    showSnackbar('请输入6位验证码', 'error');
+    return;
+  }
+
+  isVerifying.value = true;
   try {
-    // 调用 userStore 的 logout 方法
-    await userStore.logout()
+    const result = await userStore.verifyCode(verificationCode.value);
     
-    // 显示成功消息
-    showMessage('已成功退出登录', 'success')
-    
-    // 延迟跳转，让用户看到成功消息
-    setTimeout(() => {
-      window.location.href = '/login'
-    }, 1500)
+    if (result.success) {
+      showSnackbar('邮箱认证成功', 'success');
+      verifyStep.value = 3;
+      // 更新本地用户信息
+      await userStore.fetchUserInfo(userStore.user?.username || '');
+    } else {
+      showSnackbar(result.message, 'error');
+    }
   } catch (error) {
-    console.error('退出登录失败:', error)
-    showMessage('退出登录失败', 'error')
+    console.error('验证码验证失败:', error);
+    showSnackbar('验证失败，请重试', 'error');
   } finally {
-    loggingOut.value = false
+    isVerifying.value = false;
   }
-}
+};
 
-// 新增方法 - 处理注销账户（暂时只做UI展示）
-const handleDeleteAccount = async () => {
-  deletingAccount.value = true
+// 倒计时计时器
+const startCountdown = () => {
+  countdown.value = 60;
+  const timer = setInterval(() => {
+    countdown.value--;
+    if (countdown.value <= 0) {
+      clearInterval(timer);
+    }
+  }, 1000);
+};
+
+// 显示提示信息
+const showSnackbar = (message: string, color: 'success' | 'error' | 'info' = 'success') => {
+  snackbar.value = {
+    show: true,
+    message,
+    color
+  };
+};
+
+// 关闭对话框时的清理
+const closeEmailVerifyDialog = () => {
+  emailVerifyDialog.value = false;
+  verifyStep.value = 1;
+  verificationCode.value = '';
+  countdown.value = 0;
+};
+
+// 新增按钮处理函数
+const editInfo = () => {
+  console.log('编辑信息按钮被点击');
+  // 这里可以添加编辑信息的逻辑
+};
+
+// 账号注销
+const deleteAccount = () => {
+  console.log('账号注销按钮被点击');
+  // 这里可以添加账号注销的逻辑
+};
+
+// 退出登录 - 使用user.ts中的logout方法
+const logout = async () => {
+  isLoggingOut.value = true;
   try {
-    // 这里应该是调用API注销账户
-    // 暂时只模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    showMessage('账户注销功能暂未实现', 'info')
-    showDeleteDialog.value = false
+    await userStore.logout();
+    showSnackbar('退出登录成功', 'success');
+    // 跳转到登录页面
+    router.push('/');
   } catch (error) {
-    console.error('注销账户失败:', error)
-    showMessage('注销账户失败', 'error')
+    console.error('退出登录失败:', error);
+    showSnackbar('退出登录失败，请重试', 'error');
   } finally {
-    deletingAccount.value = false
+    isLoggingOut.value = false;
   }
-}
+};
 
-const showMessage = (message: string, color: string) => {
-  snackbarMessage.value = message
-  snackbarColor.value = color
-  showSnackbar.value = true
-}
+onMounted(async () => {
+  await loadData();
+});
 </script>
 
 <style scoped>
+/* 导航栏样式 */
 .navbar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  position: relative; 
+  width: 100%;
   height: 60px;
-  background-color: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  margin:  0;
+  padding: 0 16px;
+  background-color:#cadefc;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 1000; 
   display: flex;
   align-items: center;
-  padding: 0 24px;
-  z-index: 1000;
+  justify-content:flex-start;
 }
 
-.navbar .icon {
-  margin-right: 12px;
+/* 图标和标题放大 */
+.icon svg {
+  width: 48px;
+  height: 48px;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: bold;
+  margin-left: 16px;
+  color: white !important; 
+}
+
+/* 主卡片样式 */
+.custom-card {
+  background-color: #def0ff !important;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  box-shadow: none !important;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.custom-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+  transform: translateY(-2px);
+}
+
+.info-card {
+  background-color: rgba(255, 255, 255, 0.7) !important;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  transition: all 0.2s ease;
+  box-shadow: none !important; /* 默认无阴影 */
+}
+
+.info-card:hover {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important; /* 悬停时添加阴影 */
+}
+
+/* 余额卡片样式 - 修改为默认无阴影 */
+.balance-card {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: none !important; /* 默认极阴影 */
+}
+
+.balance-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important; /* 悬停时添加阴影 */
+}
+
+.v-application {
+  background-color: #f6fcff !important; /* 使用您喜欢的颜色 */
+}
+
+/* 信用评分卡片样式 - 修改为默认无阴影 */
+.credit-score-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: none !important; /* 默认无阴影 */
+}
+
+.credit-score-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important; /* 悬停时添加阴影 */
+}
+
+.user-avatar-container {
+  width: 60px; /* 调小尺寸 */
+  height: 60px; /* 调小尺寸 */
   display: flex;
   align-items: center;
+  justify-content: center;
 }
 
-.navbar .title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #333;
+/* 用户头像图片样式 */
+.user-avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* 保持图片比例并填充容器 */
+  border-radius: 4px; /* 可选：添加轻微圆角 */
 }
 
-.logout-btn {
-  position: fixed;
-  top: 75px;
-  left: 24px;
-  z-index: 1000;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+/* 账号管理按钮样式 */
+.account-action-btn {
+  border: 1px solid rgba(255, 255, 255, 0.3);
   transition: all 0.3s ease;
 }
 
-.logout-btn:hover {
-  transform: scale(1.05);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+.account-action-btn:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2) !important;
+  transform: translateY(-2px);
 }
 
-.profile-container {
-  position: relative;
+/* 补充PC端特有样式 */
+.pc-user-detail {
   min-height: 100vh;
-  background: linear-gradient(135deg, #FFD6E0 0%, #C1E0FF 100%);
-  padding-top: 60px;
+  display: flex;
+  flex-direction: column;
 }
 
-.content-wrapper {
-  position: relative;
-  z-index: 2;
-  padding-top: 20px;
+.ml-auto {
+  margin-left: auto;
 }
 
-.user-profile-card {
-  border-radius: 16px;
-  overflow: hidden;
-  background-color: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(5px);
+.logout-btn {
+  margin-left: auto;
 }
 
-.profile-avatar {
-  border: 4px solid white;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  margin-top: -60px;
-}
-
-.credit-score-container {
-  background-color: rgba(255, 255, 255, 0.7);
-  border-radius: 12px;
-  padding: 16px;
-  margin-top: 24px;
-}
-
-.decorative-bg {
-  position: absolute;
-  top: 50%;
-  right: 5%;
-  width: 40%;
-  transform: translateY(-50%);
-  z-index: 1;
-  opacity: 1;
-}
-
-.decorative-bg img {
+/* 修改后的按钮样式 - 垂直排列并水平居中 */
+.vertical-button-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* 水平居中 */
+  gap: 8px;
   width: 100%;
-  height: auto;
-  object-fit: contain;
 }
 
+.action-btn {
+  background-color: #ffdfdf !important;
+  color: white !important;
+  width: 140px !important; /* 固定宽度 */
+  max-width: 140px;
+  min-width: 140px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: none !important; 
+}
+
+.action-btn:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  transform: translateY(-2px);
+  background-color: #ffc9c9 !important;
+}
+
+/* 邮箱认证按钮样式调整 */
+.verify-btn {
+  background-color: #4CAF50 !important; /* 绿色表示认证相关 */
+}
+
+.verify-btn:hover {
+  background-color: #45a049 !important;
+}
+
+/* OTP输入框居中 */
+.v-otp-input {
+  justify-content: center;
+}
+
+.v-otp-input :deep(.v-text-field) {
+  margin: 0 4px;
+}
+
+/* 响应式调整 */
 @media (max-width: 960px) {
-  .content-wrapper {
-    padding-top: 10px;
-  }
-  
-  .decorative-bg {
-    display: none;
-  }
-  
-  .user-profile-card {
-    margin-top: 20px;
-  }
-  
-  .logout-btn {
-    top: 70px;
-    left: 15px;
-    size: 48px;
+  .action-btn {
+    max-width: 120px;
+    font-size: 14px;
   }
 }
 </style>
