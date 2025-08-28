@@ -149,6 +149,89 @@ export interface LogoutAllResponse {
   revokedTokens: number
 }
 
+// 用户详细信息响应
+export interface UserProfileResponse {
+  userId: number
+  username: string
+  email: string
+  fullName?: string
+  phone?: string
+  studentId: string
+  creditScore: number
+  emailVerified: boolean
+  isActive: boolean
+  createdAt: string
+  lastLoginAt?: string
+  lastLoginIp?: string
+  loginCount: number
+  student?: {
+    studentId: string
+    name: string
+    department: string
+  }
+  virtualAccount?: {
+    accountId: number
+    balance: number
+    createdAt: string
+  }
+}
+
+// 更新用户信息请求
+export interface UpdateUserProfileData {
+  username?: string
+  fullName?: string
+  phone?: string
+}
+
+// 信用历史响应
+export interface CreditHistoryResponse {
+  items: CreditHistoryItem[]
+  totalCount: number
+  totalPages: number
+  currentPage: number
+}
+
+export interface CreditHistoryItem {
+  logId: number
+  changeType: string
+  newScore: number
+  createdAt: string
+}
+
+// 修改密码请求
+export interface ChangePasswordData {
+  currentPassword: string
+  newPassword: string
+  confirmPassword: string
+}
+
+// 用户统计信息响应
+export interface UserStatisticsResponse {
+  publishedProducts: number
+  buyOrders: number
+  sellOrders: number
+  receivedReviews: number
+  registrationDays: number
+}
+
+// 安全信息响应
+export interface SecurityInfoResponse {
+  emailVerified: boolean
+  twoFactorEnabled: boolean
+  passwordChangedAt?: string
+  lastLoginAt?: string
+  lastLoginIp?: string
+  activeDevicesCount: number
+  recentLogins: RecentLoginItem[]
+}
+
+export interface RecentLoginItem {
+  logTime: string
+  ipAddress?: string
+  deviceType: string
+  riskLevel: number
+}
+
 // API 方法
 export const authApi = {
   // 登录
@@ -193,30 +276,62 @@ export const authApi = {
   },
 
   sendVerificationCode: (userId: number, email: string): Promise<ApiResponse> => {
-  return api.post('/api/auth/send-verification-code', {
-    userId,
-    email
-  })
-},
+    return api.post('/api/auth/send-verification-code', {
+      UserId: userId,
+      Email: email,
+    })
+  },
 
-// 验证邮箱验证码
-verifyCode: (userId: number, code: string): Promise<ApiResponse> => {
-  return api.post('/api/auth/verify-code', {
-    userId,
-    code
-  })
-},
+  // 验证邮箱验证码
+  verifyCode: (userId: number, code: string): Promise<ApiResponse> => {
+    return api.post('/api/auth/verify-code', {
+      UserId: userId,
+      Code: code,
+    })
+  },
 
-// 验证邮箱链接（GET请求）
-verifyEmail: (token: string): Promise<ApiResponse> => {
-  return api.get(`/api/auth/verify-email?token=${encodeURIComponent(token)}`)
-},
+  // 验证邮箱链接（GET请求）
+  verifyEmail: (token: string): Promise<ApiResponse> => {
+    return api.get(`/api/auth/verify-email?token=${encodeURIComponent(token)}`)
+  },
 
-// 退出所有设备
-logoutAll: (): Promise<ApiResponse<{ revokedTokens: number }>> => {
-  return api.post('/api/auth/logout-all')
-}
+  // 退出所有设备
+  logoutAll: (): Promise<ApiResponse<{ revokedTokens: number }>> => {
+    return api.post('/api/auth/logout-all')
+  },
 
+  // 获取当前用户详细信息
+  getUserProfile: (): Promise<ApiResponse<UserProfileResponse>> => {
+    return api.get('/api/auth/profile')
+  },
+
+  // 更新用户信息
+  updateUserProfile: (data: UpdateUserProfileData): Promise<ApiResponse> => {
+    return api.put('/api/auth/profile', data)
+  },
+
+  // 获取信用历史
+  getCreditHistory: (
+    page: number = 1,
+    pageSize: number = 20
+  ): Promise<ApiResponse<CreditHistoryResponse>> => {
+    return api.get(`/api/auth/credit-history?page=${page}&pageSize=${pageSize}`)
+  },
+
+  // 修改密码
+  changePassword: (data: ChangePasswordData): Promise<ApiResponse> => {
+    return api.post('/api/auth/change-password', data)
+  },
+
+  // 获取用户统计信息
+  getUserStatistics: (): Promise<ApiResponse<UserStatisticsResponse>> => {
+    return api.get('/api/auth/statistics')
+  },
+
+  // 获取用户安全信息
+  getSecurityInfo: (): Promise<ApiResponse<SecurityInfoResponse>> => {
+    return api.get('/api/auth/security')
+  },
 }
 
 export interface OrderItemResponse {
@@ -327,7 +442,7 @@ export enum OrderStatus {
   SHIPPED = 'shipped',
   DELIVERED = 'delivered',
   COMPLETED = 'completed',
-  CANCELLED = 'cancelled'
+  CANCELLED = 'cancelled',
 }
 
 // 订单相关接口
@@ -354,7 +469,7 @@ export const orderApi = {
     if (filters?.status) params.append('status', filters.status)
     if (filters?.pageIndex) params.append('pageIndex', filters.pageIndex.toString())
     if (filters?.pageSize) params.append('pageSize', filters.pageSize.toString())
-    
+
     return api.get(`/api/order?${params.toString()}`)
   },
 
@@ -369,7 +484,10 @@ export const orderApi = {
   },
 
   // 更新订单状态
-  updateOrderStatus: (orderId: number, data: UpdateOrderStatusRequest): Promise<ApiResponse<void>> => {
+  updateOrderStatus: (
+    orderId: number,
+    data: UpdateOrderStatusRequest
+  ): Promise<ApiResponse<void>> => {
     return api.put(`/api/order/${orderId}/status`, data)
   },
 
@@ -448,30 +566,46 @@ export interface ProductDetail {
 }
 
 export interface ProductListItem {
-  id: number
+  product_id: number
   title: string
-  price: number
-  originalPrice?: number
-  categoryId: number
-  categoryName: string
-  sellerId: number
-  sellerName: string
+  base_price: number
+  publish_time: string
+  view_count: number
   status: string
-  condition: string
-  primaryImage: string
-  viewCount: number
-  likeCount: number
-  createdAt: string
-  isLiked: boolean
-  location?: string
+  main_image_url?: string
+  thumbnail_url?: string
+  user: {
+    user_id: number
+    username: string
+  }
+  category: {
+    category_id: number
+    name: string
+    parent_id?: number
+  }
+  days_until_auto_remove?: number
+  is_popular: boolean
+  tags: string[]
+
+  // 兼容现有代码，添加别名属性
+  id?: number
+  price?: number
+  primaryImage?: string
+  sellerId?: number
+  sellerName?: string
+  categoryId?: number
+  categoryName?: string
+  createdAt?: string
 }
 
 export interface CategoryItem {
-  id: number
+  category_id: number
   name: string
-  parentId?: number
-  icon?: string
-  productCount?: number
+  parent_id?: number
+  level: number
+  full_path: string
+  product_count: number
+  active_product_count: number
   children?: CategoryItem[]
 }
 
@@ -483,16 +617,11 @@ export interface CategoryBreadcrumb {
 
 export interface CreateProductRequest {
   title: string
-  description: string
-  price: number
-  originalPrice?: number
-  categoryId: number
-  condition: string
-  stock: number
-  tags?: string[]
-  specifications?: Omit<ProductSpecification, 'id'>[]
-  location?: string
-  contactMethod: string
+  description?: string
+  base_price: number
+  category_id: number
+  image_urls?: string[]
+  auto_remove_time?: string
 }
 
 export interface UpdateProductRequest {
@@ -537,8 +666,10 @@ export interface ProductListResponse {
   totalPages: number
 }
 
-export interface CategoryTreeResponse extends CategoryItem {
-  children?: CategoryTreeResponse[]
+export interface CategoryTreeResponse {
+  root_categories: CategoryItem[]
+  total_count: number
+  last_update_time: string
 }
 
 export interface CategoryBreadcrumbResponse {
@@ -563,7 +694,10 @@ export const productApi = {
   },
 
   // 更新商品
-  updateProduct: (productId: number, data: UpdateProductRequest): Promise<ApiResponse<ProductDetail>> => {
+  updateProduct: (
+    productId: number,
+    data: UpdateProductRequest
+  ): Promise<ApiResponse<ProductDetail>> => {
     return api.put(`/api/product/${productId}`, data)
   },
 
@@ -580,76 +714,93 @@ export const productApi = {
   // 查询商品列表
   getProducts: (queryParams: ProductQueryParams): Promise<ApiResponse<ProductListResponse>> => {
     const params = new URLSearchParams()
-    
-    if (queryParams.pageIndex !== undefined) params.append('pageIndex', queryParams.pageIndex.toString())
-    if (queryParams.pageSize !== undefined) params.append('pageSize', queryParams.pageSize.toString())
-    if (queryParams.categoryId !== undefined) params.append('categoryId', queryParams.categoryId.toString())
+
+    if (queryParams.pageIndex !== undefined)
+      params.append('pageIndex', queryParams.pageIndex.toString())
+    if (queryParams.pageSize !== undefined)
+      params.append('pageSize', queryParams.pageSize.toString())
+    if (queryParams.categoryId !== undefined)
+      params.append('categoryId', queryParams.categoryId.toString())
     if (queryParams.condition) params.append('condition', queryParams.condition)
-    if (queryParams.minPrice !== undefined) params.append('minPrice', queryParams.minPrice.toString())
-    if (queryParams.maxPrice !== undefined) params.append('maxPrice', queryParams.maxPrice.toString())
+    if (queryParams.minPrice !== undefined)
+      params.append('minPrice', queryParams.minPrice.toString())
+    if (queryParams.maxPrice !== undefined)
+      params.append('maxPrice', queryParams.maxPrice.toString())
     if (queryParams.sortBy) params.append('sortBy', queryParams.sortBy)
     if (queryParams.sortOrder) params.append('sortOrder', queryParams.sortOrder)
     if (queryParams.status) params.append('status', queryParams.status)
     if (queryParams.tags && queryParams.tags.length > 0) {
       queryParams.tags.forEach(tag => params.append('tags', tag))
     }
-    
+
     return api.get(`/api/product?${params.toString()}`)
   },
 
   // 搜索商品
-  searchProducts: (searchParams: ProductSearchParams): Promise<ApiResponse<ProductListResponse>> => {
+  searchProducts: (
+    searchParams: ProductSearchParams
+  ): Promise<ApiResponse<ProductListResponse>> => {
     const params = new URLSearchParams()
     params.append('keyword', searchParams.keyword)
-    
-    if (searchParams.pageIndex !== undefined) params.append('pageIndex', searchParams.pageIndex.toString())
-    if (searchParams.pageSize !== undefined) params.append('pageSize', searchParams.pageSize.toString())
-    if (searchParams.categoryId !== undefined) params.append('categoryId', searchParams.categoryId.toString())
-    
+
+    if (searchParams.pageIndex !== undefined)
+      params.append('pageIndex', searchParams.pageIndex.toString())
+    if (searchParams.pageSize !== undefined)
+      params.append('pageSize', searchParams.pageSize.toString())
+    if (searchParams.categoryId !== undefined)
+      params.append('categoryId', searchParams.categoryId.toString())
+
     return api.get(`/api/product/search?${params.toString()}`)
   },
 
   // 获取热门商品
-  getPopularProducts: (count: number = 10, categoryId?: number): Promise<ApiResponse<ProductListItem[]>> => {
+  getPopularProducts: (
+    count: number = 10,
+    categoryId?: number
+  ): Promise<ApiResponse<ProductListItem[]>> => {
     const params = new URLSearchParams()
     params.append('count', count.toString())
-    
+
     if (categoryId !== undefined) params.append('categoryId', categoryId.toString())
-    
+
     return api.get(`/api/product/popular?${params.toString()}`)
   },
 
   // 获取用户发布的商品
   getUserProducts: (
-    userId?: number, 
-    pageIndex: number = 0, 
-    pageSize: number = 20, 
+    userId?: number,
+    pageIndex: number = 0,
+    pageSize: number = 20,
     status?: string
   ): Promise<ApiResponse<ProductListResponse>> => {
     const params = new URLSearchParams()
     params.append('pageIndex', pageIndex.toString())
     params.append('pageSize', pageSize.toString())
-    
+
     if (status) params.append('status', status)
-    
-    const endpoint = userId !== undefined 
-      ? `/api/product/user/${userId}?${params.toString()}`
-      : `/api/product/user?${params.toString()}`
-    
+
+    const endpoint =
+      userId !== undefined
+        ? `/api/product/user/${userId}?${params.toString()}`
+        : `/api/product/user?${params.toString()}`
+
     return api.get(endpoint)
   },
 
   // 获取分类树
-  getCategoryTree: (includeProductCount: boolean = true): Promise<ApiResponse<CategoryTreeResponse[]>> => {
+  getCategoryTree: (
+    includeProductCount: boolean = true
+  ): Promise<ApiResponse<CategoryTreeResponse[]>> => {
     return api.get(`/api/product/categories/tree?includeProductCount=${includeProductCount}`)
   },
 
   // 获取子分类
   getSubCategories: (parentId?: number): Promise<ApiResponse<CategoryItem[]>> => {
-    const endpoint = parentId !== undefined 
-      ? `/api/product/categories?parentId=${parentId}`
-      : '/api/product/categories'
-    
+    const endpoint =
+      parentId !== undefined
+        ? `/api/product/categories?parentId=${parentId}`
+        : '/api/product/categories'
+
     return api.get(endpoint)
   },
 
@@ -660,27 +811,76 @@ export const productApi = {
 
   // 获取分类下的商品
   getProductsByCategory: (
-    categoryId: number, 
-    pageIndex: number = 0, 
-    pageSize: number = 20, 
+    categoryId: number,
+    pageIndex: number = 0,
+    pageSize: number = 20,
     includeSubCategories: boolean = true
   ): Promise<ApiResponse<ProductListResponse>> => {
     const params = new URLSearchParams()
     params.append('pageIndex', pageIndex.toString())
     params.append('pageSize', pageSize.toString())
     params.append('includeSubCategories', includeSubCategories.toString())
-    
+
     return api.get(`/api/product/categories/${categoryId}/products?${params.toString()}`)
   },
 
   // 获取即将自动下架的商品
-  getProductsToAutoRemove: (days: number = 7): Promise<ApiResponse<ProductsToAutoRemoveResponse>> => {
+  getProductsToAutoRemove: (
+    days: number = 7
+  ): Promise<ApiResponse<ProductsToAutoRemoveResponse>> => {
     return api.get(`/api/product/auto-remove?days=${days}`)
   },
 
   // 延期商品下架时间
   extendProductAutoRemoveTime: (productId: number, extendDays: number): Promise<ApiResponse> => {
     return api.patch(`/api/product/${productId}/extend`, { extendDays })
+  },
+}
+
+// 文件上传相关接口
+export const fileApi = {
+  // 上传商品图片
+  uploadProductImage: (
+    file: File
+  ): Promise<
+    ApiResponse<{ fileName: string; fileUrl: string; thumbnailUrl?: string; fileSize: number }>
+  > => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post('/api/File/upload/product-image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+
+  // 批量上传文件
+  batchUploadFiles: (
+    files: File[],
+    fileType: string = 'ProductImage'
+  ): Promise<ApiResponse<Array<{ fileName: string; fileUrl: string; fileSize: number }>>> => {
+    const formData = new FormData()
+    files.forEach(file => formData.append('files', file))
+    formData.append('fileType', fileType)
+    return api.post('/api/File/upload/batch', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+
+  // 删除文件
+  deleteFile: (fileUrl: string): Promise<ApiResponse> => {
+    return api.post('/api/File/delete', { fileUrl })
+  },
+}
+
+// 分类相关接口
+export const categoryApi = {
+  // 获取商品分类树
+  getCategoryTree: (): Promise<ApiResponse<CategoryTreeResponse>> => {
+    return api.get('/api/Product/categories/tree')
+  },
+
+  // 获取分类面包屑导航
+  getCategoryBreadcrumb: (categoryId: number): Promise<ApiResponse<CategoryBreadcrumb[]>> => {
+    return api.get(`/api/Product/categories/${categoryId}/breadcrumb`)
   },
 }
 
@@ -723,40 +923,43 @@ export const virtualAccountApi = {
 }
 
 export interface DashboardStatsDto {
-  monthlyTransactions: MonthlyTransactionDto[];
-  popularProducts: PopularProductDto[];
-  userActivities: UserActivityDto[];
+  monthlyTransactions: MonthlyTransactionDto[]
+  popularProducts: PopularProductDto[]
+  userActivities: UserActivityDto[]
 }
 
 export interface MonthlyTransactionDto {
-  month: string;
-  orderCount: number;
-  totalAmount: number;
+  month: string
+  orderCount: number
+  totalAmount: number
 }
 
 export interface PopularProductDto {
-  productId: number;
-  productTitle: string;
-  orderCount: number;
+  productId: number
+  productTitle: string
+  orderCount: number
 }
 
 export interface UserActivityDto {
-  date: string;
-  activeUserCount: number;
-  newUserCount: number;
+  date: string
+  activeUserCount: number
+  newUserCount: number
 }
 
 export interface DashboardSummaryDto {
-  totalUsers: number;
-  activeUsers: number;
-  totalOrders: number;
-  monthlySales: number;
+  totalUsers: number
+  activeUsers: number
+  totalOrders: number
+  monthlySales: number
 }
 
 // Dashboard API方法
 export const dashboardApi = {
   // 获取统计数据
-  getStatistics: (year: number, activityDays: number = 30): Promise<ApiResponse<DashboardStatsDto>> => {
+  getStatistics: (
+    year: number,
+    activityDays: number = 30
+  ): Promise<ApiResponse<DashboardStatsDto>> => {
     return api.get(`/api/dashboard/statistics?year=${year}&activityDays=${activityDays}`)
   },
 
@@ -768,16 +971,16 @@ export const dashboardApi = {
   // 导出Excel
   exportExcel: (year: number): Promise<Blob> => {
     return api.get(`/api/dashboard/export/excel?year=${year}`, {
-      responseType: 'blob'
+      responseType: 'blob',
     })
   },
 
   // 导出PDF
   exportPdf: (year: number): Promise<Blob> => {
     return api.get(`/api/dashboard/export/pdf?year=${year}`, {
-      responseType: 'blob'
+      responseType: 'blob',
     })
-  }
+  },
 }
 
 export default api

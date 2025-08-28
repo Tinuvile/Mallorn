@@ -12,6 +12,7 @@ import GoodsReleaseView from '@/views/GoodsReleaseView.vue'
 import AdminModeratorView from '@/views/AdminModeratorView.vue'
 import SystemAuditView from '@/views/SystemAuditView.vue'
 import AdminDashboardView from '@/views/AdminDashboardView.vue'
+import ProductListView from '@/views/ProductListView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -65,35 +66,45 @@ const router = createRouter({
       component: OrderView,
     },
     {
-    path: '/goods/:id',  // 动态路由参数:商品ID
-    name: 'goodsDetails',
-    component: GoodsDetails,
-    props: true  // 允许将路由参数作为props传递
+      path: '/message',
+      name: 'message',
+      component: () => import('@/views/Message.vue'),
+    },
+    {
+      path: '/goods/:id', // 动态路由参数:商品ID
+      name: 'goodsDetails',
+      component: GoodsDetails,
+      props: true, // 允许将路由参数作为props传递
     },
     {
       path: '/admin',
-      name: 'adminDashboard', 
+      name: 'adminDashboard',
       component: AdminDashboardView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
     },
     {
       path: '/admin/moderator',
       name: 'adminModerator',
       component: AdminModeratorView,
-      meta: { requiresAuth: true, requiresRole: 'moderator' }
+      meta: { requiresAuth: true, requiresRole: 'moderator' },
     },
     {
       path: '/admin/system-audit',
       name: 'systemAudit',
       component: SystemAuditView,
-      meta: { requiresAuth: true, requiresRole: 'system_admin' }
-    }
+      meta: { requiresAuth: true, requiresRole: 'system_admin' },
+    },
+    {
+      path: '/products',
+      name: 'products',
+      component: ProductListView,
+    },
   ],
-   // 添加滚动行为配置
+  // 添加滚动行为配置
   scrollBehavior(to, from, savedPosition) {
     // 始终滚动到顶部
     return { top: 0 }
-  }
+  },
 })
 
 // 路由守卫

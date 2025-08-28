@@ -5,9 +5,9 @@
         <svg width="48px" height="48px" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" color="#ffffff">
           <circle cx="12" cy="12" r="10" stroke="#ffffff" stroke-width="1.5"></circle>
           <path d="M7.63262 3.06689C8.98567 3.35733 9.99999 4.56025 9.99999 6.00007C9.99999 7.65693 8.65685 9.00007 6.99999 9.00007C5.4512 9.00007 4.17653 7.82641 4.01685 6.31997" stroke="#ffffff" stroke-width="1.5"></path>
-          <path d="M22 13.0505C21.364 12.4022 20.4793 12 19.5 12C17.567 12 16 13.567 16 15.5C16 17.2632 17.3039 18.7219 19 极 18.9646" stroke="#ffffff" stroke-width="1.5" ></path>
-          <path d="M14.5 8.51L14.51 8.49889" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin极="round"></path>
-          <path d="M10 17C11.1046 17 12 16.1046 12 15C12 13.8954 11.1046 13 10 13C8.89543 13 极 8 13.8954 8 15C8 16.1046 8.89543 17 10 17Z" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M22 13.0505C21.364 12.4022 20.4793 12 19.5 12C17.567 12 16 13.567 16 15.5C16 17.2632 17.3039 18.7219 19 18.9646" stroke="#ffffff" stroke-width="1.5" ></path>
+          <path d="M14.5 8.51L14.51 8.49889" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M10 17C11.1046 17 12 16.1046 12 15C12 13.8954 11.1046 13 10 13C8.89543 13 8 13.8954 8 15C8 16.1046 8.89543 17 10 17Z" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
         </svg>
       </span>
       <span class="title">Campus Secondhand</span>
@@ -67,7 +67,7 @@
 
                 <v-row class="mt-4 flex-grow-1" style="align-content: flex-start;">
                   <!-- 用户ID -->
-                  <v-col cols极="12">
+                  <v-col cols="12">
                     <v-card class="pa-3 info-card-1 rounded-lg">
                       <div class="d-flex justify-space-between">
                         <span class="font-weight-medium">用户ID:</span>
@@ -237,7 +237,7 @@
                   </v-col>
                   
                   <v-col cols="6">
-                    <v-card class="pa-3 info-card-极1 rounded-lg">
+                    <v-card class="pa-3 info-card-1 rounded-lg">
                       <div class="d-flex justify-space-between align-center">
                         <span class="font-weight-medium">账户ID:</span>
                         <span>{{ virtualAccountStore.account?.accountId || 'N/A' }}</span>
@@ -288,8 +288,7 @@
                       class="py-4 d-flex flex-column account-action-btn" 
                       height="auto" 
                       width="60%"
-                      @click="confirmLogoutAll"
-                      :loading="isLoggingOutAll"
+                      @click="deleteAccount"
                     >
                       <v-icon size="28" class="mb-2">mdi-account-remove</v-icon>
                       <span>退出所有设备</span>
@@ -366,7 +365,7 @@
             <!-- 步骤3：验证成功 -->
             <div v-if="verifyStep === 3" class="text-center">
               <v-icon color="success" size="64" class="mb-4">mdi-check-circle</v-icon>
-              <p class="text-h极6 success--text">邮箱认证成功!</p>
+              <p class="text-h6 success--text">邮箱认证成功!</p>
               <p class="text--secondary">您的邮箱已成功验证</p>
             </div>
           </v-card-text>
@@ -409,39 +408,6 @@
         </v-card>
       </v-dialog>
 
-      <!-- 退出所有设备确认对话框 -->
-      <v-dialog v-model="logoutAllDialog" max-width="500px">
-        <v-card>
-          <v-card-title class="text-h5 primary--text">
-            <v-icon color="warning" class="mr-2">mdi-alert</v-icon>
-            确认退出所有设备
-          </v-card-title>
-          
-          <v-card-text class="pt-4">
-            <p>您确定要退出所有设备吗？</p>
-            <p class="text--secondary">这将在所有设备上终止您的登录会话，您需要重新登录。</p>
-          </v-card-text>
-
-          <v-card-actions>
-            <v-spacer></v-spacer>
-            <v-btn 
-              text 
-              @click="logoutAllDialog = false"
-              :disabled="isLoggingOutAll"
-            >
-              取消
-            </v-btn>
-            <v-btn 
-              color="error" 
-              @click="logoutAll"
-              :loading="isLoggingOutAll"
-            >
-              确认退出
-            </v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
-
       <!-- 提示信息弹窗 -->
       <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000">
         {{ snackbar.message }}
@@ -466,7 +432,6 @@ const virtualAccountStore = useVirtualAccountStore();
 const orderStore = useOrderStore();
 const isLoading = ref(true);
 const isLoggingOut = ref(false);
-const isLoggingOutAll = ref(false); // 新增：退出所有设备加载状态
 
 // 邮箱认证相关状态
 const emailVerifyDialog = ref(false);
@@ -477,9 +442,6 @@ const isSendingCode = ref(false);
 const isVerifying = ref(false);
 const countdown = ref(0);
 
-// 退出所有设备对话框
-const logoutAllDialog = ref(false);
-
 // 提示信息
 const snackbar = ref({
   show: false,
@@ -489,8 +451,13 @@ const snackbar = ref({
 
 // 获取已完成订单
 const completedOrders = computed(() => {
+  // 从订单store获取已完成状态的订单
   const orders = orderStore.getOrdersByStatus(OrderStatus.COMPLETED);
+  
+  // 只取最近的4个订单
   const recentOrders = orders.slice(0, 4);
+  
+  // 创建一个空订单对象来填充不足的部分
   const emptyOrder: OrderListResponse = {
     id: 0,
     orderNumber: '',
@@ -502,6 +469,7 @@ const completedOrders = computed(() => {
     quantity: 0
   };
   
+  // 如果不足4个，用空订单对象填充
   while (recentOrders.length < 4) {
     recentOrders.push({ ...emptyOrder });
   }
@@ -572,6 +540,7 @@ const loadData = async () => {
     await userStore.fetchUserInfo('current');
     if (userStore.user) {
       await virtualAccountStore.fetchBalance();
+      // 加载用户订单
       await orderStore.getUserOrders({ 
         status: OrderStatus.COMPLETED,
         pageSize: 4 
@@ -587,6 +556,7 @@ const loadData = async () => {
 // 处理邮箱认证按钮点击
 const handleVerifyEmail = async () => {
   if (userStore.user?.emailVerified) {
+    // 已认证，显示提示
     showSnackbar('您的邮箱已通过认证', 'info');
     return;
   }
@@ -684,32 +654,10 @@ const editInfo = () => {
   // 这里可以添加编辑信息的逻辑
 };
 
-// 确认退出所有设备
-const confirmLogoutAll = () => {
-  logoutAllDialog.value = true;
-};
-
-// 退出所有设备
-const logoutAll = async () => {
-  isLoggingOutAll.value = true;
-  try {
-    const result = await userStore.logoutAll();
-    
-    if (result.success) {
-      showSnackbar(`已成功退出${result.revokedCount || '所有'}台设备`, 'success');
-      // 关闭对话框
-      logoutAllDialog.value = false;
-       await userStore.logout();
-       router.push('/');
-    } else {
-      showSnackbar(result.message, 'error');
-    }
-  } catch (error) {
-    console.error('退出所有设备失败:', error);
-    showSnackbar('退出所有设备失败，请重试', 'error');
-  } finally {
-    isLoggingOutAll.value = false;
-  }
+// 账号注销
+const deleteAccount = () => {
+  console.log('账号注销按钮被点击');
+  // 这里可以添加账号注销的逻辑
 };
 
 // 退出登录 - 使用user.ts中的logout方法
@@ -754,13 +702,14 @@ onMounted(async () => {
   background: transparent !important;
 }
 
-/* 隐藏Edge和IE的极 scrollbar */
+/* 隐藏Edge和IE的滚动条 */
 body, html, .v-application, .v-application--wrap, .v-main, .grey.lighten-4 {
   -ms-overflow-style: none !important; /* IE and Edge */
   scrollbar-width: none !important; /* Firefox */
   overflow: -moz-scrollbars-none !important; /* 旧版Firefox */
 }
 
+/* 隐藏特定容器的滚动条 */
 .pc-user-detail, .v-container, .v-row, .v-col, .custom-card {
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
@@ -800,7 +749,7 @@ body, html, .v-application, .v-application--wrap, .v-main, .grey.lighten-4 {
 .title {
   font-size: 32px;
   font-weight: bold;
-  margin-left: 极16px;
+  margin-left: 16px;
   color: white !important; 
 }
 
@@ -846,7 +795,7 @@ body, html, .v-application, .v-application--wrap, .v-main, .grey.lighten-4 {
 
 .info-card-1:hover {
   background-color: rgba(255, 255, 255, 0.9) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 极0.1) !important; /* 悬停时添加阴影 */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important; /* 悬停时添加阴影 */
 }
 
 /* 虚线占位符样式 */
@@ -938,9 +887,8 @@ body, html, .v-application, .v-application--wrap, .v-main, .grey.lighten-4 {
   transition: all 0.3s ease;
 }
 
-
 .account-action-btn:hover {
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2) !important;
+  box-shadow: 0 6px 极16px rgba(0, 0, 0, 0.2) !important;
   transform: translateY(-2px);
 }
 
