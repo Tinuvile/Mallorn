@@ -6,9 +6,6 @@ import {
   type TokenResponse,
   type UserInfo,
   type ApiResponse,
-  type UserProfileResponse,
-  type UpdateUserProfileData,
-  type ChangePasswordData,
 } from '@/services/api'
 
 export interface User {
@@ -25,16 +22,44 @@ export interface User {
   lastLoginAt?: string
   lastLoginIp?: string
   loginCount?: number
+}
+
+export interface UserProfile {
+  userId: number
+  username: string
+  email: string
+  fullName?: string
+  phone?: string
+  studentId?: string
+  creditScore: number
+  emailVerified: boolean
+  isActive: boolean
+  createdAt: string
+  lastLoginAt?: string
+  lastLoginIp?: string
+  loginCount: number
   student?: {
     studentId: string
     name: string
-    department: string
+    department?: string
   }
   virtualAccount?: {
     accountId: number
     balance: number
     createdAt: string
   }
+}
+
+export interface UpdateProfileData {
+  username?: string
+  fullName?: string
+  phone?: string
+}
+
+export interface ChangePasswordData {
+  currentPassword: string
+  newPassword: string
+  confirmPassword: string
 }
 
 export const useUserStore = defineStore('user', () => {
@@ -73,14 +98,14 @@ export const useUserStore = defineStore('user', () => {
         token.value = tokenData.access_token
         refreshToken.value = tokenData.refresh_token
 
-        // 保存用户信息（新增 emailVerified 字段）
+        // 保存用户信息
         user.value = {
           userId: tokenData.user_id,
           username: tokenData.username,
           email: tokenData.email,
           studentId: tokenData.student_id,
           creditScore: tokenData.credit_score,
-          emailVerified: tokenData.email_verified || false, // 新增字段，默认为 false
+          emailVerified: tokenData.email_verified || false
         }
 
         isLoggedIn.value = true
@@ -124,7 +149,6 @@ export const useUserStore = defineStore('user', () => {
       console.error('注册错误详情:', error)
       let message = '注册失败，请重试'
 
-      // 尝试从不同的错误响应结构中提取错误消息
       if (error && typeof error === 'object' && 'response' in error) {
         const err = error as { response?: { data?: unknown } }
         const errorData = err.response?.data
@@ -203,7 +227,7 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  // 获取用户信息（新增 emailVerified 字段）
+  // 获取用户信息
   const fetchUserInfo = async (username: string) => {
     try {
       const response: ApiResponse<UserInfo> = await authApi.getUser(username)
@@ -218,7 +242,7 @@ export const useUserStore = defineStore('user', () => {
           phone: userData.phone,
           studentId: userData.studentId,
           creditScore: userData.creditScore,
-          emailVerified: userData.emailVerified || false, // 新增字段
+          emailVerified: userData.emailVerified || false
         }
         localStorage.setItem('user', JSON.stringify(user.value))
 
@@ -241,9 +265,8 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  const sendVerificationCode = async (
-    email: string
-  ): Promise<{ success: boolean; message: string }> => {
+  // 发送验证码
+  const sendVerificationCode = async (email: string): Promise<{ success: boolean; message: string }> => {
     try {
       if (!user.value?.userId) {
         return { success: false, message: '用户未登录' }
@@ -336,20 +359,15 @@ export const useUserStore = defineStore('user', () => {
   }
 
   // 退出所有设备
-  const logoutAll = async (): Promise<{
-    success: boolean
-    message: string
-    revokedCount?: number
-  }> => {
+  const logoutAll = async (): Promise<{ success: boolean; message: string; revokedCount?: number }> => {
     try {
       const response = await authApi.logoutAll()
 
       if (response.success && response.data) {
-        // 清除本地状态（可选，根据需求决定是否立即退出当前会话）
-        return {
-          success: true,
+        return { 
+          success: true, 
           message: response.message || '已退出所有设备',
-          revokedCount: response.data.revokedTokens,
+          revokedCount: response.data.revokedTokens
         }
       }
 
@@ -369,38 +387,16 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  // 获取用户详细信息（包含虚拟账户等）
-  const getUserProfile = async () => {
+  // 获取用户详细信息（包含信用分、虚拟账户等）
+  const fetchUserProfile = async (): Promise<{ success: boolean; message: string; data?: UserProfile }> => {
     try {
       const response = await authApi.getUserProfile()
 
       if (response.success && response.data) {
-        // 更新用户信息
-        user.value = {
-          userId: response.data.userId,
-          username: response.data.username,
-          email: response.data.email,
-          fullName: response.data.fullName,
-          phone: response.data.phone,
-          studentId: response.data.studentId,
-          creditScore: response.data.creditScore,
-          emailVerified: response.data.emailVerified,
-          isActive: response.data.isActive,
-          createdAt: response.data.createdAt,
-          lastLoginAt: response.data.lastLoginAt,
-          lastLoginIp: response.data.lastLoginIp,
-          loginCount: response.data.loginCount,
-          student: response.data.student,
-          virtualAccount: response.data.virtualAccount,
-        }
-
-        // 保存到本地存储
-        localStorage.setItem('user', JSON.stringify(user.value))
-
-        return {
-          success: true,
+        return { 
+          success: true, 
           message: response.message || '获取用户信息成功',
-          data: response.data,
+          data: response.data
         }
       }
 
@@ -420,24 +416,19 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  // 更新用户信息
-  const updateUserProfile = async (updateData: {
-    username?: string
-    fullName?: string
-    phone?: string
-  }) => {
+  // 更新用户基本信息
+  const updateUserProfile = async (profileData: UpdateProfileData): Promise<{ success: boolean; message: string }> => {
     try {
-      const response = await authApi.updateUserProfile(updateData)
+      const response = await authApi.updateUserProfile(profileData)
 
       if (response.success) {
         // 更新本地用户信息
         if (user.value) {
-          if (updateData.username) user.value.username = updateData.username
-          if (updateData.fullName) user.value.fullName = updateData.fullName
-          if (updateData.phone) user.value.phone = updateData.phone
+          if (profileData.username) user.value.username = profileData.username
+          if (profileData.fullName) user.value.fullName = profileData.fullName
+          if (profileData.phone) user.value.phone = profileData.phone
           localStorage.setItem('user', JSON.stringify(user.value))
         }
-
         return { success: true, message: response.message || '用户信息更新成功' }
       }
 
@@ -458,11 +449,7 @@ export const useUserStore = defineStore('user', () => {
   }
 
   // 修改密码
-  const changePassword = async (passwordData: {
-    currentPassword: string
-    newPassword: string
-    confirmPassword: string
-  }) => {
+  const changePassword = async (passwordData: ChangePasswordData): Promise<{ success: boolean; message: string }> => {
     try {
       const response = await authApi.changePassword(passwordData)
 
@@ -497,12 +484,12 @@ export const useUserStore = defineStore('user', () => {
     validateStudent,
     logout,
     fetchUserInfo,
-    sendVerificationCode,
-    verifyCode,
-    verifyEmailLink,
+    sendVerificationCode,    
+    verifyCode,              
+    verifyEmailLink,         
     logoutAll,
-    getUserProfile,
+    fetchUserProfile,
     updateUserProfile,
-    changePassword,
+    changePassword
   }
 })

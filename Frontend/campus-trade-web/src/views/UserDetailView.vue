@@ -25,7 +25,7 @@
         <v-container class="px-4" style="max-width: 1600px">
           <div class="user-info-header">
             <h1 class="text-h4 font-weight-bold text-center primary--text mb-2">个人信息中心</h1>
-            <v-divider thickness="4" color="#ffa5a5" class="mb-6"></v-divider>
+            <v-divider thickness="4" color="#f5d8d8" class="mb-6"></v-divider>
           </div>
           <!-- 加载状态 -->
           <v-row v-if="isLoading" justify="center" align="center" class="fill-height" style="height: 70vh">
@@ -128,6 +128,13 @@
                 <!-- 修改后的按钮区域 - 垂直排列并水平居中 -->
                 <div class="vertical-button-container mt-4">
                   <v-btn 
+                    class="action-btn account-action-btn" 
+                    @click="openChangePasswordDialog"
+                    block
+                  >
+                    修改密码
+                  </v-btn>
+                  <v-btn 
                     class="action-btn edit-btn mb-2"
                     @click="editInfo"
                     block
@@ -149,7 +156,7 @@
             <v-divider 
               vertical 
               thickness="4" 
-              color="#4d606e" 
+              color="#c9d6df" 
               class="mx-md-2 my-6 d-none d-md-flex"
             ></v-divider>
 
@@ -213,7 +220,7 @@
             <v-divider 
               vertical 
               thickness="4" 
-              color="#4d606e" 
+              color="#c9d6df" 
               class="mx-md-2 my-6 d-none d-md-flex"
             ></v-divider>
 
@@ -288,7 +295,8 @@
                       class="py-4 d-flex flex-column account-action-btn" 
                       height="auto" 
                       width="60%"
-                      @click="deleteAccount"
+                      @click="logoutAllDevices"
+                      :loading="isLoggingOutAll"
                     >
                       <v-icon size="28" class="mb-2">mdi-account-remove</v-icon>
                       <span>退出所有设备</span>
@@ -408,6 +416,146 @@
         </v-card>
       </v-dialog>
 
+      <!-- 编辑信息对话框 -->
+      <v-dialog v-model="editDialog" max-width="600px" persistent>
+        <v-card>
+          <v-card-title class="text-h5 primary--text">
+            <v-icon color="primary" class="mr-2">mdi-account-edit</v-icon>
+            编辑个人信息
+          </v-card-title>
+          
+          <v-card-text class="pt-4">
+            <v-form ref="editForm" v-model="editFormValid">
+              <v-row>
+                <v-col cols="12">
+                  <v-text-field
+                    v-model="editFormData.username"
+                    label="用户名"
+                    outlined
+                    dense
+                    :rules="[v => !!v || '用户名不能为空']"
+                  ></v-text-field>
+                </v-col>
+                
+                <v-col cols="12">
+                  <v-text-field
+                    v-model="editFormData.fullName"
+                    label="真实姓名"
+                    outlined
+                    dense
+                  ></v-text-field>
+                </v-col>
+                
+                <v-col cols="12">
+                  <v-text-field
+                    v-model="editFormData.phone"
+                    label="手机号码"
+                    outlined
+                    dense
+                    :rules="[
+                      v => !v || /^1[3-9]\d{9}$/.test(v) || '请输入有效的手机号码'
+                    ]"
+                  ></v-text-field>
+                </v-col>
+              </v-row>
+            </v-form>
+          </v-card-text>
+
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn 
+              text 
+              @click="closeEditDialog"
+              :disabled="isUpdatingProfile"
+            >
+              取消
+            </v-btn>
+            <v-btn 
+              color="primary" 
+              @click="updateProfile"
+              :loading="isUpdatingProfile"
+              :disabled="!editFormValid"
+            >
+              保存
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
+      <!-- 修改密码对话框 -->
+      <v-dialog v-model="changePasswordDialog" max-width="600px" persistent>
+        <v-card>
+          <v-card-title class="text-h5 primary--text">
+            <v-icon color="primary" class="mr-2">mdi-lock-reset</v-icon>
+            修改密码
+          </v-card-title>
+          
+          <v-card-text class="pt-4">
+            <v-form ref="passwordForm" v-model="passwordFormValid">
+              <v-row>
+                <v-col cols="12">
+                  <v-text-field
+                    v-model="passwordFormData.currentPassword"
+                    label="当前密码"
+                    type="password"
+                    outlined
+                    dense
+                    :rules="[v => !!v || '请输入当前密码']"
+                  ></v-text-field>
+                </v-col>
+                
+                <v-col cols="12">
+                  <v-text-field
+                    v-model="passwordFormData.newPassword"
+                    label="新密码"
+                    type="password"
+                    outlined
+                    dense
+                    :rules="[
+                      v => !!v || '请输入新密码',
+                      v => v.length >= 6 || '密码长度至少6位'
+                    ]"
+                  ></v-text-field>
+                </v-col>
+                
+                <v-col cols="12">
+                  <v-text-field
+                    v-model="passwordFormData.confirmPassword"
+                    label="确认新密码"
+                    type="password"
+                    outlined
+                    dense
+                    :rules="[
+                      v => !!v || '请确认新密码',
+                      v => v === passwordFormData.newPassword || '两次输入的密码不一致'
+                    ]"
+                  ></v-text-field>
+                </v-col>
+              </v-row>
+            </v-form>
+          </v-card-text>
+
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn 
+              text 
+              @click="closeChangePasswordDialog"
+              :disabled="isChangingPassword"
+            >
+              取消
+            </v-btn>
+            <v-btn 
+              color="primary" 
+              @click="changePassword"
+              :loading="isChangingPassword"
+              :disabled="!passwordFormValid"
+            >
+              确认修改
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
       <!-- 提示信息弹窗 -->
       <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000">
         {{ snackbar.message }}
@@ -432,6 +580,7 @@ const virtualAccountStore = useVirtualAccountStore();
 const orderStore = useOrderStore();
 const isLoading = ref(true);
 const isLoggingOut = ref(false);
+const isLoggingOutAll = ref(false);
 
 // 邮箱认证相关状态
 const emailVerifyDialog = ref(false);
@@ -442,12 +591,36 @@ const isSendingCode = ref(false);
 const isVerifying = ref(false);
 const countdown = ref(0);
 
+// 编辑信息相关状态
+const editDialog = ref(false);
+const editFormValid = ref(false);
+const isUpdatingProfile = ref(false);
+const editFormData = ref({
+  username: '',
+  fullName: '',
+  phone: ''
+});
+
+// 修改密码相关状态
+const changePasswordDialog = ref(false);
+const passwordFormValid = ref(false);
+const isChangingPassword = ref(false);
+const passwordFormData = ref({
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: ''
+});
+
 // 提示信息
 const snackbar = ref({
   show: false,
   message: '',
   color: 'success'
 });
+
+// 表单引用
+const editForm = ref(null);
+const passwordForm = ref(null);
 
 // 获取已完成订单
 const completedOrders = computed(() => {
@@ -640,7 +813,7 @@ const showSnackbar = (message: string, color: 'success' | 'error' | 'info' = 'su
   };
 };
 
-// 关闭对话框时的清理
+// 关闭邮箱认证对话框时的清理
 const closeEmailVerifyDialog = () => {
   emailVerifyDialog.value = false;
   verifyStep.value = 1;
@@ -648,16 +821,108 @@ const closeEmailVerifyDialog = () => {
   countdown.value = 0;
 };
 
-// 新增按钮处理函数
+// 打开编辑信息对话框
 const editInfo = () => {
-  console.log('编辑信息按钮被点击');
-  // 这里可以添加编辑信息的逻辑
+  // 填充当前用户信息
+  editFormData.value = {
+    username: userStore.user?.username || '',
+    fullName: userStore.user?.fullName || '',
+    phone: userStore.user?.phone || ''
+  };
+  editDialog.value = true;
 };
 
-// 账号注销
-const deleteAccount = () => {
-  console.log('账号注销按钮被点击');
-  // 这里可以添加账号注销的逻辑
+// 关闭编辑信息对话框
+const closeEditDialog = () => {
+  editDialog.value = false;
+  if ((editForm.value as any)?.reset) {
+    (editForm.value as any).reset();
+  }
+};
+
+// 更新用户信息
+const updateProfile = async () => {
+  if (!editFormValid.value) return;
+
+  isUpdatingProfile.value = true;
+  try {
+    const result = await userStore.updateUserProfile(editFormData.value);
+    
+    if (result.success) {
+      showSnackbar('个人信息更新成功', 'success');
+      editDialog.value = false;
+      // 重新加载用户信息
+      await userStore.fetchUserInfo('current');
+    } else {
+      showSnackbar(result.message, 'error');
+    }
+  } catch (error) {
+    console.error('更新个人信息失败:', error);
+    showSnackbar('更新失败，请重试', 'error');
+  } finally {
+    isUpdatingProfile.value = false;
+  }
+};
+
+// 打开修改密码对话框
+const openChangePasswordDialog = () => {
+  changePasswordDialog.value = true;
+};
+
+// 关闭修改密码对话框
+const closeChangePasswordDialog = () => {
+  changePasswordDialog.value = false;
+  if ((passwordForm.value as any)?.reset) {
+    (passwordForm.value as any).reset();
+  }
+  passwordFormData.value = {
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  };
+};
+
+// 修改密码
+const changePassword = async () => {
+  if (!passwordFormValid.value) return;
+
+  isChangingPassword.value = true;
+  try {
+    const result = await userStore.changePassword(passwordFormData.value);
+    
+    if (result.success) {
+      showSnackbar('密码修改成功', 'success');
+      changePasswordDialog.value = false;
+    } else {
+      showSnackbar(result.message, 'error');
+    }
+  } catch (error) {
+    console.error('修改密码失败:', error);
+    showSnackbar('修改失败，请重试', 'error');
+  } finally {
+    isChangingPassword.value = false;
+  }
+};
+
+// 退出所有设备
+const logoutAllDevices = async () => {
+  isLoggingOutAll.value = true;
+  try {
+    const result = await userStore.logoutAll();
+    
+    if (result.success) {
+      showSnackbar(`已退出 ${result.revokedCount || 0} 个设备`, 'success');
+      // 重新加载页面以确保状态正确
+      window.location.reload();
+    } else {
+      showSnackbar(result.message, 'error');
+    }
+  } catch (error) {
+    console.error('退出所有设备失败:', error);
+    showSnackbar('退出所有设备失败，请重试', 'error');
+  } finally {
+    isLoggingOutAll.value = false;
+  }
 };
 
 // 退出登录 - 使用user.ts中的logout方法
@@ -680,7 +945,6 @@ onMounted(async () => {
   await loadData();
 });
 </script>
-
 <style scoped>
 .v-application {
   background-color: #f6fcff !important;
@@ -733,7 +997,7 @@ body, html, .v-application, .v-application--wrap, .v-main, .grey.lighten-4 {
   margin:  0;
   padding: 0 16px;
   background-color:#cadefc;
-  box-shadow: 0 2px 4px rgba(0, 0, 极 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   z-index: 1000; 
   display: flex;
   align-items: center;
@@ -764,7 +1028,7 @@ body, html, .v-application, .v-application--wrap, .v-main, .grey.lighten-4 {
 }
 
 .custom-card:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 极0.12) !important;
   transform: translateY(-2px);
 }
 
@@ -786,7 +1050,7 @@ body, html, .v-application, .v-application--wrap, .v-main, .grey.lighten-4 {
 }
 
 .info-card-1 {
-  background-color: rgba(255, 255, 255, 0.7) !important;
+  background-color: rgba(255, 极255, 255, 0.7) !important;
   border: 1px solid rgba(255, 255, 255, 0.5);
   transition: all 0.2s ease;
   box-shadow: none !important; /* 默认无阴影 */
@@ -823,7 +1087,7 @@ body, html, .v-application, .v-application--wrap, .v-main, .grey.lighten-4 {
 }
 
 /* 实线框悬停效果 */
-.info-card:not(.dashed-placeholder):hover {
+.info-card:not(.极dashed-placeholder):hover {
   background-color: rgba(255, 255, 255, 0.9) !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
 }
@@ -838,7 +1102,6 @@ body, html, .v-application, .v-application--wrap, .v-main, .grey.lighten-4 {
   font-size: 24px;
   margin-bottom: 8px;
 }
-
 
 /* 余额卡片样式 */
 .balance-card {
@@ -855,7 +1118,7 @@ body, html, .v-application, .v-application--wrap, .v-main, .grey.lighten-4 {
 /* 信用评分卡片样式 */
 .credit-score-card {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7)) !important;
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: 1px极 solid rgba(255, 255, 255, 极0.6);
   box-shadow: none !important;
   overflow: hidden !important;
 }
@@ -885,10 +1148,11 @@ body, html, .v-application, .v-application--wrap, .v-main, .grey.lighten-4 {
 .account-action-btn {
   border: 1px solid rgba(255, 255, 255, 0.3);
   transition: all 0.3s ease;
+  border-radius: 8px;
 }
 
 .account-action-btn:hover {
-  box-shadow: 0 6px 极16px rgba(0, 0, 0, 0.2) !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2) !important;
   transform: translateY(-2px);
 }
 
@@ -928,6 +1192,8 @@ body, html, .v-application, .v-application--wrap, .v-main, .grey.lighten-4 {
   align-items: center;
   justify-content: center;
   box-shadow: none !important; 
+  border-radius: 8px;
+  font-weight: 500;
 }
 
 .action-btn:hover {
@@ -945,6 +1211,15 @@ body, html, .v-application, .v-application--wrap, .v-main, .grey.lighten-4 {
   background-color: #45a049 !important;
 }
 
+/* 编辑信息按钮样式 */
+.edit-btn {
+  background-color: #2196F3 !important;
+}
+
+.edit-btn:hover {
+  background-color: #1976D2 !important;
+}
+
 /* OTP输入框居中 */
 .v-otp-input {
   justify-content: center;
@@ -955,11 +1230,39 @@ body, html, .v-application, .v-application--wrap, .v-main, .grey.lighten-4 {
 }
 
 /* 文本截断 */
-.text-trunc极ate {
+.text-truncate {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 120px;
+}
+
+/* 用户信息头部样式 */
+.user-info-header {
+  margin-bottom: 2rem;
+}
+
+.user-info-header h1 {
+  color: #1976D2 !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 分隔线样式优化 */
+.v-divider {
+  opacity: 0.8;
+}
+
+/* 卡片内边距优化 */
+.pa-6 {
+  padding: 24px;
+}
+
+.pa-4 {
+  padding: 16px;
+}
+
+.pa-3 {
+  padding: 12px;
 }
 
 /* 响应式调整 */
@@ -972,11 +1275,253 @@ body, html, .v-application, .v-application--wrap, .v-main, .grey.lighten-4 {
   .text-truncate {
     max-width: 100px;
   }
+  
+  .user-avatar-container {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .title {
+    font-size: 28px;
+  }
 }
 
 @media (max-width: 600px) {
   .text-truncate {
     max-width: 80px;
+  }
+  
+  .navbar {
+    padding: 0 12px;
+  }
+  
+  .title {
+    font-size: 24px;
+    margin-left: 12px;
+  }
+  
+  .icon svg {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .user-info-header h1 {
+    font-size: 1.75rem !important;
+  }
+  
+  .vertical-button-container {
+    gap: 6px;
+  }
+  
+  .action-btn {
+    width: 120px !important;
+    max-width: 120px;
+    min-width: 120px;
+    font-size: 13px;
+  }
+  
+  .account-action-btn {
+    width: 50% !important;
+  }
+}
+
+/* 对话框标题样式优化 */
+.v-card-title {
+  padding-bottom: 16px;
+}
+
+.v-card-title .v-icon {
+  margin-right: 8px;
+}
+
+/* 表单字段样式优化 */
+.v-text-field {
+  margin-bottom: 8px;
+}
+
+.v-text-field :deep(.v-label) {
+  font-size: 14px;
+}
+
+.v-text-field :deep(.v-input__control) {
+  min-height: 48px;
+}
+
+/* 按钮组样式优化 */
+.v-card-actions {
+  padding: 16px 24px 24px;
+}
+
+.v-card-actions .v-btn {
+  min-width: 80px;
+}
+
+/* 加载状态样式 */
+.v-progress-circular {
+  margin-bottom: 16px;
+}
+
+/* 错误状态样式 */
+.error--text {
+  color: #ff5252 !important;
+}
+
+.success--text {
+  color: #4caf50 !important;
+}
+
+.primary--text {
+  color: #000000 !important;
+}
+
+/* 信用评分进度条样式 */
+.v-progress-linear {
+  border-radius: 4px;
+}
+
+.v-progress-linear :deep(.v-progress-linear__determinate) {
+  border-radius: 4px;
+}
+
+/* 交易记录卡片悬停效果 */
+.info-card:not(.dashed-placeholder):hover {
+  transform: translateY(-2px);
+  transition: transform 0.2s ease;
+}
+
+/* 账号管理区域按钮间距优化 */
+.v-row.justify-center .v-col {
+  padding: 8px 12px;
+}
+
+/* 确保所有卡片内容不会溢出 */
+.custom-card > * {
+  overflow: hidden !important;
+}
+
+/* 确保图片不会变形 */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* 确保文本不会溢出 */
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 对话框内容区域样式 */
+.v-card-text {
+  padding: 20px 24px;
+}
+
+.v-card-text p {
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+/* 计数文字样式 */
+.text-caption {
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+/* 确保按钮文字不会换行 */
+.v-btn {
+  white-space: nowrap;
+}
+
+/* 邮箱认证步骤样式 */
+.v-otp-input {
+  gap: 8px;
+}
+
+.v-otp-input :deep(.v-text-field) {
+  flex: 1;
+}
+
+/* 响应式对话框 */
+@media (max-width: 600px) {
+  .v-dialog {
+    margin: 16px;
+  }
+  
+  .v-card-title {
+    font-size: 1.25rem !important;
+    padding: 16px;
+  }
+  
+  .v-card-text {
+    padding: 16px;
+  }
+  
+  .v-card-actions {
+    padding: 16px;
+  }
+  
+  .v-otp-input {
+    gap: 4px;
+  }
+  
+  .v-otp-input :deep(.v-text-field) {
+    margin: 0 2px;
+  }
+}
+
+/* 确保移动端触摸友好 */
+.v-btn {
+  min-height: 36px;
+}
+
+.v-text-field :deep(.v-input__control) {
+  min-height: 56px;
+}
+
+/* 焦点状态优化 */
+.v-btn:focus::before,
+.v-text-field:focus-within {
+  opacity: 0.1;
+}
+
+/* 过渡动画优化 */
+.v-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.v-btn {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 确保高对比度可访问性 */
+@media (prefers-contrast: high) {
+  .custom-card {
+    border: 2px solid #1976D2;
+  }
+  
+  .info-card,
+  .info-card-1,
+  .balance-card,
+  .credit-score-card {
+    border: 1px solid #000;
+    background-color: #fff !important;
+  }
+}
+
+/* 减少运动偏好 */
+@media (prefers-reduced-motion: reduce) {
+  .custom-card,
+  .v-btn,
+  .info-card,
+  .info-card-1 {
+    transition: none;
+  }
+  
+  .custom-card:hover,
+  .info-card:hover,
+  .info-card-1:hover {
+    transform: none;
   }
 }
 </style>

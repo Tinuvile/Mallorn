@@ -277,16 +277,16 @@ export const authApi = {
 
   sendVerificationCode: (userId: number, email: string): Promise<ApiResponse> => {
     return api.post('/api/auth/send-verification-code', {
-      UserId: userId,
-      Email: email,
+      userId: userId,
+      email: email,
     })
   },
 
   // 验证邮箱验证码
   verifyCode: (userId: number, code: string): Promise<ApiResponse> => {
     return api.post('/api/auth/verify-code', {
-      UserId: userId,
-      Code: code,
+      userId: userId,
+      code: code,
     })
   },
 
