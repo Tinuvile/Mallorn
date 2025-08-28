@@ -5,9 +5,9 @@
         <svg width="48px" height="48px" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" color="#ffffff">
           <circle cx="12" cy="12" r="10" stroke="#ffffff" stroke-width="1.5"></circle>
           <path d="M7.63262 3.06689C8.98567 3.35733 9.99999 4.56025 9.99999 6.00007C9.99999 7.65693 8.65685 9.00007 6.99999 9.00007C5.4512 9.00007 4.17653 7.82641 4.01685 6.31997" stroke="#ffffff" stroke-width="1.5"></path>
-          <path d="M22 13.0505C21.364 12.4022 20.4793 12 19.5 12C17.567 12 16 13.567 16 15.5C16 17.2632 17.3039 18.7219 19 18.9646" stroke="#ffffff" stroke-width="1.5" ></path>
-          <path d="M14.5 8.51L14.51 8.49889" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
-          <path d="M10 17C11.1046 17 12 16.1046 12 15C12 13.8954 11.1046 13 10 13C8.89543 13 8 13.8954 8 15C8 16.1046 8.89543 17 10 17Z" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M22 13.0505C21.364 12.4022 20.4793 12 19.5 12C17.567 12 16 13.567 16 15.5C16 17.2632 17.3039 18.7219 19 极 18.9646" stroke="#ffffff" stroke-width="1.5" ></path>
+          <path d="M14.5 8.51L14.51 8.49889" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin极="round"></path>
+          <path d="M10 17C11.1046 17 12 16.1046 12 15C12 13.8954 11.1046 13 10 13C8.89543 13 极 8 13.8954 8 15C8 16.1046 8.89543 17 10 17Z" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
         </svg>
       </span>
       <span class="title">Campus Secondhand</span>
@@ -20,7 +20,7 @@
         <v-icon color="black">mdi-exit-to-app</v-icon>
       </v-btn>
     </header>
-    <v-main class="grey lighten-4">
+    <v-main class="grey lighten-4" style="min-height: 100vh;">
       <div class="pc-user-detail">
         <v-container class="px-4" style="max-width: 1600px">
           <div class="user-info-header">
@@ -67,8 +67,8 @@
 
                 <v-row class="mt-4 flex-grow-1" style="align-content: flex-start;">
                   <!-- 用户ID -->
-                  <v-col cols="12">
-                    <v-card class="pa-3 info-card rounded-lg">
+                  <v-col cols极="12">
+                    <v-card class="pa-3 info-card-1 rounded-lg">
                       <div class="d-flex justify-space-between">
                         <span class="font-weight-medium">用户ID:</span>
                         <span>{{ userStore.user?.userId || 'N/A' }}</span>
@@ -78,7 +78,7 @@
                   
                   <!-- 用户名 -->
                   <v-col cols="12">
-                    <v-card class="pa-3 info-card rounded-lg">
+                    <v-card class="pa-3 info-card-1 rounded-lg">
                       <div class="d-flex justify-space-between">
                         <span class="font-weight-medium">用户名:</span>
                         <span>{{ userStore.user?.username || 'N/A' }}</span>
@@ -88,7 +88,7 @@
                   
                   <!-- 学号 -->
                   <v-col cols="12">
-                    <v-card class="pa-3 info-card rounded-lg">
+                    <v-card class="pa-3 info-card-1 rounded-lg">
                       <div class="d-flex justify-space-between">
                         <span class="font-weight-medium">学号:</span>
                         <span>{{ userStore.user?.studentId || 'N/A' }}</span>
@@ -98,7 +98,7 @@
                   
                   <!-- 手机号 -->
                   <v-col cols="12">
-                    <v-card class="pa-3 info-card rounded-lg">
+                    <v-card class="pa-3 info-card-1 rounded-lg">
                       <div class="d-flex justify-space-between">
                         <span class="font-weight-medium">手机:</span>
                         <span>{{ userStore.user?.phone ? maskPhone(userStore.user.phone) : 'N/A' }}</span>
@@ -108,7 +108,7 @@
                   
                   <!-- 邮箱 -->
                   <v-col cols="12">
-                    <v-card class="pa-3 info-card rounded-lg">
+                    <v-card class="pa-3 info-card-1 rounded-lg">
                       <div class="d-flex justify-space-between">
                         <span class="font-weight-medium">邮箱:</span>
                         <span>{{ userStore.user?.email || 'N/A' }}</span>
@@ -153,7 +153,7 @@
               class="mx-md-2 my-6 d-none d-md-flex"
             ></v-divider>
 
-            <!-- 中间交易记录区 -->
+            <!-- 中间交易记录区 - 修改部分 -->
             <v-col cols="12" md="4" class="px-md-4 d-flex">
               <v-card class="custom-card pa-6 d-flex flex-column" style="flex: 1;">
                 <div class="d-flex align-center mb-4">
@@ -162,16 +162,27 @@
                 </div>
                 
                 <v-row class="flex-grow-1" style="align-content: flex-start;">
-                  <!-- 交易记录列表 -->
-                  <v-col cols="12" v-for="(transaction, index) in transactions" :key="index">
-                    <v-card class="pa-3 info-card rounded-lg">
-                      <div class="d-flex justify-space-between align-center mb-1">
-                        <span class="font-weight-medium">{{ transaction.title }}</span>
-                        <span :class="transaction.amount > 0 ? 'green--text' : 'red--text'">
-                          {{ transaction.amount > 0 ? '+' : '' }}¥{{ Math.abs(transaction.amount).toFixed(2) }}
-                        </span>
+                  <!-- 交易记录列表 - 修改为显示已完成订单 -->
+                  <v-col cols="12" v-for="(order, index) in completedOrders" :key="index">
+                    <v-card class="pa-3 info-card rounded-lg" :class="{ 'dashed-placeholder': !order.id }">
+                      <div v-if="order.id">
+                        <div class="d-flex justify-space-between align-center mb-1">
+                          <span class="font-weight-medium text-truncate">{{ order.productName }}</span>
+                          <span class="green--text">
+                            ¥{{ order.totalAmount.toFixed(2) }}
+                          </span>
+                        </div>
+                        <div class="d-flex justify-space-between align-center text-caption text--secondary">
+                          <span>{{ formatOrderDate(order.orderDate) }}</span>
+                          <v-chip x-small color="success" text-color="white">
+                            已完成
+                          </v-chip>
+                        </div>
                       </div>
-                      <div class="text-caption text--secondary">{{ transaction.date }}</div>
+                      <div v-else class="d-flex justify-center align-center fill-height">
+                        <v-icon color="grey lighten-1">mdi-cart</v-icon>
+                        <span class="ml-2 grey--text text--lighten-1">{{ order.productName }}</span>
+                      </div>
                     </v-card>
                   </v-col>
                 </v-row>
@@ -226,7 +237,7 @@
                   </v-col>
                   
                   <v-col cols="6">
-                    <v-card class="pa-3 info-card rounded-lg">
+                    <v-card class="pa-3 info-card-极1 rounded-lg">
                       <div class="d-flex justify-space-between align-center">
                         <span class="font-weight-medium">账户ID:</span>
                         <span>{{ virtualAccountStore.account?.accountId || 'N/A' }}</span>
@@ -235,7 +246,7 @@
                   </v-col>
                   
                   <v-col cols="6">
-                    <v-card class="pa-3 info-card rounded-lg">
+                    <v-card class="pa-3 info-card-1 rounded-lg">
                       <div class="d-flex justify-space-between align-center">
                         <span class="font-weight-medium">用户ID:</span>
                         <span>{{ virtualAccountStore.account?.userId || 'N/A' }}</span>
@@ -244,7 +255,7 @@
                   </v-col>
                   
                   <v-col cols="6">
-                    <v-card class="pa-3 info-card rounded-lg">
+                    <v-card class="pa-3 info-card-1 rounded-lg">
                       <div class="d-flex justify-space-between align-center">
                         <span class="font-weight-medium">创建时间:</span>
                         <span>{{ formatDate(virtualAccountStore.account?.createTime) }}</span>
@@ -253,7 +264,7 @@
                   </v-col>
                   
                   <v-col cols="6">
-                    <v-card class="pa-3 info-card rounded-lg">
+                    <v-card class="pa-3 info-card-1 rounded-lg">
                       <div class="d-flex justify-space-between align-center">
                         <span class="font-weight-medium">最后更新:</span>
                         <span>{{ formatDate(virtualAccountStore.account?.lastUpdateTime) }}</span>
@@ -277,7 +288,8 @@
                       class="py-4 d-flex flex-column account-action-btn" 
                       height="auto" 
                       width="60%"
-                      @click="deleteAccount"
+                      @click="confirmLogoutAll"
+                      :loading="isLoggingOutAll"
                     >
                       <v-icon size="28" class="mb-2">mdi-account-remove</v-icon>
                       <span>退出所有设备</span>
@@ -354,7 +366,7 @@
             <!-- 步骤3：验证成功 -->
             <div v-if="verifyStep === 3" class="text-center">
               <v-icon color="success" size="64" class="mb-4">mdi-check-circle</v-icon>
-              <p class="text-h6 success--text">邮箱认证成功！</p>
+              <p class="text-h极6 success--text">邮箱认证成功!</p>
               <p class="text--secondary">您的邮箱已成功验证</p>
             </div>
           </v-card-text>
@@ -397,6 +409,39 @@
         </v-card>
       </v-dialog>
 
+      <!-- 退出所有设备确认对话框 -->
+      <v-dialog v-model="logoutAllDialog" max-width="500px">
+        <v-card>
+          <v-card-title class="text-h5 primary--text">
+            <v-icon color="warning" class="mr-2">mdi-alert</v-icon>
+            确认退出所有设备
+          </v-card-title>
+          
+          <v-card-text class="pt-4">
+            <p>您确定要退出所有设备吗？</p>
+            <p class="text--secondary">这将在所有设备上终止您的登录会话，您需要重新登录。</p>
+          </v-card-text>
+
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn 
+              text 
+              @click="logoutAllDialog = false"
+              :disabled="isLoggingOutAll"
+            >
+              取消
+            </v-btn>
+            <v-btn 
+              color="error" 
+              @click="logoutAll"
+              :loading="isLoggingOutAll"
+            >
+              确认退出
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
       <!-- 提示信息弹窗 -->
       <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000">
         {{ snackbar.message }}
@@ -406,10 +451,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/user';
 import { useVirtualAccountStore } from '@/stores/virtualaccount';
+import { useOrderStore, OrderStatus, type OrderListResponse } from '@/stores/order';
 
 // 路由
 const router = useRouter();
@@ -417,8 +463,10 @@ const router = useRouter();
 // 状态管理
 const userStore = useUserStore();
 const virtualAccountStore = useVirtualAccountStore();
+const orderStore = useOrderStore();
 const isLoading = ref(true);
 const isLoggingOut = ref(false);
+const isLoggingOutAll = ref(false); // 新增：退出所有设备加载状态
 
 // 邮箱认证相关状态
 const emailVerifyDialog = ref(false);
@@ -429,6 +477,9 @@ const isSendingCode = ref(false);
 const isVerifying = ref(false);
 const countdown = ref(0);
 
+// 退出所有设备对话框
+const logoutAllDialog = ref(false);
+
 // 提示信息
 const snackbar = ref({
   show: false,
@@ -436,13 +487,27 @@ const snackbar = ref({
   color: 'success'
 });
 
-// 交易记录数据
-const transactions = ref([
-  { title: '二手教材', amount: 50.00, date: '2024-03-15 14:30' },
-  { title: '校园卡充值', amount: -100.00, date: '2024-03-10 09:15' },
-  { title: '代取快递', amount: 15.00, date: '2024-03-05 17:45' },
-  { title: '校园周边', amount: -35.00, date: '2024-02-28 13:20' }
-]);
+// 获取已完成订单
+const completedOrders = computed(() => {
+  const orders = orderStore.getOrdersByStatus(OrderStatus.COMPLETED);
+  const recentOrders = orders.slice(0, 4);
+  const emptyOrder: OrderListResponse = {
+    id: 0,
+    orderNumber: '',
+    orderDate: '',
+    status: OrderStatus.COMPLETED,
+    productName: '暂无交易记录',
+    productImage: '',
+    totalAmount: 0,
+    quantity: 0
+  };
+  
+  while (recentOrders.length < 4) {
+    recentOrders.push({ ...emptyOrder });
+  }
+  
+  return recentOrders;
+});
 
 // 计算信用评分百分比
 const calculateCreditScorePercentage = (score: number | undefined) => {
@@ -474,6 +539,17 @@ const formatDate = (dateString: string | undefined) => {
   }
 };
 
+// 格式化订单日期 - 修复类型错误
+const formatOrderDate = (dateString: string | null | undefined) => {
+  if (!dateString) return '日期未知';
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('zh-CN');
+  } catch {
+    return '日期未知';
+  }
+};
+
 // 获取账户详情
 const fetchAccountDetails = async () => {
   try {
@@ -496,6 +572,10 @@ const loadData = async () => {
     await userStore.fetchUserInfo('current');
     if (userStore.user) {
       await virtualAccountStore.fetchBalance();
+      await orderStore.getUserOrders({ 
+        status: OrderStatus.COMPLETED,
+        pageSize: 4 
+      });
     }
   } catch (error) {
     console.error('加载用户信息失败:', error);
@@ -507,7 +587,6 @@ const loadData = async () => {
 // 处理邮箱认证按钮点击
 const handleVerifyEmail = async () => {
   if (userStore.user?.emailVerified) {
-    // 已认证，显示提示
     showSnackbar('您的邮箱已通过认证', 'info');
     return;
   }
@@ -605,10 +684,32 @@ const editInfo = () => {
   // 这里可以添加编辑信息的逻辑
 };
 
-// 账号注销
-const deleteAccount = () => {
-  console.log('账号注销按钮被点击');
-  // 这里可以添加账号注销的逻辑
+// 确认退出所有设备
+const confirmLogoutAll = () => {
+  logoutAllDialog.value = true;
+};
+
+// 退出所有设备
+const logoutAll = async () => {
+  isLoggingOutAll.value = true;
+  try {
+    const result = await userStore.logoutAll();
+    
+    if (result.success) {
+      showSnackbar(`已成功退出${result.revokedCount || '所有'}台设备`, 'success');
+      // 关闭对话框
+      logoutAllDialog.value = false;
+       await userStore.logout();
+       router.push('/');
+    } else {
+      showSnackbar(result.message, 'error');
+    }
+  } catch (error) {
+    console.error('退出所有设备失败:', error);
+    showSnackbar('退出所有设备失败，请重试', 'error');
+  } finally {
+    isLoggingOutAll.value = false;
+  }
 };
 
 // 退出登录 - 使用user.ts中的logout方法
@@ -633,6 +734,48 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.v-application {
+  background-color: #f6fcff !important;
+  min-height: 100vh;
+  overflow: hidden !important;
+}
+
+.v-application--wrap {
+  min-height: 100vh;
+  background-color: #f6fcff;
+  overflow: hidden !important;
+}
+
+/* 隐藏所有滚动条 - 通用解决方案 */
+::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+  background: transparent !important;
+}
+
+/* 隐藏Edge和IE的极 scrollbar */
+body, html, .v-application, .v-application--wrap, .v-main, .grey.lighten-4 {
+  -ms-overflow-style: none !important; /* IE and Edge */
+  scrollbar-width: none !important; /* Firefox */
+  overflow: -moz-scrollbars-none !important; /* 旧版Firefox */
+}
+
+.pc-user-detail, .v-container, .v-row, .v-col, .custom-card {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+.pc-user-detail::-webkit-scrollbar,
+.v-container::-webkit-scrollbar,
+.v-row::-webkit-scrollbar,
+.v-col::-webkit-scrollbar,
+.custom-card::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 /* 导航栏样式 */
 .navbar {
   position: relative; 
@@ -641,7 +784,7 @@ onMounted(async () => {
   margin:  0;
   padding: 0 16px;
   background-color:#cadefc;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 极 0, 0.1);
   z-index: 1000; 
   display: flex;
   align-items: center;
@@ -657,7 +800,7 @@ onMounted(async () => {
 .title {
   font-size: 32px;
   font-weight: bold;
-  margin-left: 16px;
+  margin-left: 极16px;
   color: white !important; 
 }
 
@@ -668,6 +811,7 @@ onMounted(async () => {
   transition: all 0.3s ease;
   box-shadow: none !important;
   border: 1px solid rgba(255, 255, 255, 0.3);
+  overflow: hidden !important;
 }
 
 .custom-card:hover {
@@ -679,54 +823,113 @@ onMounted(async () => {
   background-color: rgba(255, 255, 255, 0.7) !important;
   border: 1px solid rgba(255, 255, 255, 0.5);
   transition: all 0.2s ease;
-  box-shadow: none !important; /* 默认无阴影 */
+  box-shadow: none !important;
+  min-height: 80px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden !important;
 }
 
 .info-card:hover {
   background-color: rgba(255, 255, 255, 0.9) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important; /* 悬停时添加阴影 */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
 }
 
-/* 余额卡片样式 - 修改为默认无阴影 */
-.balance-card {
-  background-color: rgba(255, 255, 255, 0.8) !important;
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: none !important; /* 默认极阴影 */
-}
-
-.balance-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important; /* 悬停时添加阴影 */
-}
-
-.v-application {
-  background-color: #f6fcff !important; /* 使用您喜欢的颜色 */
-}
-
-/* 信用评分卡片样式 - 修改为默认无阴影 */
-.credit-score-card {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7)) !important;
-  border: 1px solid rgba(255, 255, 255, 0.6);
+.info-card-1 {
+  background-color: rgba(255, 255, 255, 0.7) !important;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  transition: all 0.2s ease;
   box-shadow: none !important; /* 默认无阴影 */
+  overflow: hidden !important;
 }
 
-.credit-score-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important; /* 悬停时添加阴影 */
+.info-card-1:hover {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 极0.1) !important; /* 悬停时添加阴影 */
 }
 
-.user-avatar-container {
-  width: 60px; /* 调小尺寸 */
-  height: 60px; /* 调小尺寸 */
+/* 虚线占位符样式 */
+.dashed-placeholder {
+  border: 2px dashed #c4c4c4 !important;
+  background-color: rgba(249, 249, 249, 0.7) !important;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden !important;
+  min-height: 80px;
+  transition: all 0.3s ease;
+}
+
+.info-card:not(.dashed-placeholder) {
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  background-color: rgba(255, 255, 255, 0.7) !important;
+  transition: all 0.3s ease;
+}
+
+/* 虚线框悬停效果 */
+.dashed-placeholder:hover {
+  border-color: #a0a0a0 !important;
+  background-color: rgba(249, 249, 249, 0.9) !important;
+}
+
+/* 实线框悬停效果 */
+.info-card:not(.dashed-placeholder):hover {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* 虚线框内容样式优化 */
+.dashed-placeholder .d-flex {
+  flex-direction: column;
+  color: #a0a0a0;
+}
+
+.dashed-placeholder .v-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+
+/* 余额卡片样式 */
+.balance-card {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: none !important;
+  overflow: hidden !important;
+}
+
+.balance-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* 信用评分卡片样式 */
+.credit-score-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: none !important;
+  overflow: hidden !important;
+}
+
+.credit-score-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.user-avatar-container {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden !important;
 }
 
 /* 用户头像图片样式 */
 .user-avatar-image {
   width: 100%;
   height: 100%;
-  object-fit: cover; /* 保持图片比例并填充容器 */
-  border-radius: 4px; /* 可选：添加轻微圆角 */
+  object-fit: cover;
+  border-radius: 4px;
 }
 
 /* 账号管理按钮样式 */
@@ -734,6 +937,7 @@ onMounted(async () => {
   border: 1px solid rgba(255, 255, 255, 0.3);
   transition: all 0.3s ease;
 }
+
 
 .account-action-btn:hover {
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2) !important;
@@ -745,6 +949,7 @@ onMounted(async () => {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden !important;
 }
 
 .ml-auto {
@@ -759,7 +964,7 @@ onMounted(async () => {
 .vertical-button-container {
   display: flex;
   flex-direction: column;
-  align-items: center; /* 水平居中 */
+  align-items: center;
   gap: 8px;
   width: 100%;
 }
@@ -767,7 +972,7 @@ onMounted(async () => {
 .action-btn {
   background-color: #ffdfdf !important;
   color: white !important;
-  width: 140px !important; /* 固定宽度 */
+  width: 140px !important;
   max-width: 140px;
   min-width: 140px;
   margin: 0 auto;
@@ -785,7 +990,7 @@ onMounted(async () => {
 
 /* 邮箱认证按钮样式调整 */
 .verify-btn {
-  background-color: #4CAF50 !important; /* 绿色表示认证相关 */
+  background-color: #4CAF50 !important;
 }
 
 .verify-btn:hover {
@@ -801,11 +1006,29 @@ onMounted(async () => {
   margin: 0 4px;
 }
 
+/* 文本截断 */
+.text-trunc极ate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
 /* 响应式调整 */
 @media (max-width: 960px) {
   .action-btn {
     max-width: 120px;
     font-size: 14px;
+  }
+  
+  .text-truncate {
+    max-width: 100px;
+  }
+}
+
+@media (max-width: 600px) {
+  .text-truncate {
+    max-width: 80px;
   }
 }
 </style>

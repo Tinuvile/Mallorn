@@ -20,7 +20,6 @@
         <v-icon color="black">mdi-exit-to-app</v-icon>
       </v-btn>
     </header>
-    
     <v-card flat class="content-card">
       <div class="title-container">
         <v-card-title class="product-title">发布商品</v-card-title>
@@ -79,7 +78,7 @@
               </div>
             </div>
       
-            <div class="text-caption text-grey mt-2">
+            <div class="text-caption text-grey mt-2 image-upload-tip">
               最多可上传4张图片，建议上传清晰、真实的商品图片
             </div>
           </v-card>
@@ -541,9 +540,16 @@ body, .v-application {
 /* 图片上传区域 */
 .image-upload-card {
   height: auto;
-  min-height: 400px;
+  min-height: 550px;
   background-color: #f0f2f6 !important;
   border: 1px solid #cadefc !important;
+}
+
+.image-upload-tip {
+  margin-top: 16px !important;
+  padding: 0 8px;
+  text-align: center;
+  line-height: 1.4;
 }
 
 /* 图片网格容器 */
@@ -756,6 +762,7 @@ body, .v-application {
     min-height: auto;
   }
 }
+
 
 /* 确保Vuetify组件可以正常滚动 */
 :deep(.v-card__body) {
