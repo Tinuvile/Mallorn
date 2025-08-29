@@ -1,6 +1,7 @@
 <template>
   <v-app>
     <header class="navbar">
+      <!-- 导航栏代码保持不变 -->
       <span class="icon">
         <svg width="48px" height="48px" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" color="#ffffff">
           <circle cx="12" cy="12" r="10" stroke="#ffffff" stroke-width="1.5"></circle>
@@ -35,19 +36,8 @@
             </v-col>
           </v-row>
 
-          <!-- 错误状态 -->
-          <v-row v-else-if="virtualAccountStore.error" justify="center" align="center" class="fill-height" style="height: 70vh">
-            <v-col cols="12" md="6" class="text-center">
-              <v-icon color="error" size="64" class="mb-4">mdi-alert-circle</v-icon>
-              <p class="error--text mb-4 text-h6">{{ virtualAccountStore.error }}</p>
-              <v-btn @click="retryLoading" color="primary" large>
-                重试
-              </v-btn>
-            </v-col>
-          </v-row>
-
-          <!-- 主内容区 -->
-          <v-row v-else class="mt-6" style="align-items: stretch;">
+          <!-- 主内容区 - 移除错误状态判断，总是显示内容 -->
+          <v-row class="mt-6" style="align-items: stretch;">
             <!-- 左侧用户信息区 -->
             <v-col cols="12" md="4" class="pr-md-4 d-flex">
               <v-card class="custom-card pa-6 d-flex flex-column" style="flex: 1;">
@@ -60,7 +50,7 @@
                   >
                 </div>
                   <div>
-                    <h2 class="text-h5 font-weight-bold">{{ userStore.user?.fullName || userStore.user?.username || '未命名用户' }}</h2>
+                    <h2 class="text-h5 font-weight-bold">{{ getUserDisplayName() }}</h2>
                     <p class="text--secondary">计算机科学与技术学院</p>
                   </div>
                 </div>
@@ -174,9 +164,9 @@
                     <v-card class="pa-3 info-card rounded-lg" :class="{ 'dashed-placeholder': !order.id }">
                       <div v-if="order.id">
                         <div class="d-flex justify-space-between align-center mb-1">
-                          <span class="font-weight-medium text-truncate">{{ order.productName }}</span>
+                          <span class="font-weight-medium text-truncate">{{ order.productName || 'N/A' }}</span>
                           <span class="green--text">
-                            ¥{{ order.totalAmount.toFixed(2) }}
+                            ¥{{ order.totalAmount ? order.totalAmount.toFixed(2) : '0.00' }}
                           </span>
                         </div>
                         <div class="d-flex justify-space-between align-center text-caption text--secondary">
@@ -188,7 +178,7 @@
                       </div>
                       <div v-else class="d-flex justify-center align-center fill-height">
                         <v-icon color="grey lighten-1">mdi-cart</v-icon>
-                        <span class="ml-2 grey--text text--lighten-1">{{ order.productName }}</span>
+                        <span class="ml-2 grey--text text--lighten-1">{{ order.productName || '暂无交易记录' }}</span>
                       </div>
                     </v-card>
                   </v-col>
@@ -333,7 +323,7 @@
           <v-card-text class="pt-4">
             <!-- 步骤1：发送验证码 -->
             <div v-if="verifyStep === 1">
-              <p>我们将向您的邮箱 <strong>{{ userStore.user?.email }}</strong> 发送验证码</p>
+              <p>我们将向您的邮箱 <strong>{{ userStore.user?.email || 'N/A' }}</strong> 发送验证码</p>
               <v-text-field
                 v-model="email"
                 label="邮箱地址"
@@ -622,32 +612,52 @@ const snackbar = ref({
 const editForm = ref(null);
 const passwordForm = ref(null);
 
+// 获取用户显示名称
+const getUserDisplayName = () => {
+  return userStore.user?.fullName || userStore.user?.username || '未命名用户';
+};
+
 // 获取已完成订单
 const completedOrders = computed(() => {
-  // 从订单store获取已完成状态的订单
-  const orders = orderStore.getOrdersByStatus(OrderStatus.COMPLETED);
-  
-  // 只取最近的4个订单
-  const recentOrders = orders.slice(0, 4);
-  
-  // 创建一个空订单对象来填充不足的部分
-  const emptyOrder: OrderListResponse = {
-    id: 0,
-    orderNumber: '',
-    orderDate: '',
-    status: OrderStatus.COMPLETED,
-    productName: '暂无交易记录',
-    productImage: '',
-    totalAmount: 0,
-    quantity: 0
-  };
-  
-  // 如果不足4个，用空订单对象填充
-  while (recentOrders.length < 4) {
-    recentOrders.push({ ...emptyOrder });
+  try {
+    // 从订单store获取已完成状态的订单
+    const orders = orderStore.getOrdersByStatus(OrderStatus.COMPLETED);
+    
+    // 只取最近的4个订单
+    const recentOrders = orders.slice(0, 4);
+    
+    // 创建一个空订单对象来填充不足的部分
+    const emptyOrder: OrderListResponse = {
+      id: 0,
+      orderNumber: '',
+      orderDate: '',
+      status: OrderStatus.COMPLETED,
+      productName: '暂无交易记录',
+      productImage: '',
+      totalAmount: 0,
+      quantity: 0
+    };
+    
+    // 如果不足4个，用空订单对象填充
+    while (recentOrders.length < 4) {
+      recentOrders.push({ ...emptyOrder });
+    }
+    
+    return recentOrders;
+  } catch (error) {
+    console.error('获取订单失败:', error);
+    // 返回默认的空订单列表
+    return Array(4).fill({
+      id: 0,
+      orderNumber: '',
+      orderDate: '',
+      status: OrderStatus.COMPLETED,
+      productName: '暂无交易记录',
+      productImage: '',
+      totalAmount: 0,
+      quantity: 0
+    });
   }
-  
-  return recentOrders;
 });
 
 // 计算信用评分百分比
@@ -691,6 +701,24 @@ const formatOrderDate = (dateString: string | null | undefined) => {
   }
 };
 
+// 获取用户详细信息（包含信用分）
+const fetchUserProfile = async () => {
+  try {
+    const result = await userStore.fetchUserProfile();
+    if (result.success && result.data && userStore.user) {
+      userStore.user = {
+        ...userStore.user, 
+        creditScore: result.data.creditScore,
+        emailVerified: result.data.emailVerified
+      };
+    } else {
+      console.warn('获取用户详细信息失败:', result.message);
+    }
+  } catch (error) {
+    console.error('获取用户详细信息异常:', error);
+  }
+};
+
 // 获取账户详情
 const fetchAccountDetails = async () => {
   try {
@@ -707,18 +735,40 @@ const retryLoading = async () => {
   await loadData();
 };
 
-// 加载数据
+// 加载数据 - 优化后的版本
 const loadData = async () => {
   try {
-    await userStore.fetchUserInfo('current');
-    if (userStore.user) {
-      await virtualAccountStore.fetchBalance();
+    isLoading.value = true;
+    
+    // 并行获取用户基本信息和账户信息
+    const [userResult, accountResult] = await Promise.allSettled([
+      userStore.fetchUserInfo('current'),
+      virtualAccountStore.fetchBalance()
+    ]);
+
+    // 检查用户信息获取结果
+    if (userResult.status === 'fulfilled' && userStore.user) {
+      // 获取用户详细信息（包含信用分）
+      await fetchUserProfile();
+      
       // 加载用户订单
-      await orderStore.getUserOrders({ 
-        status: OrderStatus.COMPLETED,
-        pageSize: 4 
-      });
+      try {
+        await orderStore.getUserOrders({ 
+          status: OrderStatus.COMPLETED,
+          pageSize: 4 
+        });
+      } catch (error) {
+        console.error('加载订单失败:', error);
+      }
+    } else {
+      console.error('获取用户信息失败:', userResult.status === 'rejected' ? userResult.reason : '未知错误');
     }
+
+    // 检查账户信息获取结果
+    if (accountResult.status === 'rejected') {
+      console.error('获取账户信息失败:', accountResult.reason);
+    }
+
   } catch (error) {
     console.error('加载用户信息失败:', error);
   } finally {
@@ -780,8 +830,8 @@ const verifyCode = async () => {
     if (result.success) {
       showSnackbar('邮箱认证成功', 'success');
       verifyStep.value = 3;
-      // 更新本地用户信息
-      await userStore.fetchUserInfo(userStore.user?.username || '');
+      // 更新本地用户信息，重新获取包含信用分的完整信息
+      await fetchUserProfile();
     } else {
       showSnackbar(result.message, 'error');
     }
@@ -851,8 +901,8 @@ const updateProfile = async () => {
     if (result.success) {
       showSnackbar('个人信息更新成功', 'success');
       editDialog.value = false;
-      // 重新加载用户信息
-      await userStore.fetchUserInfo('current');
+      // 重新加载用户信息，包含信用分
+      await fetchUserProfile();
     } else {
       showSnackbar(result.message, 'error');
     }
@@ -1493,6 +1543,7 @@ img {
 .v-btn {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
 
 /* 确保高对比度可访问性 */
 @media (prefers-contrast: high) {

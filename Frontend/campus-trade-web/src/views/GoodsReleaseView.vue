@@ -97,7 +97,7 @@
               </div>
             </div>
 
-            <div class="text-caption text-grey mt-2">
+            <div class="text-caption text-grey mt-2 image-upload-tip">
               最多可上传4张图片，建议上传清晰、真实的商品图片
             </div>
           </v-card>
@@ -622,7 +622,7 @@
   /* 图片上传区域 */
   .image-upload-card {
     height: auto;
-    min-height: 400px;
+    min-height: 550px;
     background-color: #f0f2f6 !important;
     border: 1px solid #cadefc !important;
   }
@@ -707,7 +707,25 @@
     align-self: stretch !important;
   }
 
-  /* 右侧输入框统一边框样式 */
+  .image-upload-tip {
+  margin-top: 16px !important;
+  padding: 0 8px;
+  text-align: center;
+  line-height: 1.4;
+  }
+
+  .image-grid-container {
+  margin-bottom: 8px;
+  }
+
+  @media (max-width: 600px) {
+    .image-upload-tip {
+      margin-top: 12px !important;
+      font-size: 0.7rem;
+    }
+  }
+
+
   .right-input-border :deep(.v-field) {
     border: 1px solid #cadefc !important;
     border-radius: 8px !important;
