@@ -21,10 +21,14 @@
         <v-icon color="black">mdi-exit-to-app</v-icon>
       </v-btn>
     </header>
-
+    <div class="simple-title-section">
+      <h2>确认订单</h2>
+      <v-divider color="#fb7c7c" thickness="4" class="mx-auto" style="width: 95%;"></v-divider>
+    </div>
     <!-- 主体内容 -->
     <v-main class="bg-gray-100 main-content">
       <v-container class="pa-0 h-full" fluid>
+
         <v-row class="h-full ma-0">
           <!-- 收货地址部分 -->
           <v-col cols="12" md="3" sm="12" class="h-full pl-2 pr-1 px-4">
@@ -584,18 +588,21 @@ body, .v-application {
 
 .main-content {
   min-height: calc(100vh - 168px) !important; 
-  background-color: #f2ecec; 
+  background-color: #fcf6f6; 
 }
 
 .v-application--wrap {
   height: 100%;
 }
 .v-card {
-  height: 730px;
+  min-height: 630px; /* 设置最小高度 */
+  height: auto; /* 高度自动适应内容 */
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
 }
 .v-card-text {
   padding: 40px !important;
+  overflow-y: auto; /* 允许垂直滚动 */
+  flex: 1; /* 填充剩余空间 */
 }
 
 .v-card-title {
@@ -674,6 +681,19 @@ body, .v-application {
 /* 添加空状态样式 */
 .text-center.text-grey {
   color: #9e9e9e;
+}
+
+.simple-title-section {
+  text-align: center;
+  padding: 20px 0 10px 0;
+  background-color: #fcf6f6; 
+}
+
+.simple-title-section h2 {
+  font-size: 1.8rem;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 16px;
 }
 
 /* 商品图片占位符 */
