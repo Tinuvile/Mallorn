@@ -1,4 +1,5 @@
 using CampusTrade.API.Infrastructure.Utils.Performance;
+using CampusTrade.API.Models.DTOs;
 using CampusTrade.API.Models.DTOs.Admin;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
@@ -24,6 +25,9 @@ namespace CampusTrade.API.Services.Admin
         private readonly ILogger<AdminService> _logger;
         private readonly Serilog.ILogger _serilogLogger;
 
+        private readonly ICreditService _creditService;
+
+
         public AdminService(
             IAdminRepository adminRepository,
             IAuditLogRepository auditLogRepository,
@@ -32,7 +36,8 @@ namespace CampusTrade.API.Services.Admin
             IProductRepository productRepository,
             IRepository<Category> categoryRepository,
             IUnitOfWork unitOfWork,
-            ILogger<AdminService> logger)
+            ILogger<AdminService> logger,
+            ICreditService creditService)
         {
             _adminRepository = adminRepository;
             _auditLogRepository = auditLogRepository;
@@ -400,6 +405,20 @@ namespace CampusTrade.API.Services.Admin
                         penaltyInfo += $", 处罚时长: {handleDto.PenaltyDuration}天";
                     }
                     // TODO: 实现具体的处罚逻辑（警告、禁言、封号）
+                    // 信用分扣分（只有审核通过时才执行）
+                    if (handleDto.HandleResult == "通过")
+                    {
+                        var reportedUserId = report.Order?.SellerId;
+                        if (reportedUserId != null)
+                        {
+                            await _creditService.ApplyCreditChangeAsync(new CreditEvent
+                            {
+                                UserId = reportedUserId.Value,
+                                EventType = CreditEventType.ReportPenalty,
+                                Description = $"举报处理通过，管理员处罚类型: {handleDto.PenaltyType}"
+                            });
+                        }
+                    }
                 }
 
                 await _unitOfWork.SaveChangesAsync();

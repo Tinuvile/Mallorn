@@ -1,3 +1,4 @@
+using CampusTrade.API.Models.DTOs;
 using CampusTrade.API.Models.DTOs.Order;
 using CampusTrade.API.Models.DTOs.Payment;
 using CampusTrade.API.Models.Entities;
@@ -21,9 +22,10 @@ namespace CampusTrade.API.Services.Order
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<OrderService> _logger;
 
+        private readonly ICreditService _creditService;
+
         // 订单超时时间（分钟）
         private const int ORDER_TIMEOUT_MINUTES = 30;
-
         public OrderService(
             IOrderRepository orderRepository,
             IRepository<Models.Entities.Product> productRepository,
@@ -31,7 +33,8 @@ namespace CampusTrade.API.Services.Order
             IRepository<AbstractOrder> abstractOrderRepository,
             IVirtualAccountsRepository virtualAccountRepository,
             IUnitOfWork unitOfWork,
-            ILogger<OrderService> logger)
+            ILogger<OrderService> logger,
+            ICreditService creditService)
         {
             _orderRepository = orderRepository;
             _productRepository = productRepository;
@@ -40,6 +43,7 @@ namespace CampusTrade.API.Services.Order
             _virtualAccountRepository = virtualAccountRepository;
             _unitOfWork = unitOfWork;
             _logger = logger;
+            _creditService = creditService; 
         }
 
         #region 订单创建
@@ -439,7 +443,12 @@ namespace CampusTrade.API.Services.Order
 
                 _logger.LogInformation("订单 {OrderId} 完成并转账成功，卖家 {SellerId} 收到 {Amount}",
                     orderId, order.SellerId, transferAmount);
-
+                await _creditService.ApplyCreditChangeAsync(new CreditEvent
+                {
+                    UserId = order.SellerId,
+                    EventType = CreditEventType.TransactionCompleted,
+                    Description = $"订单 {order.OrderId} 成功完成，卖家获得信用加分"
+                });
                 return true;
             }
             catch (Exception ex)
