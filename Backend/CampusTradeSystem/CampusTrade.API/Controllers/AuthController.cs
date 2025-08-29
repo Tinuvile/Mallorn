@@ -433,6 +433,166 @@ public class AuthController : ControllerBase
             }
         }
     }
+
+    /// <summary>
+    /// 获取当前用户详细信息（包含信用分、虚拟账户等）
+    /// </summary>
+    /// <returns>用户详细信息</returns>
+    [HttpGet("profile")]
+    [Authorize]
+    public async Task<IActionResult> GetUserProfile()
+    {
+        try
+        {
+            var userId = User.GetUserId();
+            var user = await _unitOfWork.Users.GetUserWithDetailsAsync(userId);
+
+            if (user == null)
+            {
+                return NotFound(ApiResponse.CreateError("用户不存在", "USER_NOT_FOUND"));
+            }
+
+            // 获取虚拟账户信息
+            var virtualAccount = await _unitOfWork.VirtualAccounts.GetByUserIdAsync(userId);
+
+            return Ok(ApiResponse<object>.CreateSuccess(new
+            {
+                userId = user.UserId,
+                username = user.Username,
+                email = user.Email,
+                fullName = user.FullName,
+                phone = user.Phone,
+                studentId = user.StudentId,
+                creditScore = user.CreditScore,
+                emailVerified = user.EmailVerified == 1,
+                isActive = user.IsActive == 1,
+                createdAt = user.CreatedAt,
+                lastLoginAt = user.LastLoginAt,
+                lastLoginIp = user.LastLoginIp,
+                loginCount = user.LoginCount,
+                student = user.Student != null ? new
+                {
+                    studentId = user.Student.StudentId,
+                    name = user.Student.Name,
+                    department = user.Student.Department
+                } : null,
+                virtualAccount = virtualAccount != null ? new
+                {
+                    accountId = virtualAccount.AccountId,
+                    balance = virtualAccount.Balance,
+                    createdAt = virtualAccount.CreatedAt
+                } : null
+            }, "获取用户信息成功"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "获取用户详细信息失败，用户ID: {UserId}", User.GetUserId());
+            return StatusCode(500, ApiResponse.CreateError("获取用户信息时发生内部错误", "INTERNAL_ERROR"));
+        }
+    }
+
+    /// <summary>
+    /// 更新用户基本信息
+    /// </summary>
+    /// <param name="updateDto">更新信息</param>
+    /// <returns>更新结果</returns>
+    [HttpPut("profile")]
+    [Authorize]
+    public async Task<IActionResult> UpdateUserProfile([FromBody] UpdateUserProfileDto updateDto)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ApiResponse.CreateError("请求参数验证失败", "VALIDATION_ERROR"));
+        }
+
+        try
+        {
+            var userId = User.GetUserId();
+            var user = await _unitOfWork.Users.GetByPrimaryKeyAsync(userId);
+
+            if (user == null)
+            {
+                return NotFound(ApiResponse.CreateError("用户不存在", "USER_NOT_FOUND"));
+            }
+
+            // 检查用户名是否已被使用（如果要更改用户名）
+            if (!string.IsNullOrEmpty(updateDto.Username) && updateDto.Username != user.Username)
+            {
+                var existingUser = await _unitOfWork.Users.FirstOrDefaultAsync(u => u.Username == updateDto.Username);
+                if (existingUser != null)
+                {
+                    return BadRequest(ApiResponse.CreateError("该用户名已被使用", "USERNAME_EXISTS"));
+                }
+                user.Username = updateDto.Username;
+            }
+
+            // 更新其他字段
+            if (!string.IsNullOrEmpty(updateDto.FullName))
+                user.FullName = updateDto.FullName;
+
+            if (!string.IsNullOrEmpty(updateDto.Phone))
+                user.Phone = updateDto.Phone;
+
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _unitOfWork.SaveChangesAsync();
+
+            return Ok(ApiResponse.CreateSuccess("用户信息更新成功"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "更新用户信息失败，用户ID: {UserId}", User.GetUserId());
+            return StatusCode(500, ApiResponse.CreateError("更新用户信息时发生内部错误", "INTERNAL_ERROR"));
+        }
+    }
+
+
+
+    /// <summary>
+    /// 修改密码
+    /// </summary>
+    /// <param name="changePasswordDto">密码修改信息</param>
+    /// <returns>修改结果</returns>
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto changePasswordDto)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ApiResponse.CreateError("请求参数验证失败", "VALIDATION_ERROR"));
+        }
+
+        try
+        {
+            var userId = User.GetUserId();
+            var user = await _unitOfWork.Users.GetByPrimaryKeyAsync(userId);
+
+            if (user == null)
+            {
+                return NotFound(ApiResponse.CreateError("用户不存在", "USER_NOT_FOUND"));
+            }
+
+            // 验证当前密码
+            if (!BCrypt.Net.BCrypt.Verify(changePasswordDto.CurrentPassword, user.PasswordHash))
+            {
+                return BadRequest(ApiResponse.CreateError("当前密码不正确", "INVALID_CURRENT_PASSWORD"));
+            }
+
+            // 更新密码
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(changePasswordDto.NewPassword);
+            user.PasswordChangedAt = DateTime.UtcNow;
+            user.SecurityStamp = Guid.NewGuid().ToString(); // 更新安全戳，使旧Token失效
+
+            await _unitOfWork.SaveChangesAsync();
+
+            return Ok(ApiResponse.CreateSuccess("密码修改成功"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "修改密码失败，用户ID: {UserId}", User.GetUserId());
+            return StatusCode(500, ApiResponse.CreateError("修改密码时发生内部错误", "INTERNAL_ERROR"));
+        }
+    }
 }
 
 
@@ -486,4 +646,55 @@ public class VerifyCodeDto
 {
     public int UserId { get; set; }
     public string Code { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// 更新用户信息DTO
+/// </summary>
+public class UpdateUserProfileDto
+{
+    /// <summary>
+    /// 用户名
+    /// </summary>
+    [StringLength(50, ErrorMessage = "用户名长度不能超过50字符")]
+    public string? Username { get; set; }
+
+    /// <summary>
+    /// 完整姓名
+    /// </summary>
+    [StringLength(100, ErrorMessage = "姓名长度不能超过100字符")]
+    public string? FullName { get; set; }
+
+    /// <summary>
+    /// 手机号
+    /// </summary>
+    [Phone(ErrorMessage = "手机号格式不正确")]
+    [StringLength(20, ErrorMessage = "手机号长度不能超过20字符")]
+    public string? Phone { get; set; }
+}
+
+/// <summary>
+/// 修改密码DTO
+/// </summary>
+public class ChangePasswordDto
+{
+    /// <summary>
+    /// 当前密码
+    /// </summary>
+    [Required(ErrorMessage = "当前密码不能为空")]
+    public string CurrentPassword { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 新密码
+    /// </summary>
+    [Required(ErrorMessage = "新密码不能为空")]
+    [StringLength(100, MinimumLength = 6, ErrorMessage = "密码长度必须在6-100字符之间")]
+    public string NewPassword { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 确认新密码
+    /// </summary>
+    [Required(ErrorMessage = "确认密码不能为空")]
+    [Compare("NewPassword", ErrorMessage = "两次输入的密码不一致")]
+    public string ConfirmPassword { get; set; } = string.Empty;
 }
