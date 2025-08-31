@@ -49,7 +49,7 @@
         <v-container class="px-4" style="max-width: 1600px">
           <div class="user-info-header">
             <h1 class="text-h4 font-weight-bold text-center primary--text mb-2">个人信息中心</h1>
-            <v-divider thickness="4" color="#ffa5a5" class="mb-6"></v-divider>
+            <v-divider thickness="4" color="#f5d8d8" class="mb-6"></v-divider>
           </div>
           <!-- 加载状态 -->
           <v-row
@@ -100,7 +100,7 @@
                 <v-row class="mt-4 flex-grow-1" style="align-content: flex-start">
                   <!-- 用户ID -->
                   <v-col cols="12">
-                    <v-card class="pa-3 info-card rounded-lg">
+                    <v-card class="pa-3 info-card-1 rounded-lg">
                       <div class="d-flex justify-space-between">
                         <span class="font-weight-medium">用户ID:</span>
                         <span>{{ userStore.user?.userId || 'N/A' }}</span>
@@ -110,7 +110,7 @@
 
                   <!-- 用户名 -->
                   <v-col cols="12">
-                    <v-card class="pa-3 info-card rounded-lg">
+                    <v-card class="pa-3 info-card-1 rounded-lg">
                       <div class="d-flex justify-space-between">
                         <span class="font-weight-medium">用户名:</span>
                         <span>{{ userStore.user?.username || 'N/A' }}</span>
@@ -120,7 +120,7 @@
 
                   <!-- 学号 -->
                   <v-col cols="12">
-                    <v-card class="pa-3 info-card rounded-lg">
+                    <v-card class="pa-3 info-card-1 rounded-lg">
                       <div class="d-flex justify-space-between">
                         <span class="font-weight-medium">学号:</span>
                         <span>{{ userStore.user?.studentId || 'N/A' }}</span>
@@ -130,7 +130,7 @@
 
                   <!-- 手机号 -->
                   <v-col cols="12">
-                    <v-card class="pa-3 info-card rounded-lg">
+                    <v-card class="pa-3 info-card-1 rounded-lg">
                       <div class="d-flex justify-space-between">
                         <span class="font-weight-medium">手机:</span>
                         <span>{{
@@ -142,7 +142,7 @@
 
                   <!-- 邮箱 -->
                   <v-col cols="12">
-                    <v-card class="pa-3 info-card rounded-lg">
+                    <v-card class="pa-3 info-card-1 rounded-lg">
                       <div class="d-flex justify-space-between">
                         <span class="font-weight-medium">邮箱:</span>
                         <span>{{ userStore.user?.email || 'N/A' }}</span>
@@ -161,6 +161,13 @@
 
                 <!-- 修改后的按钮区域 - 垂直排列并水平居中 -->
                 <div class="vertical-button-container mt-4">
+                  <v-btn
+                    class="action-btn account-action-btn"
+                    @click="openChangePasswordDialog"
+                    block
+                  >
+                    修改密码
+                  </v-btn>
                   <v-btn class="action-btn edit-btn mb-2" @click="editInfo" block> 编辑信息 </v-btn>
                   <v-btn
                     class="action-btn verify-btn"
@@ -177,7 +184,7 @@
             <v-divider
               vertical
               thickness="4"
-              color="#4d606e"
+              color="#c9d6df"
               class="mx-md-2 my-6 d-none d-md-flex"
             ></v-divider>
 
@@ -234,7 +241,7 @@
             <v-divider
               vertical
               thickness="4"
-              color="#4d606e"
+              color="#c9d6df"
               class="mx-md-2 my-6 d-none d-md-flex"
             ></v-divider>
 
@@ -485,6 +492,73 @@
         </v-card>
       </v-dialog>
 
+      <!-- 修改密码对话框 -->
+      <v-dialog v-model="changePasswordDialog" max-width="600px" persistent>
+        <v-card>
+          <v-card-title class="text-h5 primary--text">
+            <v-icon color="primary" class="mr-2">mdi-lock-reset</v-icon>
+            修改密码
+          </v-card-title>
+
+          <v-card-text class="pt-4">
+            <v-form ref="passwordForm" v-model="passwordFormValid">
+              <v-row>
+                <v-col cols="12">
+                  <v-text-field
+                    v-model="passwordFormData.currentPassword"
+                    label="当前密码"
+                    type="password"
+                    outlined
+                    dense
+                    :rules="[v => !!v || '请输入当前密码']"
+                  ></v-text-field>
+                </v-col>
+
+                <v-col cols="12">
+                  <v-text-field
+                    v-model="passwordFormData.newPassword"
+                    label="新密码"
+                    type="password"
+                    outlined
+                    dense
+                    :rules="[v => !!v || '请输入新密码', v => v.length >= 6 || '密码长度至少6位']"
+                  ></v-text-field>
+                </v-col>
+
+                <v-col cols="12">
+                  <v-text-field
+                    v-model="passwordFormData.confirmPassword"
+                    label="确认新密码"
+                    type="password"
+                    outlined
+                    dense
+                    :rules="[
+                      v => !!v || '请确认新密码',
+                      v => v === passwordFormData.newPassword || '两次输入的密码不一致',
+                    ]"
+                  ></v-text-field>
+                </v-col>
+              </v-row>
+            </v-form>
+          </v-card-text>
+
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn text @click="closeChangePasswordDialog" :disabled="isChangingPassword">
+              取消
+            </v-btn>
+            <v-btn
+              color="primary"
+              @click="changePassword"
+              :loading="isChangingPassword"
+              :disabled="!passwordFormValid"
+            >
+              确认修改
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
       <!-- 提示信息弹窗 -->
       <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000">
         {{ snackbar.message }}
@@ -523,6 +597,19 @@
     message: '',
     color: 'success',
   })
+
+  // 修改密码相关状态
+  const changePasswordDialog = ref(false)
+  const passwordFormValid = ref(false)
+  const isChangingPassword = ref(false)
+  const passwordFormData = ref({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  })
+
+  // 表单引用
+  const passwordForm = ref(null)
 
   // 交易记录数据
   const transactions = ref([
@@ -740,6 +827,46 @@
     }
   }
 
+  // 打开修改密码对话框
+  const openChangePasswordDialog = () => {
+    changePasswordDialog.value = true
+  }
+
+  // 关闭修改密码对话框
+  const closeChangePasswordDialog = () => {
+    changePasswordDialog.value = false
+    if ((passwordForm.value as any)?.reset) {
+      ;(passwordForm.value as any).reset()
+    }
+    passwordFormData.value = {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    }
+  }
+
+  // 修改密码
+  const changePassword = async () => {
+    if (!passwordFormValid.value) return
+
+    isChangingPassword.value = true
+    try {
+      const result = await userStore.changePassword(passwordFormData.value)
+
+      if (result.success) {
+        showSnackbar('密码修改成功', 'success')
+        changePasswordDialog.value = false
+      } else {
+        showSnackbar(result.message, 'error')
+      }
+    } catch (error) {
+      console.error('修改密码失败:', error)
+      showSnackbar('修改失败，请重试', 'error')
+    } finally {
+      isChangingPassword.value = false
+    }
+  }
+
   // 账号注销
   const deleteAccount = () => {
     console.log('账号注销按钮被点击')
@@ -818,6 +945,19 @@
   }
 
   .info-card:hover {
+    background-color: rgba(255, 255, 255, 0.9) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important; /* 悬停时添加阴影 */
+  }
+
+  .info-card-1 {
+    background-color: rgba(255, 255, 255, 0.7) !important;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    transition: all 0.2s ease;
+    box-shadow: none !important; /* 默认无阴影 */
+    overflow: hidden !important;
+  }
+
+  .info-card-1:hover {
     background-color: rgba(255, 255, 255, 0.9) !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important; /* 悬停时添加阴影 */
   }
@@ -924,11 +1064,20 @@
 
   /* 邮箱认证按钮样式调整 */
   .verify-btn {
-    background-color: #4caf50 !important; /* 绿色表示认证相关 */
+    background-color: #4caf50 !important;
   }
 
   .verify-btn:hover {
     background-color: #45a049 !important;
+  }
+
+  /* 编辑信息按钮样式 */
+  .edit-btn {
+    background-color: #2196f3 !important;
+  }
+
+  .edit-btn:hover {
+    background-color: #1976d2 !important;
   }
 
   /* OTP输入框居中 */
