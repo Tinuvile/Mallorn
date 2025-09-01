@@ -101,39 +101,39 @@ namespace CampusTrade.API.Services.Review
                 var saved = await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-            // 第九步：如果保存成功，发送新评价通知给卖家
-            if (saved > 0)
-            {
-                try
+                // 第九步：如果保存成功，发送新评价通知给卖家
+                if (saved > 0)
                 {
-                    // 发送新评价通知给卖家 - 模板ID为22（收到新评价模板）
-                    var reviewContentText = string.IsNullOrEmpty(dto.Content) ? "" : $"评价内容：{dto.Content}";
-                    var notificationParams = new Dictionary<string, object>
+                    try
                     {
-                        ["rating"] = dto.Rating.ToString(),
-                        ["orderId"] = dto.OrderId.ToString(),
-                        ["reviewContent"] = reviewContentText
-                    };
-                    
-                    await _notificationService.CreateNotificationAsync(
-                        order.SellerId, 
-                        22, // 收到新评价模板ID
-                        notificationParams, 
-                        review.ReviewId
-                    );
-                }
-                catch (Exception)
-                {
-                    // 通知发送失败不影响评价创建结果，只记录异常
-                    // 这里可以添加日志记录，但为了保持代码简洁，暂时省略
-                }
-            }
+                        // 发送新评价通知给卖家 - 模板ID为22（收到新评价模板）
+                        var reviewContentText = string.IsNullOrEmpty(dto.Content) ? "" : $"评价内容：{dto.Content}";
+                        var notificationParams = new Dictionary<string, object>
+                        {
+                            ["rating"] = dto.Rating.ToString(),
+                            ["orderId"] = dto.OrderId.ToString(),
+                            ["reviewContent"] = reviewContentText
+                        };
 
-            // 第十步：返回是否保存成功（保存记录数大于0）
-            return saved > 0;
-        }
-        catch
-        {
+                        await _notificationService.CreateNotificationAsync(
+                            order.SellerId,
+                            22, // 收到新评价模板ID
+                            notificationParams,
+                            review.ReviewId
+                        );
+                    }
+                    catch (Exception)
+                    {
+                        // 通知发送失败不影响评价创建结果，只记录异常
+                        // 这里可以添加日志记录，但为了保持代码简洁，暂时省略
+                    }
+                }
+
+                // 第十步：返回是否保存成功（保存记录数大于0）
+                return saved > 0;
+            }
+            catch
+            {
                 await transaction.RollbackAsync();
                 throw;
             }
@@ -282,11 +282,11 @@ namespace CampusTrade.API.Services.Review
                         ["orderId"] = review.OrderId.ToString(),
                         ["replyContent"] = dto.SellerReply ?? ""
                     };
-                    
+
                     await _notificationService.CreateNotificationAsync(
-                        order.BuyerId, 
+                        order.BuyerId,
                         24, // 卖家回复评价模板ID
-                        notificationParams, 
+                        notificationParams,
                         review.ReviewId
                     );
                 }

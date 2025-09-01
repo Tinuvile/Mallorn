@@ -125,15 +125,15 @@ public class ProductService : IProductService
                     ["productTitle"] = product.Title,
                     ["productId"] = product.ProductId
                 };
-                
+
                 await _notificationService.CreateNotificationAsync(
-                    userId, 
+                    userId,
                     9, // 商品上架成功模板ID
-                    notificationParams, 
+                    notificationParams,
                     product.ProductId
                 );
 
-                _logger.LogInformation("商品上架成功通知已发送，商品ID: {ProductId}，用户ID: {UserId}，商品标题: {ProductTitle}", 
+                _logger.LogInformation("商品上架成功通知已发送，商品ID: {ProductId}，用户ID: {UserId}，商品标题: {ProductTitle}",
                     product.ProductId, userId, product.Title);
             }
             catch (Exception ex)
@@ -292,15 +292,15 @@ public class ProductService : IProductService
                     ["productTitle"] = product.Title,
                     ["reason"] = "主动删除"
                 };
-                
+
                 await _notificationService.CreateNotificationAsync(
-                    userId, 
+                    userId,
                     10, // 商品下架通知模板ID
-                    notificationParams, 
+                    notificationParams,
                     productId
                 );
 
-                _logger.LogInformation("商品下架通知已发送，商品ID: {ProductId}，用户ID: {UserId}，商品标题: {ProductTitle}，下架原因: 主动删除", 
+                _logger.LogInformation("商品下架通知已发送，商品ID: {ProductId}，用户ID: {UserId}，商品标题: {ProductTitle}，下架原因: 主动删除",
                     productId, userId, product.Title);
             }
             catch (Exception ex)
@@ -818,15 +818,15 @@ public class ProductService : IProductService
                         ["productTitle"] = product.Title,
                         ["expireTime"] = expireTimeStr
                     };
-                    
+
                     await _notificationService.CreateNotificationAsync(
-                        product.UserId, 
+                        product.UserId,
                         13, // 商品即将过期模板ID
-                        notificationParams, 
+                        notificationParams,
                         product.ProductId
                     );
 
-                    _logger.LogInformation("商品即将过期通知已发送，商品ID: {ProductId}，用户ID: {UserId}，商品标题: {ProductTitle}，过期时间: {ExpireTime}", 
+                    _logger.LogInformation("商品即将过期通知已发送，商品ID: {ProductId}，用户ID: {UserId}，商品标题: {ProductTitle}，过期时间: {ExpireTime}",
                         product.ProductId, product.UserId, product.Title, expireTimeStr);
                 }
                 catch (Exception ex)
@@ -1001,15 +1001,15 @@ public class ProductService : IProductService
                             ["productTitle"] = product.Title,
                             ["reason"] = "自动过期下架"
                         };
-                        
+
                         await _notificationService.CreateNotificationAsync(
-                            product.UserId, 
+                            product.UserId,
                             10, // 商品下架通知模板ID
-                            notificationParams, 
+                            notificationParams,
                             product.ProductId
                         );
 
-                        _logger.LogInformation("商品自动下架通知已发送，商品ID: {ProductId}，用户ID: {UserId}，商品标题: {ProductTitle}，下架原因: 自动过期下架", 
+                        _logger.LogInformation("商品自动下架通知已发送，商品ID: {ProductId}，用户ID: {UserId}，商品标题: {ProductTitle}，下架原因: 自动过期下架",
                             product.ProductId, product.UserId, product.Title);
                     }
                     catch (Exception notifyEx)

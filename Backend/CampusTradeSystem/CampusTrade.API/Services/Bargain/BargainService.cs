@@ -97,15 +97,15 @@ namespace CampusTrade.API.Services.Bargain
                             ["proposedPrice"] = bargainRequest.ProposedPrice.ToString("F2"),
                             ["originalPrice"] = (order.TotalAmount ?? product.BasePrice).ToString("F2")
                         };
-                        
+
                         await _notificationService.CreateNotificationAsync(
-                            order.SellerId, 
+                            order.SellerId,
                             14, // 收到议价请求模板ID
-                            notificationParams, 
+                            notificationParams,
                             negotiation.NegotiationId
                         );
 
-                        _logger.LogInformation("议价请求通知已发送，议价ID: {NegotiationId}，买家ID: {BuyerId}，卖家ID: {SellerId}，商品: {ProductTitle}，议价: ￥{ProposedPrice}，原价: ￥{OriginalPrice}", 
+                        _logger.LogInformation("议价请求通知已发送，议价ID: {NegotiationId}，买家ID: {BuyerId}，卖家ID: {SellerId}，商品: {ProductTitle}，议价: ￥{ProposedPrice}，原价: ￥{OriginalPrice}",
                             negotiation.NegotiationId, userId, order.SellerId, product.Title, bargainRequest.ProposedPrice, order.TotalAmount ?? product.BasePrice);
                     }
                 }

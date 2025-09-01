@@ -118,11 +118,11 @@ namespace CampusTrade.API.Services.Order
                         ["status"] = "待付款",
                         ["additionalInfo"] = $"您已成功创建订单，请在 {ORDER_TIMEOUT_MINUTES} 分钟内完成付款。商品金额：￥{order.TotalAmount}"
                     };
-                    
+
                     await _notificationService.CreateNotificationAsync(
-                        order.BuyerId, 
+                        order.BuyerId,
                         1, // 订单状态更新模板ID
-                        buyerNotificationParams, 
+                        buyerNotificationParams,
                         order.OrderId
                     );
 
@@ -133,15 +133,15 @@ namespace CampusTrade.API.Services.Order
                         ["status"] = "待付款",
                         ["additionalInfo"] = $"您有新的订单，买家等待付款。商品金额：￥{order.TotalAmount}"
                     };
-                    
+
                     await _notificationService.CreateNotificationAsync(
-                        order.SellerId, 
+                        order.SellerId,
                         1, // 订单状态更新模板ID
-                        sellerNotificationParams, 
+                        sellerNotificationParams,
                         order.OrderId
                     );
 
-                    _logger.LogInformation("订单创建通知已发送，订单ID: {OrderId}，买家ID: {BuyerId}，卖家ID: {SellerId}", 
+                    _logger.LogInformation("订单创建通知已发送，订单ID: {OrderId}，买家ID: {BuyerId}，卖家ID: {SellerId}",
                         order.OrderId, order.BuyerId, order.SellerId);
                 }
                 catch (Exception ex)
@@ -150,7 +150,7 @@ namespace CampusTrade.API.Services.Order
                     // 注意：通知发送失败不应该影响订单创建，所以这里只记录日志
                 }
 
-                
+
 
                 // 5. 返回订单详情
                 return await GetOrderDetailAsync(order.OrderId, userId)
@@ -433,11 +433,11 @@ namespace CampusTrade.API.Services.Order
                         ["orderId"] = orderId,
                         ["amount"] = paymentAmount.ToString("F2")
                     };
-                    
+
                     await _notificationService.CreateNotificationAsync(
                         userId, // 买家ID
                         3, // 支付成功确认模板ID
-                        buyerNotificationParams, 
+                        buyerNotificationParams,
                         orderId
                     );
 
@@ -448,15 +448,15 @@ namespace CampusTrade.API.Services.Order
                         ["status"] = "已付款",
                         ["additionalInfo"] = $"买家已完成付款，订单金额：￥{paymentAmount:F2}，请及时发货。"
                     };
-                    
+
                     await _notificationService.CreateNotificationAsync(
-                        order.SellerId, 
+                        order.SellerId,
                         1, // 订单状态更新模板ID
-                        sellerNotificationParams, 
+                        sellerNotificationParams,
                         orderId
                     );
 
-                    _logger.LogInformation("付款确认通知已发送，订单ID: {OrderId}，买家ID: {BuyerId}，卖家ID: {SellerId}", 
+                    _logger.LogInformation("付款确认通知已发送，订单ID: {OrderId}，买家ID: {BuyerId}，卖家ID: {SellerId}",
                         orderId, userId, order.SellerId);
                 }
                 catch (Exception ex)
@@ -498,11 +498,11 @@ namespace CampusTrade.API.Services.Order
                         ["trackingInfo"] = string.IsNullOrEmpty(trackingInfo) ? "" : $"物流信息：{trackingInfo}，",
                         ["deliveryTime"] = "1-3个工作日内" // 可以根据实际业务逻辑动态计算
                     };
-                    
+
                     await _notificationService.CreateNotificationAsync(
                         order.BuyerId, // 买家ID
                         4, // 发货通知模板ID
-                        buyerNotificationParams, 
+                        buyerNotificationParams,
                         orderId
                     );
 
@@ -511,19 +511,19 @@ namespace CampusTrade.API.Services.Order
                     {
                         ["orderId"] = orderId,
                         ["status"] = "已发货",
-                        ["additionalInfo"] = string.IsNullOrEmpty(trackingInfo) 
-                            ? "您已成功发货，买家将收到发货通知。" 
+                        ["additionalInfo"] = string.IsNullOrEmpty(trackingInfo)
+                            ? "您已成功发货，买家将收到发货通知。"
                             : $"您已成功发货，物流信息：{trackingInfo}，买家将收到发货通知。"
                     };
-                    
+
                     await _notificationService.CreateNotificationAsync(
                         userId, // 卖家ID
                         1, // 订单状态更新模板ID
-                        sellerNotificationParams, 
+                        sellerNotificationParams,
                         orderId
                     );
 
-                    _logger.LogInformation("发货通知已发送，订单ID: {OrderId}，买家ID: {BuyerId}，卖家ID: {SellerId}，物流信息: {TrackingInfo}", 
+                    _logger.LogInformation("发货通知已发送，订单ID: {OrderId}，买家ID: {BuyerId}，卖家ID: {SellerId}，物流信息: {TrackingInfo}",
                         orderId, order.BuyerId, userId, trackingInfo ?? "无");
                 }
                 catch (Exception ex)
@@ -623,11 +623,11 @@ namespace CampusTrade.API.Services.Order
                     {
                         ["orderId"] = orderId
                     };
-                    
+
                     await _notificationService.CreateNotificationAsync(
-                        order.BuyerId, 
+                        order.BuyerId,
                         6, // 交易完成祝贺模板ID
-                        buyerNotificationParams, 
+                        buyerNotificationParams,
                         orderId
                     );
 
@@ -636,15 +636,15 @@ namespace CampusTrade.API.Services.Order
                     {
                         ["orderId"] = orderId
                     };
-                    
+
                     await _notificationService.CreateNotificationAsync(
-                        order.SellerId, 
+                        order.SellerId,
                         6, // 交易完成祝贺模板ID
-                        sellerNotificationParams, 
+                        sellerNotificationParams,
                         orderId
                     );
 
-                    _logger.LogInformation("交易完成祝贺通知已发送，订单ID: {OrderId}，买家ID: {BuyerId}，卖家ID: {SellerId}", 
+                    _logger.LogInformation("交易完成祝贺通知已发送，订单ID: {OrderId}，买家ID: {BuyerId}，卖家ID: {SellerId}",
                         orderId, order.BuyerId, order.SellerId);
 
                     // 发送评价提醒通知给买家 - 模板ID为23（评价提醒模板）
@@ -652,15 +652,15 @@ namespace CampusTrade.API.Services.Order
                     {
                         ["orderId"] = orderId
                     };
-                    
+
                     await _notificationService.CreateNotificationAsync(
-                        order.BuyerId, 
+                        order.BuyerId,
                         23, // 评价提醒模板ID
-                        reviewReminderParams, 
+                        reviewReminderParams,
                         orderId
                     );
 
-                    _logger.LogInformation("评价提醒通知已发送给买家，订单ID: {OrderId}，买家ID: {BuyerId}", 
+                    _logger.LogInformation("评价提醒通知已发送给买家，订单ID: {OrderId}，买家ID: {BuyerId}",
                         orderId, order.BuyerId);
                 }
                 catch (Exception ex)
@@ -709,7 +709,7 @@ namespace CampusTrade.API.Services.Order
             //             ["orderId"] = orderId,
             //             ["reason"] = cancelReason
             //         };
-                    
+
             //         await _notificationService.CreateNotificationAsync(
             //             order.BuyerId, 
             //             7, // 订单取消通知模板ID
@@ -723,7 +723,7 @@ namespace CampusTrade.API.Services.Order
             //             ["orderId"] = orderId,
             //             ["reason"] = cancelReason
             //         };
-                    
+
             //         await _notificationService.CreateNotificationAsync(
             //             order.SellerId, 
             //             7, // 订单取消通知模板ID
@@ -792,11 +792,11 @@ namespace CampusTrade.API.Services.Order
                                         ["orderId"] = order.OrderId,
                                         ["reason"] = cancelReason
                                     };
-                                    
+
                                     await _notificationService.CreateNotificationAsync(
-                                        order.BuyerId, 
+                                        order.BuyerId,
                                         7, // 订单取消通知模板ID
-                                        buyerNotificationParams, 
+                                        buyerNotificationParams,
                                         order.OrderId
                                     );
 
@@ -806,15 +806,15 @@ namespace CampusTrade.API.Services.Order
                                         ["orderId"] = order.OrderId,
                                         ["reason"] = cancelReason
                                     };
-                                    
+
                                     await _notificationService.CreateNotificationAsync(
-                                        orderDetails.SellerId, 
+                                        orderDetails.SellerId,
                                         7, // 订单取消通知模板ID
-                                        sellerNotificationParams, 
+                                        sellerNotificationParams,
                                         order.OrderId
                                     );
 
-                                    _logger.LogDebug("订单超时取消通知已发送，订单ID: {OrderId}，买家ID: {BuyerId}，卖家ID: {SellerId}", 
+                                    _logger.LogDebug("订单超时取消通知已发送，订单ID: {OrderId}，买家ID: {BuyerId}，卖家ID: {SellerId}",
                                         order.OrderId, order.BuyerId, orderDetails.SellerId);
                                 }
                             }
@@ -885,15 +885,15 @@ namespace CampusTrade.API.Services.Order
                                 ["expireTime"] = expireTimeStr,
                                 ["amount"] = orderAmount.ToString("F2")
                             };
-                            
+
                             await _notificationService.CreateNotificationAsync(
-                                order.BuyerId, 
+                                order.BuyerId,
                                 2, // 支付提醒模板ID
-                                notificationParams, 
+                                notificationParams,
                                 order.OrderId
                             );
 
-                            _logger.LogInformation("支付提醒通知已发送，订单ID: {OrderId}，买家ID: {BuyerId}，过期时间: {ExpireTime}，金额: ￥{Amount}", 
+                            _logger.LogInformation("支付提醒通知已发送，订单ID: {OrderId}，买家ID: {BuyerId}，过期时间: {ExpireTime}，金额: ￥{Amount}",
                                 order.OrderId, order.BuyerId, expireTimeStr, orderAmount);
                         }
                         catch (Exception ex)

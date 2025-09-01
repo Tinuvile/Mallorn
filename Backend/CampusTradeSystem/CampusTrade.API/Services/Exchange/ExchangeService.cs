@@ -102,15 +102,15 @@ namespace CampusTrade.API.Services.Exchange
                         ["requestedProductTitle"] = requestProduct.Title,
                         ["offeredProductTitle"] = offerProduct.Title
                     };
-                    
+
                     await _notificationService.CreateNotificationAsync(
-                        requestProduct.UserId, 
+                        requestProduct.UserId,
                         18, // 收到换物请求模板ID
-                        notificationParams, 
+                        notificationParams,
                         request.ExchangeId
                     );
 
-                    _logger.LogInformation("换物请求通知已发送，请求ID: {ExchangeId}，请求者ID: {RequesterId}，被请求商品所有者ID: {TargetUserId}，提供商品: {OfferProduct}，请求商品: {RequestProduct}", 
+                    _logger.LogInformation("换物请求通知已发送，请求ID: {ExchangeId}，请求者ID: {RequesterId}，被请求商品所有者ID: {TargetUserId}，提供商品: {OfferProduct}，请求商品: {RequestProduct}",
                         request.ExchangeId, userId, requestProduct.UserId, offerProduct.Title, requestProduct.Title);
                 }
                 catch (Exception ex)
