@@ -34,7 +34,7 @@ namespace CampusTrade.API.Data
         public DbSet<Review> Reviews { get; set; }
         public DbSet<Reports> Reports { get; set; }
         public DbSet<ReportEvidence> ReportEvidences { get; set; }
-        public DbSet<CreditHistory> CreditHistory { get; set; } 
+        public DbSet<CreditHistory> CreditHistory { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
