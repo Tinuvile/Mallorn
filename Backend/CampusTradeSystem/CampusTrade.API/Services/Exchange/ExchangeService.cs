@@ -2,6 +2,7 @@ using CampusTrade.API.Models.DTOs.Exchange;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Interfaces;
+using CampusTrade.API.Services.Notification;
 using Microsoft.Extensions.Logging;
 
 namespace CampusTrade.API.Services.Exchange
@@ -15,14 +16,14 @@ namespace CampusTrade.API.Services.Exchange
         private readonly IRepository<Models.Entities.Product> _productsRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<ExchangeService> _logger;
-        private readonly Auth.NotifiService _notificationService;
+        private readonly NotifiService _notificationService;
 
         public ExchangeService(
             IExchangeRequestsRepository exchangeRequestsRepository,
             IRepository<Models.Entities.Product> productsRepository,
             IUnitOfWork unitOfWork,
             ILogger<ExchangeService> logger,
-            Auth.NotifiService notificationService)
+            NotifiService notificationService)
         {
             _exchangeRequestsRepository = exchangeRequestsRepository;
             _productsRepository = productsRepository;

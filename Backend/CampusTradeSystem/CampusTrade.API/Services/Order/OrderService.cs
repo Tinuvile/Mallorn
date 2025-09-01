@@ -4,6 +4,7 @@ using CampusTrade.API.Models.DTOs.Payment;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Interfaces;
+using CampusTrade.API.Services.Notification;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -23,7 +24,7 @@ namespace CampusTrade.API.Services.Order
         private readonly ILogger<OrderService> _logger;
 
         private readonly ICreditService _creditService;
-        private readonly Auth.NotifiService _notificationService;
+        private readonly CampusTrade.API.Services.Notification.NotifiService _notificationService;
 
         // 订单超时时间（分钟）
         private const int ORDER_TIMEOUT_MINUTES = 30;
@@ -36,7 +37,7 @@ namespace CampusTrade.API.Services.Order
             IUnitOfWork unitOfWork,
             ILogger<OrderService> logger,
             ICreditService creditService,
-            Auth.NotifiService notificationService)
+            CampusTrade.API.Services.Notification.NotifiService notificationService)
         {
             _orderRepository = orderRepository;
             _productRepository = productRepository;

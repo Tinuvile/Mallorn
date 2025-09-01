@@ -39,10 +39,10 @@ public class DatabasePerformanceInterceptor : DbCommandInterceptor
         return await base.NonQueryExecutedAsync(command, eventData, result, cancellationToken);
     }
 
-    public override async ValueTask<object> ScalarExecutedAsync(
+    public override async ValueTask<object?> ScalarExecutedAsync(
         DbCommand command,
         CommandExecutedEventData eventData,
-        object result,
+        object? result,
         CancellationToken cancellationToken = default)
     {
         LogIfSlow(command, eventData);

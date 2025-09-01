@@ -4,6 +4,7 @@ using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.File;
 using CampusTrade.API.Services.Interfaces;
+using CampusTrade.API.Services.Notification;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -20,7 +21,7 @@ public class ProductService : IProductService
     private readonly IUserCacheService _userCache;
     private readonly IFileService _fileService;
     private readonly ILogger<ProductService> _logger;
-    private readonly Auth.NotifiService _notificationService;
+    private readonly NotifiService _notificationService;
 
     // 自动下架配置
     private const int DEFAULT_AUTO_REMOVE_DAYS = 20; // 默认20天自动下架
@@ -35,7 +36,7 @@ public class ProductService : IProductService
         IUserCacheService userCache,
         IFileService fileService,
         ILogger<ProductService> logger,
-        Auth.NotifiService notificationService)
+        NotifiService notificationService)
     {
         _unitOfWork = unitOfWork;
         _productCache = productCache;

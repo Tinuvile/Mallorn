@@ -2,6 +2,7 @@ using CampusTrade.API.Models.DTOs.Bargain;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Interfaces;
+using CampusTrade.API.Services.Notification;
 using Microsoft.Extensions.Logging;
 
 namespace CampusTrade.API.Services.Bargain
@@ -16,7 +17,7 @@ namespace CampusTrade.API.Services.Bargain
         private readonly IRepository<Models.Entities.Product> _productsRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<BargainService> _logger;
-        private readonly Auth.NotifiService _notificationService;
+        private readonly NotifiService _notificationService;
 
         public BargainService(
             INegotiationsRepository negotiationsRepository,
@@ -24,7 +25,7 @@ namespace CampusTrade.API.Services.Bargain
             IRepository<Models.Entities.Product> productsRepository,
             IUnitOfWork unitOfWork,
             ILogger<BargainService> logger,
-            Auth.NotifiService notificationService)
+            NotifiService notificationService)
         {
             _negotiationsRepository = negotiationsRepository;
             _ordersRepository = ordersRepository;
