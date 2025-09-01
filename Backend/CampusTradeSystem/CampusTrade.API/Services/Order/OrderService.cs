@@ -43,7 +43,7 @@ namespace CampusTrade.API.Services.Order
             _virtualAccountRepository = virtualAccountRepository;
             _unitOfWork = unitOfWork;
             _logger = logger;
-            _creditService = creditService; 
+            _creditService = creditService;
         }
 
         #region 订单创建
@@ -438,17 +438,20 @@ namespace CampusTrade.API.Services.Order
                     return false;
                 }
 
-                await _unitOfWork.SaveChangesAsync();
-                await _unitOfWork.CommitTransactionAsync();
-
-                _logger.LogInformation("订单 {OrderId} 完成并转账成功，卖家 {SellerId} 收到 {Amount}",
-                    orderId, order.SellerId, transferAmount);
+                // 3. 更新卖家信用分（事务内，不自动保存）
                 await _creditService.ApplyCreditChangeAsync(new CreditEvent
                 {
                     UserId = order.SellerId,
                     EventType = CreditEventType.TransactionCompleted,
                     Description = $"订单 {order.OrderId} 成功完成，卖家获得信用加分"
-                });
+                }, autoSave: false);
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                _logger.LogInformation("订单 {OrderId} 完成并转账成功，卖家 {SellerId} 收到 {Amount}",
+                    orderId, order.SellerId, transferAmount);
+
                 return true;
             }
             catch (Exception ex)

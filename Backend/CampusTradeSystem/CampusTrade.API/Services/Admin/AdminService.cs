@@ -405,7 +405,7 @@ namespace CampusTrade.API.Services.Admin
                         penaltyInfo += $", 处罚时长: {handleDto.PenaltyDuration}天";
                     }
                     // TODO: 实现具体的处罚逻辑（警告、禁言、封号）
-                    // 信用分扣分（只有审核通过时才执行）
+                    // 信用分扣分（只有审核通过时才执行，事务内不自动保存）
                     if (handleDto.HandleResult == "通过")
                     {
                         var reportedUserId = report.Order?.SellerId;
@@ -416,7 +416,7 @@ namespace CampusTrade.API.Services.Admin
                                 UserId = reportedUserId.Value,
                                 EventType = CreditEventType.ReportPenalty,
                                 Description = $"举报处理通过，管理员处罚类型: {handleDto.PenaltyType}"
-                            });
+                            }, autoSave: false);
                         }
                     }
                 }

@@ -60,7 +60,7 @@ public class ProductService : IProductService
             }
 
             //检查用户信用分是否允许商品发布
-            if (user.CreditScore < 60)
+            if (user.CreditScore < MIN_CREDIT_TO_PUBLISH)
             {
                 return ApiResponse<ProductDetailDto>.CreateError($"用户信用分为 {user.CreditScore}，低于{MIN_CREDIT_TO_PUBLISH}，无法发布商品");
             }
