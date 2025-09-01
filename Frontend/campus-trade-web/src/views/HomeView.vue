@@ -72,15 +72,15 @@
 
     <v-divider></v-divider>
     <!-- 页面主体内容 -->
-    <v-main style="margin-top: 30px">
+    <v-main style="margin-top: 10px">
       <div class="d-flex flex-row">
         <!-- 分类菜单 -->
-        <div style="margin: 40px 20px 20px 20px">
+        <div style="margin: 40px 40px 20px 20px">
           <CategoryHoverMenu :menu-width="240" @category-select="onCategorySelect" />
         </div>
         <!-- 滚动图片展示 -->
         <v-carousel
-          style="height: 500px; width: 80%; margin: 40px auto 20px; overflow: hidden"
+          style="height: 500px; width: 60%; margin: 40px auto 20px; overflow: hidden"
           interval="3000"
           show-arrows="hover"
           hide-delimiters
@@ -119,35 +119,99 @@
           class="pa-4"
           width="20%"
           style="
-            margin: 40px 20px 20px 20px;
+            margin: 40px 20px 20px 40px;
             border-radius: 10px;
             background: linear-gradient(to bottom, #fceeee, #f8bbd0);
           "
+          v-if="isLoggedIn"
         >
-          <v-avatar size="100" class="mx-auto">
-            <img :src="userInfo.avatar" :alt="userInfo.name" />
-          </v-avatar>
-          <v-card-title class="text-center mt-4">{{ userInfo.name }}</v-card-title>
-          <v-card-subtitle class="text-center">{{ userInfo.email }}</v-card-subtitle>
+          <div class="text-center mb-4">
+            <v-avatar size="50" class="mb-2">
+              <v-icon size="50">mdi-account-circle</v-icon>
+            </v-avatar>
+          </div>
+          <v-card-title class="text-center mt-2">{{ displayName }}</v-card-title>
           <v-divider class="my-4"></v-divider>
-          <v-list style="background-color: transparent">
-            <v-list-item>
+
+          <!-- 加载状态 -->
+          <div v-if="userProfileLoading" class="text-center pa-4">
+            <v-progress-circular indeterminate color="primary" size="30"></v-progress-circular>
+            <div class="mt-2 text-body-2">加载用户信息...</div>
+          </div>
+
+          <!-- 用户信息列表 -->
+          <v-list v-else style="background-color: transparent">
+            <v-list-item v-if="userStore.user?.phone">
               <v-list-item-icon>
                 <v-icon>mdi-phone</v-icon>
               </v-list-item-icon>
               <v-list-item-content>
-                <v-list-item-title>{{ userInfo.phone }}</v-list-item-title>
+                <v-list-item-title>{{ userStore.user.phone }}</v-list-item-title>
               </v-list-item-content>
             </v-list-item>
+
             <v-list-item>
               <v-list-item-icon>
-                <v-icon>mdi-account-group</v-icon>
+                <v-icon>mdi-email</v-icon>
               </v-list-item-icon>
               <v-list-item-content>
-                <v-list-item-title>{{ userInfo.role }}</v-list-item-title>
+                <v-list-item-title>{{ userStore.user?.email || 'N/A' }}</v-list-item-title>
+              </v-list-item-content>
+            </v-list-item>
+
+            <v-list-item>
+              <v-list-item-icon>
+                <v-icon>mdi-school</v-icon>
+              </v-list-item-icon>
+              <v-list-item-content>
+                <v-list-item-title>{{ userStore.user?.studentId || 'N/A' }}</v-list-item-title>
+              </v-list-item-content>
+            </v-list-item>
+
+            <v-list-item>
+              <v-list-item-icon>
+                <v-icon>mdi-star</v-icon>
+              </v-list-item-icon>
+              <v-list-item-content>
+                <v-list-item-title
+                  >信用分: {{ userStore.user?.creditScore || 0 }}</v-list-item-title
+                >
+              </v-list-item-content>
+            </v-list-item>
+
+            <v-list-item v-if="userStore.user?.virtualAccount?.balance !== undefined">
+              <v-list-item-icon>
+                <v-icon>mdi-wallet</v-icon>
+              </v-list-item-icon>
+              <v-list-item-content>
+                <v-list-item-title
+                  >余额: ¥{{ userStore.user.virtualAccount.balance }}</v-list-item-title
+                >
               </v-list-item-content>
             </v-list-item>
           </v-list>
+        </v-card>
+
+        <!-- 未登录提示卡片 -->
+        <v-card
+          class="pa-4"
+          width="20%"
+          style="
+            margin: 40px 20px 20px 20px;
+            border-radius: 10px;
+            background: linear-gradient(to bottom, #e3f2fd, #bbdefb);
+          "
+          v-else
+        >
+          <div class="text-center">
+            <v-icon size="80" color="grey">mdi-account-off</v-icon>
+            <v-card-title class="text-center mt-4">未登录</v-card-title>
+            <v-divider class="my-4"></v-divider>
+            <p class="text-body-2 text-center">登录后查看个人信息</p>
+            <v-btn color="primary" variant="outlined" @click="goToLogin" class="mt-2">
+              立即登录
+            </v-btn>
+          </div>
         </v-card>
       </div>
 
@@ -264,7 +328,7 @@
 </template>
 
 <script setup>
-  import { ref, computed, onMounted } from 'vue'
+  import { ref, computed, onMounted, watch } from 'vue'
   import { useRouter } from 'vue-router'
   import { useUserStore } from '@/stores/user'
   import CategoryHoverMenu from '@/components/CategoryHoverMenu.vue'
@@ -275,7 +339,17 @@
   const showAuthWarning = ref(false)
   const authWarningMessage = ref('')
   const isLoading = ref(false)
+  const userProfileLoading = ref(false)
   const isLoggedIn = computed(() => userStore.isLoggedIn) // 添加登录状态
+
+  // 计算显示名称
+  const displayName = computed(() => {
+    const user = userStore.user
+    if (!user) return '未知用户'
+
+    // 优先级：fullName > student.name > username > '未知用户'
+    return user.fullName || user.student?.name || user.username || '未知用户'
+  })
 
   // 分类选择处理
   const onCategorySelect = category => {
@@ -289,18 +363,6 @@
       },
     })
   }
-
-  // 个人信息数据
-  const userInfo = ref({
-    avatar: 'https://picsum.photos/100/100?random=1',
-    name: '张三',
-    email: 'zhangsan@example.com',
-    phone: '13800138000',
-    role: '普通用户',
-  })
-
-  // 模拟购物车商品数量
-  const cartItemsCount = ref(3)
 
   // 点击消息图标时的跳转方法
   const goToMessage = () => {
@@ -375,9 +437,41 @@
 
   const loading = ref(false)
 
+  // 加载用户详细信息
+  const loadUserProfile = async () => {
+    if (!userStore.isLoggedIn) {
+      return
+    }
+
+    userProfileLoading.value = true
+    try {
+      const result = await userStore.getUserProfile()
+      if (!result.success) {
+        console.warn('获取用户详细信息失败:', result.message)
+        showAuthWarning.value = true
+        authWarningMessage.value = result.message || '获取用户信息失败'
+      }
+    } catch (error) {
+      console.error('加载用户信息异常:', error)
+      showAuthWarning.value = true
+      authWarningMessage.value = '加载用户信息失败，请稍后重试'
+    } finally {
+      userProfileLoading.value = false
+    }
+  }
+
   // 组件挂载时加载数据
-  onMounted(() => {
-    loadAllProducts()
+  onMounted(async () => {
+    // 并行加载用户信息和商品数据
+    await Promise.all([loadUserProfile(), loadAllProducts()])
+  })
+
+  // 监听登录状态变化，自动刷新用户信息
+  watch(isLoggedIn, newValue => {
+    if (newValue) {
+      // 用户登录时，加载用户信息
+      loadUserProfile()
+    }
   })
 
   // 获取热门商品
