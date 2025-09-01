@@ -2,6 +2,7 @@ using CampusTrade.API.Models.DTOs.Exchange;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Interfaces;
+using CampusTrade.API.Services.Notification;
 using Microsoft.Extensions.Logging;
 
 namespace CampusTrade.API.Services.Exchange
@@ -15,17 +16,20 @@ namespace CampusTrade.API.Services.Exchange
         private readonly IRepository<Models.Entities.Product> _productsRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<ExchangeService> _logger;
+        private readonly NotifiService _notificationService;
 
         public ExchangeService(
             IExchangeRequestsRepository exchangeRequestsRepository,
             IRepository<Models.Entities.Product> productsRepository,
             IUnitOfWork unitOfWork,
-            ILogger<ExchangeService> logger)
+            ILogger<ExchangeService> logger,
+            NotifiService notificationService)
         {
             _exchangeRequestsRepository = exchangeRequestsRepository;
             _productsRepository = productsRepository;
             _unitOfWork = unitOfWork;
             _logger = logger;
+            _notificationService = notificationService;
         }
 
         /// <summary>
@@ -88,6 +92,32 @@ namespace CampusTrade.API.Services.Exchange
 
                 await _exchangeRequestsRepository.AddAsync(request);
                 await _unitOfWork.CommitTransactionAsync();
+
+                // 发送换物请求通知给被请求商品的所有者
+                try
+                {
+                    // 通知被请求商品的所有者 - 模板ID为18（收到换物请求模板）
+                    var notificationParams = new Dictionary<string, object>
+                    {
+                        ["requestedProductTitle"] = requestProduct.Title,
+                        ["offeredProductTitle"] = offerProduct.Title
+                    };
+                    
+                    await _notificationService.CreateNotificationAsync(
+                        requestProduct.UserId, 
+                        18, // 收到换物请求模板ID
+                        notificationParams, 
+                        request.ExchangeId
+                    );
+
+                    _logger.LogInformation("换物请求通知已发送，请求ID: {ExchangeId}，请求者ID: {RequesterId}，被请求商品所有者ID: {TargetUserId}，提供商品: {OfferProduct}，请求商品: {RequestProduct}", 
+                        request.ExchangeId, userId, requestProduct.UserId, offerProduct.Title, requestProduct.Title);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "发送换物请求通知失败，请求ID: {ExchangeId}", request.ExchangeId);
+                    // 注意：通知发送失败不应该影响换物请求创建结果，所以这里只记录日志
+                }
 
                 _logger.LogInformation("换物请求创建成功，请求ID：{ExchangeId}", request.ExchangeId);
                 return (true, "换物请求已发送", request.ExchangeId);

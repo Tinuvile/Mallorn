@@ -983,4 +983,41 @@ export const dashboardApi = {
   },
 }
 
+// 通知相关接口数据格式
+export interface CreateNotificationRequest {
+  recipientId: number
+  templateId: number
+  parameters: Record<string, any>
+  orderId?: number
+}
+
+export interface NotificationResponse {
+  success: boolean
+  message: string
+  notificationId?: number
+}
+
+// 通知API方法
+export const notificationApi = {
+  // 创建通知
+  createNotification: (data: CreateNotificationRequest): Promise<ApiResponse<NotificationResponse>> => {
+    return api.post('/api/notification/create', data)
+  },
+
+  // 获取通知队列状态
+  getQueueStats: (): Promise<ApiResponse<{
+    pending: number
+    success: number
+    failed: number
+    total: number
+  }>> => {
+    return api.get('/api/notification/queue-stats')
+  },
+
+  // 获取用户通知历史
+  getUserNotifications: (userId: number, pageSize: number = 10, pageIndex: number = 0): Promise<ApiResponse<any[]>> => {
+    return api.get(`/api/notification/user/${userId}/history?pageSize=${pageSize}&pageIndex=${pageIndex}`)
+  },
+}
+
 export default api

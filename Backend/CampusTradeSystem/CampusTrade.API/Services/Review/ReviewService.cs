@@ -2,6 +2,7 @@ using CampusTrade.API.Data;
 using CampusTrade.API.Models.DTOs;
 using CampusTrade.API.Models.DTOs.Review;
 using CampusTrade.API.Models.Entities;
+using CampusTrade.API.Services.Notification;
 using Microsoft.EntityFrameworkCore;
 using ReviewEntity = CampusTrade.API.Models.Entities.Review;
 
@@ -11,11 +12,13 @@ namespace CampusTrade.API.Services.Review
     {
         private readonly CampusTradeDbContext _context;
         private readonly ICreditService _creditService;
+        private readonly NotifiService _notificationService;
 
-        public ReviewService(CampusTradeDbContext context, ICreditService creditService)
+        public ReviewService(CampusTradeDbContext context, ICreditService creditService, NotifiService notificationService)
         {
             _context = context;
             _creditService = creditService;
+            _notificationService = notificationService;
         }
 
 
@@ -98,10 +101,39 @@ namespace CampusTrade.API.Services.Review
                 var saved = await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                return saved > 0;
-            }
-            catch
+            // 第九步：如果保存成功，发送新评价通知给卖家
+            if (saved > 0)
             {
+                try
+                {
+                    // 发送新评价通知给卖家 - 模板ID为22（收到新评价模板）
+                    var reviewContentText = string.IsNullOrEmpty(dto.Content) ? "" : $"评价内容：{dto.Content}";
+                    var notificationParams = new Dictionary<string, object>
+                    {
+                        ["rating"] = dto.Rating.ToString(),
+                        ["orderId"] = dto.OrderId.ToString(),
+                        ["reviewContent"] = reviewContentText
+                    };
+                    
+                    await _notificationService.CreateNotificationAsync(
+                        order.SellerId, 
+                        22, // 收到新评价模板ID
+                        notificationParams, 
+                        review.ReviewId
+                    );
+                }
+                catch (Exception)
+                {
+                    // 通知发送失败不影响评价创建结果，只记录异常
+                    // 这里可以添加日志记录，但为了保持代码简洁，暂时省略
+                }
+            }
+
+            // 第十步：返回是否保存成功（保存记录数大于0）
+            return saved > 0;
+        }
+        catch
+        {
                 await transaction.RollbackAsync();
                 throw;
             }
@@ -238,6 +270,32 @@ namespace CampusTrade.API.Services.Review
 
             // 第五步：保存更改
             var updated = await _context.SaveChangesAsync();
+
+            // 第六步：如果保存成功，发送卖家回复评价通知给买家
+            if (updated > 0)
+            {
+                try
+                {
+                    // 发送卖家回复评价通知给买家 - 模板ID为24（卖家回复评价模板）
+                    var notificationParams = new Dictionary<string, object>
+                    {
+                        ["orderId"] = review.OrderId.ToString(),
+                        ["replyContent"] = dto.SellerReply ?? ""
+                    };
+                    
+                    await _notificationService.CreateNotificationAsync(
+                        order.BuyerId, 
+                        24, // 卖家回复评价模板ID
+                        notificationParams, 
+                        review.ReviewId
+                    );
+                }
+                catch (Exception)
+                {
+                    // 通知发送失败不影响回复评价结果，只记录异常
+                    // 这里可以添加日志记录，但为了保持代码简洁，暂时省略
+                }
+            }
 
             return updated > 0;
         }
