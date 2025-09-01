@@ -79,5 +79,9 @@ namespace CampusTrade.API.Models.Entities
         /// 举报证据列表
         /// </summary>
         public virtual ICollection<ReportEvidence> Evidences { get; set; } = new List<ReportEvidence>();
+
+        // 导航属性
+        [ForeignKey("OrderId")]
+        public virtual Order? Order { get; set; }
     }
 }

@@ -4,6 +4,7 @@ using CampusTrade.API.Data;
 using CampusTrade.API.Infrastructure.Extensions;
 using CampusTrade.API.Infrastructure.Middleware;
 using CampusTrade.API.Options;
+using CampusTrade.API.Services;
 using CampusTrade.API.Services.Auth;
 using CampusTrade.API.Services.Background;
 using CampusTrade.API.Services.Cache;
@@ -192,6 +193,8 @@ try
     // 注册评价服务
     builder.Services.AddReviewServices();
 
+    // 注册信用分服务
+    builder.Services.AddScoped<ICreditService, CreditService>();
     var app = builder.Build();
 
     // 配置HTTP请求管道

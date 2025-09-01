@@ -1,4 +1,5 @@
 using CampusTrade.API.Data;
+using CampusTrade.API.Models.DTOs;
 using CampusTrade.API.Models.DTOs.Review;
 using CampusTrade.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -9,11 +10,14 @@ namespace CampusTrade.API.Services.Review
     public class ReviewService : IReviewService
     {
         private readonly CampusTradeDbContext _context;
+        private readonly ICreditService _creditService;
 
-        public ReviewService(CampusTradeDbContext context)
+        public ReviewService(CampusTradeDbContext context, ICreditService creditService)
         {
             _context = context;
+            _creditService = creditService;
         }
+
 
         /// <summary>
         /// 创建新评论（仅允许订单买家，订单必须已完成，且不可重复评论）
@@ -23,47 +27,84 @@ namespace CampusTrade.API.Services.Review
         /// <returns>是否评论成功</returns>
         public async Task<bool> CreateReviewAsync(CreateReviewDto dto, int userId)
         {
-            // 第一步：查找订单
-            // 确保订单存在，且评论关联的订单合法
-            var order = await _context.Orders
-                .FirstOrDefaultAsync(o => o.OrderId == dto.OrderId);
+            using var transaction = await _context.Database.BeginTransactionAsync();
 
-            if (order == null)
-                throw new Exception("订单不存在");
-
-            // 第二步：校验当前用户是否为订单买家
-            if (order.BuyerId != userId)
-                throw new UnauthorizedAccessException("只有订单买家才能评论");
-
-            // 第三步：检查订单状态是否已完成（只允许“已完成”状态的订单评论）
-            if (order.Status != "已完成")
-                throw new InvalidOperationException("订单未完成，无法评论");
-
-            // 第四步：检查是否已评论过（每个订单只能评论一次）
-            bool alreadyReviewed = await _context.Reviews
-                .AnyAsync(r => r.OrderId == dto.OrderId);
-
-            if (alreadyReviewed)
-                throw new InvalidOperationException("该订单已提交评论，无法重复评论");
-
-            // 第五步：创建新的评论实体对象（设置各字段）
-            var review = new ReviewEntity
+            try
             {
-                OrderId = dto.OrderId,
-                Rating = dto.Rating,
-                DescAccuracy = dto.DescAccuracy,
-                ServiceAttitude = dto.ServiceAttitude,
-                IsAnonymous = dto.IsAnonymous ? 1 : 0, // bool 转换为 0/1 存储
-                Content = dto.Content,
-                CreateTime = DateTime.Now // 使用当前时间而不是依赖数据库默认值
-            };
+                // 第一步：查找订单
+                // 确保订单存在，且评论关联的订单合法
+                var order = await _context.Orders
+                    .FirstOrDefaultAsync(o => o.OrderId == dto.OrderId);
 
-            // 第六步：添加评论到数据库上下文并保存
-            _context.Reviews.Add(review);
-            var saved = await _context.SaveChangesAsync();
+                if (order == null)
+                    throw new Exception("订单不存在");
 
-            // 第七步：返回是否保存成功（保存记录数大于0）
-            return saved > 0;
+                // 第二步：校验当前用户是否为订单买家
+                if (order.BuyerId != userId)
+                    throw new UnauthorizedAccessException("只有订单买家才能评论");
+
+                // 第三步：检查订单状态是否已完成（只允许"已完成"状态的订单评论）
+                if (order.Status != "已完成")
+                    throw new InvalidOperationException("订单未完成，无法评论");
+
+                // 第四步：检查是否已评论过（每个订单只能评论一次）
+                bool alreadyReviewed = await _context.Reviews
+                    .AnyAsync(r => r.OrderId == dto.OrderId);
+
+                if (alreadyReviewed)
+                    throw new InvalidOperationException("该订单已提交评论，无法重复评论");
+
+                // 第五步：创建新的评论实体对象（设置各字段）
+                var review = new ReviewEntity
+                {
+                    OrderId = dto.OrderId,
+                    Rating = dto.Rating,
+                    DescAccuracy = dto.DescAccuracy,
+                    ServiceAttitude = dto.ServiceAttitude,
+                    IsAnonymous = dto.IsAnonymous ? 1 : 0, // bool 转换为 0/1 存储
+                    Content = dto.Content,
+                    CreateTime = DateTime.Now // 使用当前时间而不是依赖数据库默认值
+                };
+
+                // 第六步：添加评论到数据库上下文（暂不保存）
+                _context.Reviews.Add(review);
+
+                // 第七步：根据评分更新卖家信用（事务内，暂不保存）
+                var sellerId = order.SellerId;
+
+                //差评扣分
+                if (dto.Rating <= 2)
+                {
+                    await _creditService.ApplyCreditChangeAsync(new CreditEvent
+                    {
+                        UserId = sellerId,
+                        EventType = CreditEventType.NegativeReviewPenalty,
+                        Description = $"订单 {order.OrderId} 收到差评，卖家信用扣分"
+                    }, autoSave: false);
+                }
+
+                //好评加分
+                if (dto.Rating >= 4)
+                {
+                    await _creditService.ApplyCreditChangeAsync(new CreditEvent
+                    {
+                        UserId = sellerId,
+                        EventType = CreditEventType.PositiveReviewReward,
+                        Description = $"订单 {order.OrderId} 收到好评，卖家信用加分"
+                    }, autoSave: false);
+                }
+
+                // 第八步：统一保存并提交事务
+                var saved = await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return saved > 0;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         /// <summary>
@@ -210,28 +251,67 @@ namespace CampusTrade.API.Services.Review
         /// <returns>是否删除成功</returns>
         public async Task<bool> DeleteReviewAsync(int reviewId, int userId)
         {
-            // 第一步：获取评论
-            var review = await _context.Reviews
-                .FirstOrDefaultAsync(r => r.ReviewId == reviewId);
+            using var transaction = await _context.Database.BeginTransactionAsync();
 
-            if (review == null)
-                throw new Exception("评论不存在");
+            try
+            {
+                // 第一步：获取评论
+                var review = await _context.Reviews
+                    .FirstOrDefaultAsync(r => r.ReviewId == reviewId);
 
-            // 第二步：确认订单是否存在，并且属于当前用户（买家）
-            var order = await _context.Orders
-                .FirstOrDefaultAsync(o => o.OrderId == review.OrderId);
+                if (review == null)
+                    throw new Exception("评论不存在");
 
-            if (order == null)
-                throw new Exception("关联订单不存在");
+                // 第二步：确认订单是否存在，并且属于当前用户（买家）
+                var order = await _context.Orders
+                    .FirstOrDefaultAsync(o => o.OrderId == review.OrderId);
 
-            if (order.BuyerId != userId)
-                throw new UnauthorizedAccessException("只能删除自己写的评论");
+                if (order == null)
+                    throw new Exception("关联订单不存在");
 
-            // 第三步：删除评论记录（物理删除）
-            _context.Reviews.Remove(review);
-            var deleted = await _context.SaveChangesAsync();
+                if (order.BuyerId != userId)
+                    throw new UnauthorizedAccessException("只能删除自己写的评论");
 
-            return deleted > 0;
+                // 第三步：删除评论记录（物理删除）
+                _context.Reviews.Remove(review);
+
+                // 第四步：回滚卖家信用分（根据原评分类型回滚相应的信用分）
+                var sellerId = order.SellerId;
+                var rating = review.Rating ?? 0;
+
+                // 回滚差评扣分（原来扣分，现在加回来）
+                if (rating <= 2)
+                {
+                    await _creditService.ApplyCreditChangeAsync(new CreditEvent
+                    {
+                        UserId = sellerId,
+                        EventType = CreditEventType.PositiveReviewReward, // 用好评加分来抵消差评扣分
+                        Description = $"订单 {order.OrderId} 差评已删除，回滚信用扣分"
+                    }, autoSave: false);
+                }
+
+                // 回滚好评加分（原来加分，现在扣回来）
+                if (rating >= 4)
+                {
+                    await _creditService.ApplyCreditChangeAsync(new CreditEvent
+                    {
+                        UserId = sellerId,
+                        EventType = CreditEventType.NegativeReviewPenalty, // 用差评扣分来抵消好评加分
+                        Description = $"订单 {order.OrderId} 好评已删除，回滚信用加分"
+                    }, autoSave: false);
+                }
+
+                // 第五步：统一保存并提交事务
+                var deleted = await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return deleted > 0;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
     }
