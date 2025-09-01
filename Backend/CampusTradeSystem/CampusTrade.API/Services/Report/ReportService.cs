@@ -332,6 +332,60 @@ namespace CampusTrade.API.Services.Report
         }
 
         /// <summary>
+        /// 获取举报关联商品的一级分类信息
+        /// </summary>
+        /// <param name="reportId">举报ID</param>
+        /// <param name="requestUserId">请求用户ID（用于权限验证）</param>
+        /// <returns>一级分类信息</returns>
+        public async Task<Category?> GetReportProductPrimaryCategoryAsync(int reportId, int requestUserId)
+        {
+            using var performanceTracker = new PerformanceTracker(_serilogLogger, "GetReportProductPrimaryCategory", "ReportService")
+                .AddContext("ReportId", reportId)
+                .AddContext("RequestUserId", requestUserId);
+
+            try
+            {
+                _serilogLogger.Debug("查询举报关联商品的一级分类 - 举报ID: {ReportId}, 请求用户: {UserId}",
+                    reportId, requestUserId);
+
+                // 先验证权限（只有举报人可以查看，后续可加入管理员权限）
+                var report = await _reportsRepository.GetByPrimaryKeyAsync(reportId);
+                if (report == null)
+                {
+                    _serilogLogger.Information("查询举报商品分类 - 举报不存在: {ReportId}", reportId);
+                    return null;
+                }
+
+                if (report.ReporterId != requestUserId)
+                {
+                    _serilogLogger.Warning("举报商品分类访问权限拒绝 - 举报ID: {ReportId}, 举报人: {ReporterId}, 请求用户: {RequestUserId}",
+                        reportId, report.ReporterId, requestUserId);
+                    return null;
+                }
+
+                var primaryCategory = await _reportsRepository.GetReportProductPrimaryCategoryAsync(reportId);
+
+                if (primaryCategory != null)
+                {
+                    _serilogLogger.Information("举报商品一级分类查询成功 - 举报ID: {ReportId}, 分类: {CategoryName}(ID: {CategoryId})",
+                        reportId, primaryCategory.Name, primaryCategory.CategoryId);
+                }
+                else
+                {
+                    _serilogLogger.Information("举报商品一级分类查询 - 未找到分类信息: {ReportId}", reportId);
+                }
+
+                return primaryCategory;
+            }
+            catch (Exception ex)
+            {
+                _serilogLogger.Error(ex, "获取举报商品一级分类异常 - 举报ID: {ReportId}, 用户ID: {UserId}",
+                    reportId, requestUserId);
+                return null;
+            }
+        }
+
+        /// <summary>
         /// 计算举报优先级
         /// </summary>
         /// <param name="type">举报类型</param>

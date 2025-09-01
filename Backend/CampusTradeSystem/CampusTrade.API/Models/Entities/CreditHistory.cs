@@ -58,6 +58,7 @@ namespace CampusTrade.API.Models.Entities
             public const string TransactionCompleted = "交易完成";
             public const string ReportPenalty = "举报处罚";
             public const string PositiveReviewReward = "好评奖励";
+            public const string NegativeReviewPenalty = "差评扣分";
         }
     }
 }

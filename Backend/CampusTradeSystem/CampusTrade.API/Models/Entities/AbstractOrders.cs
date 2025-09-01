@@ -13,7 +13,7 @@ namespace CampusTrade.API.Models.Entities
     {
         /// <summary>
         /// 抽象订单ID - 主键，对应Oracle中的abstract_order_id字段
-        /// 由ORDER_SEQ序列生成
+        /// 由ABSTRACT_ORDER_SEQ序列生成
         /// </summary>
         [Key]
         [Column("ABSTRACT_ORDER_ID")]

@@ -330,5 +330,50 @@ namespace CampusTrade.API.Controllers
                 data = types
             });
         }
+
+        /// <summary>
+        /// 获取举报关联商品的一级分类信息
+        /// </summary>
+        /// <param name="reportId">举报ID</param>
+        /// <returns>一级分类信息</returns>
+        [HttpGet("{reportId}/product-category")]
+        public async Task<IActionResult> GetReportProductPrimaryCategory(int reportId)
+        {
+            try
+            {
+                // 获取当前用户ID
+                var userIdClaim = User.FindFirst("userId")?.Value;
+                if (!int.TryParse(userIdClaim, out int requestUserId))
+                {
+                    return Unauthorized(ApiResponse.CreateError("用户身份验证失败"));
+                }
+
+                var primaryCategory = await _reportService.GetReportProductPrimaryCategoryAsync(reportId, requestUserId);
+                if (primaryCategory == null)
+                {
+                    return NotFound(ApiResponse.CreateError("举报不存在、无权限访问或商品分类信息不存在"));
+                }
+
+                // 获取举报关联的商品信息用于补充DTO
+                var reportDetails = await _reportService.GetReportDetailsAsync(reportId, requestUserId);
+                var productInfo = reportDetails?.AbstractOrder?.Order?.Product;
+
+                var categoryInfo = new ReportProductCategoryDto
+                {
+                    CategoryId = primaryCategory.CategoryId,
+                    CategoryName = primaryCategory.Name,
+                    ReportId = reportId,
+                    ProductId = productInfo?.ProductId,
+                    ProductTitle = productInfo?.Title ?? string.Empty
+                };
+
+                return Ok(ApiResponse.CreateSuccess(categoryInfo, "获取举报商品分类信息成功"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取举报商品分类信息时发生异常");
+                return StatusCode(500, ApiResponse.CreateError("系统异常，请稍后重试"));
+            }
+        }
     }
 }

@@ -94,6 +94,7 @@ namespace CampusTrade.API.Services.Cache
             {
                 CategoryId = c.CategoryId,
                 Name = c.Name,
+                ParentId = c.ParentId,
                 Children = BuildCategoryTree(flatCategories, c.CategoryId)
             })
             .ToList();

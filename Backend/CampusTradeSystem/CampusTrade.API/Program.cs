@@ -4,6 +4,8 @@ using CampusTrade.API.Data;
 using CampusTrade.API.Infrastructure.Extensions;
 using CampusTrade.API.Infrastructure.Middleware;
 using CampusTrade.API.Options;
+using CampusTrade.API.Services;
+using CampusTrade.API.Services.Auth;
 using CampusTrade.API.Services.Background;
 using CampusTrade.API.Services.Cache;
 using CampusTrade.API.Services.Interfaces;
@@ -135,6 +137,7 @@ try
     // 注册定时任务服务
     builder.Services.AddHostedService<TokenCleanupTask>();
     builder.Services.AddHostedService<LogCleanupTask>();
+    builder.Services.AddHostedService<EmailVerificationCleanupTask>();
     builder.Services.AddHostedService<ProductManagementTask>();
     builder.Services.AddHostedService<OrderProcessingTask>();
     builder.Services.AddHostedService<UserCreditScoreCalculationTask>();
@@ -142,10 +145,13 @@ try
     builder.Services.AddHostedService<NotificationPushTask>();
 
     // 添加认证相关服务
-    builder.Services.AddAuthenticationServices();
+    builder.Services.AddAuthenticationServices(builder.Configuration);
 
     // 添加举报相关服务
     builder.Services.AddReportServices();
+
+    // 添加管理员相关服务
+    builder.Services.AddAdminServices();
 
     // 添加文件管理服务
     builder.Services.AddFileManagementServices(builder.Configuration);
@@ -175,6 +181,9 @@ try
     builder.Services.AddScoped<ISystemConfigCacheService, SystemConfigCacheService>();
     builder.Services.AddScoped<IUserCacheService, UserCacheService>();
 
+    // 注册邮箱验证服务
+    builder.Services.AddScoped<EmailVerificationService>();
+
     // 注册议价服务
     builder.Services.AddBargainServices();
 
@@ -184,6 +193,8 @@ try
     // 注册评价服务
     builder.Services.AddReviewServices();
 
+    // 注册信用分服务
+    builder.Services.AddScoped<ICreditService, CreditService>();
     var app = builder.Build();
 
     // 配置HTTP请求管道

@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using CampusTrade.API.Services.Auth;
+using CampusTrade.API.Services.Notification;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -69,7 +69,20 @@ namespace CampusTrade.API.Services.Background
                         }
                     }
 
-                    // 3. 每5分钟输出一次队列状态
+                    // 3. 每2分钟重试各个渠道的失败通知
+                    if (DateTime.Now.Minute % 2 == 0 && DateTime.Now.Second >= 30 && DateTime.Now.Second < 40)
+                    {
+                        var channelRetryResult = await senderService.RetryAllChannelFailuresAsync(15);
+
+                        if (channelRetryResult.TotalSignalR > 0 || channelRetryResult.TotalEmail > 0)
+                        {
+                            _logger.LogInformation($"重试渠道失败通知: " +
+                                                 $"SignalR({channelRetryResult.TotalSignalR}总/{channelRetryResult.SuccessSignalR}成功), " +
+                                                 $"Email({channelRetryResult.TotalEmail}总/{channelRetryResult.SuccessEmail}成功)");
+                        }
+                    }
+
+                    // 4. 每5分钟输出一次队列状态
                     if (DateTime.Now.Minute % 5 == 0 && DateTime.Now.Second < 10)
                     {
                         var (pending, success, failed, total) = await senderService.GetQueueStatsAsync();

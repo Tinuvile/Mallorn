@@ -1,275 +1,602 @@
-<script setup lang="ts">
-  import { ref, onMounted } from 'vue'
-  import { ShoppingBag, ChatLineRound, Lock } from '@element-plus/icons-vue'
+<template>
+  <v-app id="inspire">
+    <!-- 导航栏 -->
+    <v-app-bar color="#BBDEFB" height="72" dark>
+      <span class="title" style="font-size: 24px; margin-left: 30px; margin-right: 30px"
+        >Campus Secondhand</span
+      >
+      <v-btn icon color="indigo" @click="goToUserDetail" class="mx-2">
+        <v-icon size="40">mdi-account-circle</v-icon>
+      </v-btn>
+      <v-btn icon @click="goToMessage" class="mx-2">
+        <v-icon size="40">mdi-view-list</v-icon>
+      </v-btn>
 
-  // 统计数据
-  const totalProducts = ref(1234)
-  const totalUsers = ref(5678)
-  const totalTransactions = ref(987)
+      <v-btn
+        class="me-2"
+        color="black"
+        height="40"
+        variant="text"
+        width="100"
+        style="margin-left: 100px"
+        @click="goToLogin"
+        size="large"
+        v-if="!isLoggedIn"
+        >登录/注册</v-btn
+      >
 
-  // 最新商品数据
-  const recentProducts = ref([
+      <!-- 搜索框 -->
+      <v-text-field
+        :loading="loading"
+        append-inner-icon="mdi-magnify"
+        density="compact"
+        label="Search"
+        variant="solo"
+        hide-details
+        single-line
+        @click:append-inner="onClick"
+        style="margin-left: 100px"
+      ></v-text-field>
+      <v-btn color="primary" class="mx-2" to="/order" prepend-icon="mdi-file-document-outline">
+        我的订单
+      </v-btn>
+
+      <v-btn
+        class="submit-btn-class mx-2"
+        size="large"
+        to="/goodsreleaseview"
+        variant="text"
+        height="40"
+      >
+        <img src="/images/ReleaseProduct.png" alt="发布商品" class="btn-icon" />
+        发布商品
+      </v-btn>
+      <v-btn
+        class="mx-2"
+        to="/datawatchingview"
+        height="40"
+        variant="text"
+        style="min-width: 40px; padding: 0"
+      >
+        <v-img src="/images/DataAnalyze.png" alt="数据看板" width="30" height="30" contain />
+      </v-btn>
+      <v-spacer></v-spacer>
+    </v-app-bar>
+    <!-- 错误提示的snackbar -->
+    <v-snackbar v-model="showAuthWarning" :timeout="3000" color="error" location="top">
+      {{ authWarningMessage }}
+      <template v-slot:actions>
+        <v-btn variant="text" @click="showAuthWarning = false"> 关闭 </v-btn>
+      </template>
+    </v-snackbar>
+
+    <v-divider></v-divider>
+    <!-- 页面主体内容 -->
+    <v-main style="margin-top: 10px">
+      <div class="d-flex flex-row">
+        <!-- 分类菜单 -->
+        <div style="margin: 40px 40px 20px 20px">
+          <CategoryHoverMenu :menu-width="240" @category-select="onCategorySelect" />
+        </div>
+        <!-- 滚动图片展示 -->
+        <v-carousel
+          style="height: 500px; width: 60%; margin: 40px auto 20px; overflow: hidden"
+          interval="3000"
+          show-arrows="hover"
+          hide-delimiters
+          rounded
+          class="rounded-lg"
+          contain
+          cycle
+        >
+          <v-carousel-item v-for="(image, index) in carouselImages" :key="index">
+            <img
+              :src="image.url"
+              :alt="image.title"
+              style="width: 100%; height: 100%; object-fit: cover; border-radius: inherit"
+            />
+            >
+            <div
+              class="pa-6 text-center"
+              style="
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                z-index: 1; /* 设置 z-index 确保文字显示在图片上方 */
+                padding: 20px;
+                border-radius: 10px;
+              "
+            >
+              <h1 class="text-white">{{ image.title }}</h1>
+              <p class="text-white">{{ image.subtitle }}</p>
+            </div>
+          </v-carousel-item>
+        </v-carousel>
+
+        <!-- 个人信息区块 -->
+        <v-card
+          class="pa-4"
+          width="20%"
+          style="
+            margin: 40px 20px 20px 40px;
+            border-radius: 10px;
+            background: linear-gradient(to bottom, #fceeee, #f8bbd0);
+          "
+          v-if="isLoggedIn"
+        >
+          <div class="text-center mb-4">
+            <v-avatar size="50" class="mb-2">
+              <v-icon size="50">mdi-account-circle</v-icon>
+            </v-avatar>
+          </div>
+          <v-card-title class="text-center mt-2">{{ displayName }}</v-card-title>
+          <v-divider class="my-4"></v-divider>
+
+          <!-- 加载状态 -->
+          <div v-if="userProfileLoading" class="text-center pa-4">
+            <v-progress-circular indeterminate color="primary" size="30"></v-progress-circular>
+            <div class="mt-2 text-body-2">加载用户信息...</div>
+          </div>
+
+          <!-- 用户信息列表 -->
+          <v-list v-else style="background-color: transparent">
+            <v-list-item v-if="userStore.user?.phone">
+              <v-list-item-icon>
+                <v-icon>mdi-phone</v-icon>
+              </v-list-item-icon>
+              <v-list-item-content>
+                <v-list-item-title>{{ userStore.user.phone }}</v-list-item-title>
+              </v-list-item-content>
+            </v-list-item>
+
+            <v-list-item>
+              <v-list-item-icon>
+                <v-icon>mdi-email</v-icon>
+              </v-list-item-icon>
+              <v-list-item-content>
+                <v-list-item-title>{{ userStore.user?.email || 'N/A' }}</v-list-item-title>
+              </v-list-item-content>
+            </v-list-item>
+
+            <v-list-item>
+              <v-list-item-icon>
+                <v-icon>mdi-school</v-icon>
+              </v-list-item-icon>
+              <v-list-item-content>
+                <v-list-item-title>{{ userStore.user?.studentId || 'N/A' }}</v-list-item-title>
+              </v-list-item-content>
+            </v-list-item>
+
+            <v-list-item>
+              <v-list-item-icon>
+                <v-icon>mdi-star</v-icon>
+              </v-list-item-icon>
+              <v-list-item-content>
+                <v-list-item-title
+                  >信用分: {{ userStore.user?.creditScore || 0 }}</v-list-item-title
+                >
+              </v-list-item-content>
+            </v-list-item>
+
+            <v-list-item v-if="userStore.user?.virtualAccount?.balance !== undefined">
+              <v-list-item-icon>
+                <v-icon>mdi-wallet</v-icon>
+              </v-list-item-icon>
+              <v-list-item-content>
+                <v-list-item-title
+                  >余额: ¥{{ userStore.user.virtualAccount.balance }}</v-list-item-title
+                >
+              </v-list-item-content>
+            </v-list-item>
+          </v-list>
+        </v-card>
+
+        <!-- 未登录提示卡片 -->
+        <v-card
+          class="pa-4"
+          width="20%"
+          style="
+            margin: 40px 20px 20px 20px;
+            border-radius: 10px;
+            background: linear-gradient(to bottom, #e3f2fd, #bbdefb);
+          "
+          v-else
+        >
+          <div class="text-center">
+            <v-icon size="80" color="grey">mdi-account-off</v-icon>
+            <v-card-title class="text-center mt-4">未登录</v-card-title>
+            <v-divider class="my-4"></v-divider>
+            <p class="text-body-2 text-center">登录后查看个人信息</p>
+            <v-btn color="primary" variant="outlined" @click="goToLogin" class="mt-2">
+              立即登录
+            </v-btn>
+          </div>
+        </v-card>
+      </div>
+
+      <!-- 促销 -->
+      <v-sheet
+        class="mx-auto pa-2 pt-6"
+        style="
+          border: 3px solid #fceeee;
+          border-radius: 10px;
+          box-shadow: 0 40px 8px rgba(0, 0, 0, 0.1);
+        "
+      >
+        <v-icon color="deep-purple">mdi-sale</v-icon>
+        <p style="font-size: 40px; font-weight: bold; color: #e1bee7">促销</p>
+        <div v-if="productsLoading" class="text-center pa-4">
+          <v-progress-circular indeterminate color="primary" size="30"></v-progress-circular>
+          <div class="mt-2 text-body-2">加载中...</div>
+        </div>
+        <v-slide-group v-else show-arrows>
+          <v-slide-group-item v-for="(product, index) in saleProducts" :key="index">
+            <v-card
+              class="ma-3"
+              height="200"
+              width="250"
+              rounded
+              @click="goToProductDetail(product.id)"
+              elevation="0"
+            >
+              <v-img
+                class="product-img"
+                :src="product.imageUrl"
+                :alt="product.name"
+                height="150"
+                contain
+                placeholder="加载中..."
+              />
+              <v-card-title class="text-center">
+                <div class="product-name">{{ product.name }}</div>
+                <div class="product-price" style="margin-top: -5px">¥{{ product.price }}</div>
+              </v-card-title>
+            </v-card>
+          </v-slide-group-item>
+        </v-slide-group>
+      </v-sheet>
+
+      <!-- 热销商品 -->
+      <v-sheet class="mx-auto pa-2 pt-6">
+        <v-icon color="red">mdi-fire</v-icon>
+        <p style="font-size: 40px; font-weight: bold; color: #c2185b">热销中</p>
+
+        <div v-if="productsLoading" class="text-center pa-4">
+          <v-progress-circular indeterminate color="primary" size="30"></v-progress-circular>
+          <div class="mt-2 text-body-2">加载中...</div>
+        </div>
+        <v-slide-group v-else show-arrows>
+          <v-slide-group-item v-for="product in hotProducts" :key="product.id">
+            <v-card class="ma-3" elevation="0" @click="goToProductDetail(product.id)">
+              <v-img
+                class="product-img"
+                :width="product.id === 100 ? 300 : 200"
+                :src="product.imageUrl"
+                :alt="product.name"
+                height="200"
+                rounded
+                contain
+                loading="lazy"
+              />
+              <v-card-item>
+                <v-card-title class="text-center pt-2">
+                  <div class="product-name">{{ product.name }}</div>
+                  <div class="product-price">¥{{ product.price }}</div>
+                </v-card-title>
+              </v-card-item>
+            </v-card>
+          </v-slide-group-item>
+        </v-slide-group>
+
+        <v-container fluid>
+          <v-icon color="red">mdi-store</v-icon>
+          <p style="font-size: 40px; font-weight: bold; color: rgb(167, 54, 54)">更多推荐</p>
+
+          <div v-if="productsLoading" class="text-center pa-4">
+            <v-progress-circular indeterminate color="primary" size="30"></v-progress-circular>
+            <div class="mt-2 text-body-2">加载中...</div>
+          </div>
+          <v-row v-else>
+            <v-col v-for="product in recommendedProducts" :key="product.id" cols="3">
+              <v-card class="ma-1" elevation="0" @click="goToProductDetail(product.id)">
+                <!-- 推荐商品区域 -->
+                <v-card class="pa-2" elevation="0" @click="goToProductDetail(product.id)">
+                  <v-img
+                    class="product-img"
+                    :src="product.imageUrl"
+                    :alt="product.name"
+                    height="200"
+                    rounded
+                    contain
+                    loading="lazy"
+                  />
+                  <v-card-item>
+                    <v-card-title class="text-center">
+                      <div class="product-name">{{ product.name }}</div>
+                      <div class="product-price">¥{{ product.price }}</div>
+                    </v-card-title>
+                  </v-card-item>
+                </v-card>
+              </v-card>
+            </v-col>
+          </v-row>
+        </v-container>
+      </v-sheet>
+    </v-main>
+  </v-app>
+</template>
+
+<script setup>
+  import { ref, computed, onMounted, watch } from 'vue'
+  import { useRouter } from 'vue-router'
+  import { useUserStore } from '@/stores/user'
+  import CategoryHoverMenu from '@/components/CategoryHoverMenu.vue'
+  import { productApi } from '@/services/api'
+
+  const router = useRouter()
+  const userStore = useUserStore()
+  const showAuthWarning = ref(false)
+  const authWarningMessage = ref('')
+  const isLoading = ref(false)
+  const userProfileLoading = ref(false)
+  const isLoggedIn = computed(() => userStore.isLoggedIn) // 添加登录状态
+
+  // 计算显示名称
+  const displayName = computed(() => {
+    const user = userStore.user
+    if (!user) return '未知用户'
+
+    // 优先级：fullName > student.name > username > '未知用户'
+    return user.fullName || user.student?.name || user.username || '未知用户'
+  })
+
+  // 分类选择处理
+  const onCategorySelect = category => {
+    console.log('选中分类:', category)
+    // 跳转到商品列表页面
+    router.push({
+      name: 'products',
+      query: {
+        categoryId: category.category_id.toString(),
+        categoryName: category.name,
+      },
+    })
+  }
+
+  // 点击消息图标时的跳转方法
+  const goToMessage = () => {
+    router.push({ name: 'message' })
+  }
+
+  //点击用户图标的跳转
+  const goToUserDetail = async () => {
+    if (!userStore.isLoggedIn) {
+      showAuthWarning.value = true
+      authWarningMessage.value = '请先登录后再查看个人信息'
+      return
+    }
+
+    isLoading.value = true
+    try {
+      // 使用 getUserProfile 方法获取当前用户的完整信息
+      const result = await userStore.getUserProfile()
+
+      if (result.success) {
+        router.push('/userdetailview')
+      } else {
+        showAuthWarning.value = true
+        authWarningMessage.value = result.message || '获取用户信息失败'
+      }
+    } catch (error) {
+      console.error('获取用户信息失败:', error)
+      showAuthWarning.value = true
+      authWarningMessage.value = '请求失败，请重试'
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  // 跳转到登录页面
+  const goToLogin = () => {
+    router.push('/login')
+  }
+
+  // 跳转到商品详情页
+  const goToProductDetail = id => {
+    router.push({
+      path: `/goods/${id}`, // 路由路径格式：/goods/商品ID
+      params: { id }, // 传递商品ID参数
+    })
+  }
+
+  // 商品数据 - 从后端获取
+  const saleProducts = ref([])
+  const hotProducts = ref([])
+  const recommendedProducts = ref([])
+  const productsLoading = ref(false)
+
+  // 轮播图数据
+  const carouselImages = ref([
     {
-      id: 1,
-      name: '二手笔记本电脑',
-      price: 2999,
-      seller: '张同学',
-      image: 'https://via.placeholder.com/200x150?text=笔记本',
+      url: '/images/campus.png',
+      title: '校园交易平台',
+      subtitle: '开启便捷品质生活，品类齐全 现货热销',
     },
     {
-      id: 2,
-      name: '数学教材',
-      price: 45,
-      seller: '李同学',
-      image: 'https://via.placeholder.com/200x150?text=教材',
+      url: '/images/show.jpg',
+      title: '实战必备穿搭优选',
+      subtitle: '衣橱焕新精致指南，精选球鞋 火热开抢',
     },
     {
-      id: 3,
-      name: '自行车',
-      price: 300,
-      seller: '王同学',
-      image: 'https://via.placeholder.com/200x150?text=自行车',
-    },
-    {
-      id: 4,
-      name: '台灯',
-      price: 80,
-      seller: '赵同学',
-      image: 'https://via.placeholder.com/200x150?text=台灯',
+      url: '/images/show2.jpg',
+      title: '崭新出售',
+      subtitle: '极限竞速，极限挑战',
     },
   ])
 
-  onMounted(() => {
-    // 这里可以加载真实数据
-    console.log('Home page mounted')
+  const loading = ref(false)
+
+  // 加载用户详细信息
+  const loadUserProfile = async () => {
+    if (!userStore.isLoggedIn) {
+      return
+    }
+
+    userProfileLoading.value = true
+    try {
+      const result = await userStore.getUserProfile()
+      if (!result.success) {
+        console.warn('获取用户详细信息失败:', result.message)
+        showAuthWarning.value = true
+        authWarningMessage.value = result.message || '获取用户信息失败'
+      }
+    } catch (error) {
+      console.error('加载用户信息异常:', error)
+      showAuthWarning.value = true
+      authWarningMessage.value = '加载用户信息失败，请稍后重试'
+    } finally {
+      userProfileLoading.value = false
+    }
+  }
+
+  // 组件挂载时加载数据
+  onMounted(async () => {
+    // 并行加载用户信息和商品数据
+    await Promise.all([loadUserProfile(), loadAllProducts()])
   })
+
+  // 监听登录状态变化，自动刷新用户信息
+  watch(isLoggedIn, newValue => {
+    if (newValue) {
+      // 用户登录时，加载用户信息
+      loadUserProfile()
+    }
+  })
+
+  // 获取热门商品
+  const loadHotProducts = async () => {
+    try {
+      const response = await productApi.getPopularProducts()
+      if (response.success && response.data) {
+        hotProducts.value = response.data.map(product => ({
+          id: product.product_id,
+          name: product.title,
+          imageUrl: product.main_image_url || '/images/placeholder.jpg',
+          price: product.base_price,
+        }))
+      }
+    } catch (error) {
+      console.error('获取热门商品失败:', error)
+    }
+  }
+
+  // 获取促销商品 (按价格低到高排序的前10个)
+  const loadSaleProducts = async () => {
+    try {
+      const response = await productApi.getProducts({
+        pageIndex: 1,
+        pageSize: 10,
+        sortBy: 'price',
+        sortOrder: 'asc',
+        status: '在售',
+      })
+      if (response.success && response.data && response.data.products) {
+        saleProducts.value = response.data.products.map(product => ({
+          id: product.product_id,
+          name: product.title,
+          imageUrl: product.main_image_url || '/images/placeholder.jpg',
+          price: product.base_price,
+        }))
+      }
+    } catch (error) {
+      console.error('获取促销商品失败:', error)
+    }
+  }
+
+  // 获取推荐商品 (最新发布的商品)
+  const loadRecommendedProducts = async () => {
+    try {
+      const response = await productApi.getProducts({
+        pageIndex: 1,
+        pageSize: 12,
+        sortBy: 'publishTime',
+        sortOrder: 'desc',
+        status: '在售',
+      })
+      if (response.success && response.data && response.data.products) {
+        recommendedProducts.value = response.data.products.map(product => ({
+          id: product.product_id,
+          name: product.title,
+          imageUrl: product.main_image_url || '/images/placeholder.jpg',
+          price: product.base_price,
+        }))
+      }
+    } catch (error) {
+      console.error('获取推荐商品失败:', error)
+    }
+  }
+
+  // 加载所有商品数据
+  const loadAllProducts = async () => {
+    productsLoading.value = true
+    try {
+      await Promise.all([loadHotProducts(), loadSaleProducts(), loadRecommendedProducts()])
+    } finally {
+      productsLoading.value = false
+    }
+  }
 </script>
 
-<template>
-  <div class="home">
-    <div class="welcome-section">
-      <el-card class="welcome-card">
-        <div class="welcome-content">
-          <h1>欢迎来到校园交易平台</h1>
-          <p>在这里，你可以轻松买卖二手物品，与同学们交流交易</p>
-          <div class="stats">
-            <div class="stat-item">
-              <el-statistic title="在售商品" :value="totalProducts" />
-            </div>
-            <div class="stat-item">
-              <el-statistic title="注册用户" :value="totalUsers" />
-            </div>
-            <div class="stat-item">
-              <el-statistic title="成功交易" :value="totalTransactions" />
-            </div>
-          </div>
-        </div>
-      </el-card>
-    </div>
-
-    <div class="features-section">
-      <h2>平台特色</h2>
-      <el-row :gutter="20">
-        <el-col :span="8" :xs="24" :sm="12" :md="8">
-          <el-card class="feature-card">
-            <div class="feature-icon">
-              <el-icon size="48" color="#409EFF">
-                <ShoppingBag />
-              </el-icon>
-            </div>
-            <h3>商品发布</h3>
-            <p>轻松发布你的闲置物品，详细的分类和搜索功能让买家快速找到心仪商品</p>
-          </el-card>
-        </el-col>
-
-        <el-col :span="8" :xs="24" :sm="12" :md="8">
-          <el-card class="feature-card">
-            <div class="feature-icon">
-              <el-icon size="48" color="#67C23A">
-                <ChatLineRound />
-              </el-icon>
-            </div>
-            <h3>即时沟通</h3>
-            <p>内置消息系统，买卖双方可以实时沟通，确保交易顺利进行</p>
-          </el-card>
-        </el-col>
-
-        <el-col :span="8" :xs="24" :sm="12" :md="8">
-          <el-card class="feature-card">
-            <div class="feature-icon">
-              <el-icon size="48" color="#E6A23C">
-                <Lock />
-              </el-icon>
-            </div>
-            <h3>安全保障</h3>
-            <p>校园内部交易，身份认证，为你的每一次交易提供安全保障</p>
-          </el-card>
-        </el-col>
-      </el-row>
-    </div>
-
-    <div class="recent-section">
-      <h2>最新商品</h2>
-      <el-row :gutter="20">
-        <el-col
-          :span="6"
-          :xs="24"
-          :sm="12"
-          :md="6"
-          v-for="product in recentProducts"
-          :key="product.id"
-        >
-          <el-card class="product-card" shadow="hover">
-            <img :src="product.image" class="product-image" />
-            <div class="product-info">
-              <h4>{{ product.name }}</h4>
-              <p class="product-price">¥{{ product.price }}</p>
-              <p class="product-seller">卖家：{{ product.seller }}</p>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-    </div>
-  </div>
-</template>
-
 <style scoped>
-  .home {
-    width: 100%;
-    padding: 20px;
-    box-sizing: border-box;
+  .v-card:hover {
+    box-shadow: var(--v-shadow-key-1) !important; /* 强制使用默认阴影值 */
   }
 
-  .welcome-section {
-    margin-bottom: 40px;
+  /* 商品图片悬浮放大效果 */
+  .product-img {
+    transition: transform 0.3s ease;
   }
 
-  .welcome-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
+  .product-img:hover {
+    transform: scale(1.05); /* 放大5% */
   }
 
-  .welcome-card :deep(.el-card__body) {
-    padding: 40px;
+  .product-name {
+    color: black;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 4px;
   }
 
-  .welcome-content h1 {
-    font-size: 32px;
-    margin-bottom: 16px;
-    text-align: center;
-  }
-
-  .welcome-content p {
-    font-size: 18px;
-    text-align: center;
-    margin-bottom: 30px;
-    opacity: 0.9;
-  }
-
-  .stats {
-    display: flex;
-    justify-content: space-around;
-    gap: 20px;
-  }
-
-  .stat-item {
-    text-align: center;
-  }
-
-  .stat-item :deep(.el-statistic__content) {
-    color: white;
-  }
-
-  .stat-item :deep(.el-statistic__head) {
-    color: rgba(255, 255, 255, 0.8);
-  }
-
-  .features-section,
-  .recent-section {
-    margin-bottom: 40px;
-  }
-
-  .features-section h2,
-  .recent-section h2 {
-    text-align: center;
-    margin-bottom: 30px;
-    color: #333;
-    font-size: 28px;
-  }
-
-  .feature-card {
-    text-align: center;
-    height: 200px;
-    margin-bottom: 20px;
-  }
-
-  .feature-icon {
-    margin-bottom: 16px;
-  }
-
-  .feature-card h3 {
-    color: #333;
-    margin-bottom: 12px;
-  }
-
-  .feature-card p {
-    color: #666;
-    line-height: 1.6;
-  }
-
-  .product-card {
-    margin-bottom: 20px;
-    cursor: pointer;
-    transition: transform 0.2s;
-  }
-
-  .product-card:hover {
-    transform: translateY(-4px);
-  }
-
-  .product-image {
-    width: 100%;
-    height: 150px;
-    object-fit: cover;
-    border-radius: 4px;
-  }
-
-  .product-info {
-    padding: 12px 0;
-  }
-
-  .product-info h4 {
-    margin: 0 0 8px 0;
-    color: #333;
-    font-size: 16px;
-  }
-
+  /* 商品价格样式 */
   .product-price {
-    color: #e6a23c;
+    color: rgb(167, 54, 54);
     font-size: 18px;
     font-weight: bold;
-    margin: 4px 0;
   }
 
-  .product-seller {
-    color: #999;
-    font-size: 14px;
-    margin: 4px 0 0 0;
+  /* 新增按钮图标样式 */
+  .btn-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
   }
 
-  @media (max-width: 768px) {
-    .stats {
-      flex-direction: column;
-      gap: 10px;
-    }
+  /* 调整按钮样式以适配图标 */
+  .submit-btn-class {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1976d2 !important; /* 使用与导航栏其他按钮相似的颜色 */
+    font-weight: 500 !important;
+    border-radius: 4px !important;
+    transition: all 0.2s ease !important;
+    padding: 0 16px !important;
+  }
 
-    .welcome-content h1 {
-      font-size: 24px;
-    }
-
-    .welcome-content p {
-      font-size: 16px;
-    }
+  /* 按钮悬停效果 */
+  .submit-btn-class:hover {
+    background-color: rgba(25, 118, 210, 0.08) !important;
   }
 </style>
