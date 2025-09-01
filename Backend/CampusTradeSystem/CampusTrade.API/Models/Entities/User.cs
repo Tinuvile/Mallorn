@@ -35,7 +35,7 @@ namespace CampusTrade.API.Models.Entities
         /// </summary>
         [Column("CREDIT_SCORE", TypeName = "NUMBER(3,1)")]
         [Range(0, 100)]
-        public decimal CreditScore { get; set; }
+        public decimal CreditScore { get; set; } = 60.0m;
 
         /// <summary>
         /// 密码哈希值 - 必填，存储BCrypt加密后的密码

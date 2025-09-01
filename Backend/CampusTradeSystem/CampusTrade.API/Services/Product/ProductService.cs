@@ -25,6 +25,7 @@ public class ProductService : IProductService
     private const int DEFAULT_AUTO_REMOVE_DAYS = 20; // 默认20天自动下架
     private const int HIGH_VIEW_EXTEND_DAYS = 10;    // 高浏览量延期10天
     private const int HIGH_VIEW_THRESHOLD = 100;     // 高浏览量门槛
+    private const decimal MIN_CREDIT_TO_PUBLISH = 50m;//发布商品最低信用分
 
     public ProductService(
         IUnitOfWork unitOfWork,
@@ -56,6 +57,12 @@ public class ProductService : IProductService
             if (user == null || user.GetType().Name == "NullUser")
             {
                 return ApiResponse<ProductDetailDto>.CreateError("用户不存在");
+            }
+
+            //检查用户信用分是否允许商品发布
+            if (user.CreditScore < MIN_CREDIT_TO_PUBLISH)
+            {
+                return ApiResponse<ProductDetailDto>.CreateError($"用户信用分为 {user.CreditScore}，低于{MIN_CREDIT_TO_PUBLISH}，无法发布商品");
             }
 
             // 验证分类是否存在
