@@ -922,6 +922,67 @@ export const virtualAccountApi = {
   },
 }
 
+// 充值相关类型定义
+export enum RechargeMethod {
+  Simulation = 1,
+}
+
+export interface CreateRechargeRequest {
+  amount: number
+  method: RechargeMethod
+  remarks?: string
+}
+
+export interface RechargeResponse {
+  rechargeId: number
+  amount: number
+  method: RechargeMethod
+  status: string
+  createTime: string
+  expireTime?: string
+}
+
+export interface RechargeRecord {
+  rechargeId: number
+  amount: number
+  method: RechargeMethod
+  status: string
+  createTime: string
+  completeTime?: string
+  remarks?: string
+}
+
+export interface UserRechargeRecordsResponse {
+  records: RechargeRecord[]
+  totalCount: number
+  pageIndex: number
+  pageSize: number
+  totalPages: number
+}
+
+// 充值相关接口
+export const rechargeApi = {
+  // 创建充值订单
+  createRecharge: (data: CreateRechargeRequest): Promise<ApiResponse<RechargeResponse>> => {
+    return api.post('/api/recharge', data)
+  },
+
+  // 完成模拟充值
+  completeSimulationRecharge: (
+    rechargeId: number
+  ): Promise<ApiResponse<{ success: boolean; message: string }>> => {
+    return api.post(`/api/recharge/${rechargeId}/simulate-complete`)
+  },
+
+  // 获取用户充值记录
+  getUserRechargeRecords: (
+    pageIndex = 1,
+    pageSize = 10
+  ): Promise<ApiResponse<UserRechargeRecordsResponse>> => {
+    return api.get(`/api/recharge/records?pageIndex=${pageIndex}&pageSize=${pageSize}`)
+  },
+}
+
 export interface DashboardStatsDto {
   monthlyTransactions: MonthlyTransactionDto[]
   popularProducts: PopularProductDto[]

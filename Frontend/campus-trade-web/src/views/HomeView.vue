@@ -190,6 +190,19 @@
               </v-list-item-content>
             </v-list-item>
           </v-list>
+
+          <!-- 充值按钮 -->
+          <div class="text-center mt-4">
+            <v-btn
+              color="primary"
+              variant="outlined"
+              @click="goToRecharge"
+              prepend-icon="mdi-plus-circle"
+              class="recharge-btn"
+            >
+              账户充值
+            </v-btn>
+          </div>
         </v-card>
 
         <!-- 未登录提示卡片 -->
@@ -402,6 +415,16 @@
     router.push('/login')
   }
 
+  // 跳转到充值页面
+  const goToRecharge = () => {
+    if (!userStore.isLoggedIn) {
+      showAuthWarning.value = true
+      authWarningMessage.value = '请先登录后再进行充值'
+      return
+    }
+    router.push('/recharge')
+  }
+
   // 跳转到商品详情页
   const goToProductDetail = id => {
     router.push({
@@ -598,5 +621,18 @@
   /* 按钮悬停效果 */
   .submit-btn-class:hover {
     background-color: rgba(25, 118, 210, 0.08) !important;
+  }
+
+  /* 充值按钮样式 */
+  .recharge-btn {
+    font-weight: 500 !important;
+    border-radius: 20px !important;
+    transition: all 0.3s ease !important;
+    min-width: 120px;
+  }
+
+  .recharge-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3) !important;
   }
 </style>
