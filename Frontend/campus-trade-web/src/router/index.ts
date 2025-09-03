@@ -13,6 +13,7 @@ import AdminModeratorView from '@/views/AdminModeratorView.vue'
 import SystemAuditView from '@/views/SystemAuditView.vue'
 import AdminDashboardView from '@/views/AdminDashboardView.vue'
 import ProductListView from '@/views/ProductListView.vue'
+import RechargeView from '@/views/RechargeView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -98,6 +99,12 @@ const router = createRouter({
       path: '/products',
       name: 'products',
       component: ProductListView,
+    },
+    {
+      path: '/recharge',
+      name: 'recharge',
+      component: RechargeView,
+      meta: { requiresAuth: true },
     },
   ],
   // 添加滚动行为配置
