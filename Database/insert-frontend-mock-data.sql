@@ -247,6 +247,7 @@ DBMS_OUTPUT.PUT_LINE('已重新启用外键约束');
 BEGIN
     DBMS_OUTPUT.PUT_LINE('跳过轮播图表创建');
 END;
+/
 
 -- ================================================================
 -- 7. 插入校园热销商品数据（按正确分类分配）
@@ -277,7 +278,7 @@ BEGIN
     VALUES (3, v_digital_id, 'MacBook Air M1', '13英寸，256GB，银色，学生自用', 6990.00, '在售', 235);
     
     INSERT INTO products (user_id, category_id, title, description, base_price, status, view_count) 
-    VALUES (4, v_digital_id, 'AirPods Pro', '主动降噪，原装正品，使用半年', 1390.00, '在售', 267);
+    VALUES (1, v_digital_id, 'AirPods Pro', '主动降噪，原装正品，使用半年', 1390.00, '在售', 267);
     
     INSERT INTO products (user_id, category_id, title, description, base_price, status, view_count) 
     VALUES (2, v_digital_id, 'iPad 第9代', '64GB WiFi版，深空灰色，含保护套', 2190.00, '在售', 198);
@@ -287,7 +288,7 @@ BEGIN
     VALUES (3, v_sports_id, 'Nike Air Jordan 1', '经典黑红配色，42码，8成新', 899.00, '在售', 189);
     
     INSERT INTO products (user_id, category_id, title, description, base_price, status, view_count) 
-    VALUES (4, v_sports_id, 'Adidas Stan Smith', '小白鞋经典款，41码，几乎全新', 459.00, '在售', 145);
+    VALUES (1, v_sports_id, 'Adidas Stan Smith', '小白鞋经典款，41码，几乎全新', 459.00, '在售', 145);
     
     INSERT INTO products (user_id, category_id, title, description, base_price, status, view_count) 
     VALUES (2, v_sports_id, '健身哑铃组合', '可调节5-20kg，适合宿舍健身', 299.00, '在售', 123);
@@ -319,7 +320,7 @@ BEGIN
     
     -- 插入推荐教材
     INSERT INTO products (user_id, category_id, title, description, base_price, status, view_count) 
-    VALUES (4, v_textbook_id, '高等数学同济版', '上下册全套，有笔记，适合复习', 39.00, '在售', 234);
+    VALUES (1, v_textbook_id, '高等数学同济版', '上下册全套，有笔记，适合复习', 39.00, '在售', 234);
     
     INSERT INTO products (user_id, category_id, title, description, base_price, status, view_count) 
     VALUES (2, v_textbook_id, 'Java核心技术', '第11版，程序员必读经典', 79.00, '在售', 189);
@@ -329,7 +330,7 @@ BEGIN
     
     -- 插入推荐数码产品
     INSERT INTO products (user_id, category_id, title, description, base_price, status, view_count) 
-    VALUES (4, v_digital_id, 'Sony WH-1000XM4', '降噪耳机，黑色，音质极佳', 1899.00, '在售', 145);
+    VALUES (1, v_digital_id, 'Sony WH-1000XM4', '降噪耳机，黑色，音质极佳', 1899.00, '在售', 145);
     
     INSERT INTO products (user_id, category_id, title, description, base_price, status, view_count) 
     VALUES (2, v_digital_id, 'Kindle Paperwhite', '第11代，8GB，护眼阅读', 699.00, '在售', 89);
@@ -339,7 +340,7 @@ BEGIN
     VALUES (3, v_daily_id, '无印良品文具套装', '笔袋、笔、便签本全套', 89.00, '在售', 178);
     
     INSERT INTO products (user_id, category_id, title, description, base_price, status, view_count) 
-    VALUES (4, v_daily_id, '宿舍护理用品套装', '洗护全套，适合新生', 129.00, '在售', 134);
+    VALUES (1, v_daily_id, '宿舍护理用品套装', '洗护全套，适合新生', 129.00, '在售', 134);
     
     -- 插入推荐服装
     INSERT INTO products (user_id, category_id, title, description, base_price, status, view_count) 
@@ -400,6 +401,7 @@ END;
 BEGIN
     DBMS_OUTPUT.PUT_LINE('跳过商品标签系统创建');
 END;
+/
 
 -- ================================================================
 -- 11. 跳过首页配置表创建（删除不需要的配置功能）
@@ -407,6 +409,7 @@ END;
 BEGIN
     DBMS_OUTPUT.PUT_LINE('跳过首页配置表创建');
 END;
+/
 
 -- ================================================================
 -- 提交更改并验证结果
@@ -414,61 +417,58 @@ END;
 COMMIT;
 
 -- 验证修复结果
+DECLARE
+    v_orphan_products NUMBER;
+    v_total_products NUMBER;
+    v_categories_count NUMBER;
+    v_banners_count NUMBER;
 BEGIN
     DBMS_OUTPUT.PUT_LINE('');
     DBMS_OUTPUT.PUT_LINE('========================================');
     DBMS_OUTPUT.PUT_LINE('🎓 校园交易平台数据初始化完成！');
     DBMS_OUTPUT.PUT_LINE('========================================');
     
-    DECLARE
-        v_orphan_products NUMBER;
-        v_total_products NUMBER;
-        v_categories_count NUMBER;
-        v_banners_count NUMBER;
-    BEGIN
-        -- 检查孤立商品
-        SELECT COUNT(*) INTO v_orphan_products 
-        FROM products p 
-        WHERE NOT EXISTS (SELECT 1 FROM categories c WHERE c.category_id = p.category_id);
-        
-        SELECT COUNT(*) INTO v_total_products FROM products;
-        SELECT COUNT(*) INTO v_categories_count FROM categories;
-        v_banners_count := 0;
-        
-        DBMS_OUTPUT.PUT_LINE('📊 数据统计:');
-        DBMS_OUTPUT.PUT_LINE('- 分类总数: ' || v_categories_count);
-        DBMS_OUTPUT.PUT_LINE('- 商品总数: ' || v_total_products);
-        DBMS_OUTPUT.PUT_LINE('- 孤立商品: ' || v_orphan_products);
-        DBMS_OUTPUT.PUT_LINE('- 轮播图: ' || v_banners_count || ' 个');
-        
-        IF v_orphan_products = 0 THEN
-            DBMS_OUTPUT.PUT_LINE('✅ 所有商品都已正确分类！');
-        ELSE
-            DBMS_OUTPUT.PUT_LINE('⚠️ 仍有 ' || v_orphan_products || ' 个孤立商品');
-        END IF;
-        
-        -- 显示校园交易系统标准分类商品分布
-        DBMS_OUTPUT.PUT_LINE('');
-        DBMS_OUTPUT.PUT_LINE('🏫 校园交易系统分类商品分布:');
-        FOR rec IN (
-            SELECT c.name, COUNT(p.product_id) as product_count
-            FROM categories c
-            LEFT JOIN products p ON c.category_id = p.category_id
-            WHERE c.parent_id IS NULL
-            GROUP BY c.name
-            ORDER BY CASE c.name 
-                WHEN '教材' THEN 1 
-                WHEN '数码' THEN 2 
-                WHEN '日用' THEN 3 
-                WHEN '服装' THEN 4 
-                WHEN '运动' THEN 5 
-                WHEN '其他' THEN 6 
-                ELSE 7 END
-        ) LOOP
-            DBMS_OUTPUT.PUT_LINE('📁 ' || rec.name || ': ' || rec.product_count || ' 个商品');
-        END LOOP;
-        
-    END;
+    -- 检查孤立商品
+    SELECT COUNT(*) INTO v_orphan_products 
+    FROM products p 
+    WHERE NOT EXISTS (SELECT 1 FROM categories c WHERE c.category_id = p.category_id);
+    
+    SELECT COUNT(*) INTO v_total_products FROM products;
+    SELECT COUNT(*) INTO v_categories_count FROM categories;
+    v_banners_count := 0;
+    
+    DBMS_OUTPUT.PUT_LINE('📊 数据统计:');
+    DBMS_OUTPUT.PUT_LINE('- 分类总数: ' || v_categories_count);
+    DBMS_OUTPUT.PUT_LINE('- 商品总数: ' || v_total_products);
+    DBMS_OUTPUT.PUT_LINE('- 孤立商品: ' || v_orphan_products);
+    DBMS_OUTPUT.PUT_LINE('- 轮播图: ' || v_banners_count || ' 个');
+    
+    IF v_orphan_products = 0 THEN
+        DBMS_OUTPUT.PUT_LINE('✅ 所有商品都已正确分类！');
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('⚠️ 仍有 ' || v_orphan_products || ' 个孤立商品');
+    END IF;
+    
+    -- 显示校园交易系统标准分类商品分布
+    DBMS_OUTPUT.PUT_LINE('');
+    DBMS_OUTPUT.PUT_LINE('🏫 校园交易系统分类商品分布:');
+    FOR rec IN (
+        SELECT c.name, COUNT(p.product_id) as product_count
+        FROM categories c
+        LEFT JOIN products p ON c.category_id = p.category_id
+        WHERE c.parent_id IS NULL
+        GROUP BY c.name
+        ORDER BY CASE c.name 
+            WHEN '教材' THEN 1 
+            WHEN '数码' THEN 2 
+            WHEN '日用' THEN 3 
+            WHEN '服装' THEN 4 
+            WHEN '运动' THEN 5 
+            WHEN '其他' THEN 6 
+            ELSE 7 END
+    ) LOOP
+        DBMS_OUTPUT.PUT_LINE('📁 ' || rec.name || ': ' || rec.product_count || ' 个商品');
+    END LOOP;
 END;
 /
 
