@@ -381,6 +381,7 @@ export interface OrderListResponse {
   productImage: string
   totalAmount: number
   quantity: number
+  userRole: 'buyer' | 'seller'
 }
 
 export interface OrderStatisticsResponse {

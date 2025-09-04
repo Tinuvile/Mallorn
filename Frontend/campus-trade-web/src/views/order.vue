@@ -1422,9 +1422,15 @@
             break
           case 'shipped':
           case 'delivered':
-            // 买家确认收货操作
+            // 买家确认收货操作（同时完成订单）
             await confirmReceived(selectedOrder.value.id)
-            updateOrderStatus(selectedOrder.value.id, 'completed')
+            // Store中的confirmDelivery已经会刷新订单数据，无需额外调用
+            if (selectedOrder.value) {
+              const updatedOrder = orders.value.find(order => order.id === selectedOrder.value?.id)
+              if (updatedOrder) {
+                selectedOrder.value = updatedOrder
+              }
+            }
             break
           case 'completed':
             // 买家评价或查看评价
@@ -1561,9 +1567,9 @@
           await payOrder(order.id)
           await updateOrderStatus(order.id, 'processing')
         } else if (canExecuteAction(status, 'confirm_delivery', 'buyer')) {
-          // 买家确认收货操作
+          // 买家确认收货操作（同时完成订单）
           await confirmReceived(order.id)
-          await updateOrderStatus(order.id, 'completed')
+          // Store中的confirmDelivery已经会刷新订单数据，无需额外调用
         }
       }
     } catch (error) {

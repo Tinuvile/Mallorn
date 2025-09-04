@@ -1,121 +1,23 @@
 // store/modules/order.ts
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { orderApi, type ApiResponse } from '@/services/api'
+import {
+  orderApi,
+  type ApiResponse,
+  type OrderListResponse,
+  type UserOrdersResponse,
+  type OrderDetailResponse,
+  type OrderStatisticsResponse,
+  type CreateOrderRequest,
+  type UpdateOrderStatusRequest,
+  type ShipOrderRequest,
+  type CancelOrderRequest,
+  type PaymentResult,
+  OrderStatus,
+} from '@/services/api'
 import { getStatusDisplayText, canExecuteAction } from '@/utils/orderStatusMapping'
 
-// 订单状态枚举
-export enum OrderStatus {
-  PENDING = 'pending',
-  PROCESSING = 'processing',
-  SHIPPED = 'shipped',
-  DELIVERED = 'delivered',
-  COMPLETED = 'completed',
-  CANCELLED = 'cancelled',
-}
-
-// DTO 接口定义（根据后端 DTO 结构）
-export interface OrderItemResponse {
-  id: number
-  productId: number
-  productName: string
-  productImage: string
-  specification: string
-  price: number
-  quantity: number
-  totalAmount: number
-}
-
-export interface OrderAddressResponse {
-  recipient: string
-  phone: string
-  location: string
-}
-
-export interface OrderDetailResponse {
-  id: number
-  orderNumber: string
-  orderDate: string
-  status: OrderStatus
-  userId: number
-  sellerId: number
-  totalAmount: number
-  discountAmount: number
-  shippingFee: number
-  finalPayment: number
-  items: OrderItemResponse[]
-  address: OrderAddressResponse
-  trackingInfo?: string
-  review?: string
-  reviewDate?: string
-  cancelledReason?: string
-  cancelledDate?: string
-}
-
-export interface OrderListResponse {
-  id: number
-  orderNumber: string
-  orderDate: string
-  status: OrderStatus
-  productName: string
-  productImage: string
-  totalAmount: number
-  quantity: number
-  userRole: 'buyer' | 'seller' // 后端返回的用户角色
-}
-
-export interface OrderStatisticsResponse {
-  totalOrders: number
-  pendingCount: number
-  processingCount: number
-  shippedCount: number
-  deliveredCount: number
-  completedCount: number
-  cancelledCount: number
-  totalAmount: number
-}
-
-export interface CreateOrderRequest {
-  productId: number
-  productName: string
-  productImage: string
-  specification: string
-  price: number
-  quantity: number
-  address: OrderAddressResponse
-  totalAmount: number
-  discountAmount: number
-  shippingFee: number
-  finalPayment: number
-}
-
-export interface UpdateOrderStatusRequest {
-  status: OrderStatus
-  trackingInfo?: string
-  reason?: string
-}
-
-export interface ShipOrderRequest {
-  trackingInfo?: string
-}
-
-export interface CancelOrderRequest {
-  reason?: string
-}
-
-export interface PaymentResult {
-  success: boolean
-  message: string
-  amount?: number
-}
-
-export interface UserOrdersResponse {
-  orders: OrderListResponse[]
-  totalCount: number
-  pageIndex: number
-  pageSize: number
-  totalPages: number
-}
+// 直接使用从 api.ts 导入的接口，避免重复定义
 
 export const useOrderStore = defineStore('order', () => {
   const orders = ref<OrderListResponse[]>([])
@@ -148,6 +50,7 @@ export const useOrderStore = defineStore('order', () => {
           productImage: response.data.items[0]?.productImage || '',
           totalAmount: response.data.totalAmount,
           quantity: response.data.items.reduce((sum, item) => sum + item.quantity, 0),
+          userRole: 'buyer', // 创建订单的用户是买家
         }
 
         orders.value.unshift(orderList)
@@ -449,20 +352,31 @@ export const useOrderStore = defineStore('order', () => {
   // 确认收货
   const confirmDelivery = async (orderId: number) => {
     try {
-      const response: ApiResponse<void> = await orderApi.confirmDelivery(orderId)
+      // 步骤1：确认收货
+      const deliveryResponse: ApiResponse<void> = await orderApi.confirmDelivery(orderId)
 
-      if (response.success) {
-        // 更新订单状态为待收货
-        await updateOrderStatus(orderId, { status: OrderStatus.DELIVERED })
+      if (!deliveryResponse.success) {
+        return {
+          success: false,
+          message: deliveryResponse.message || '确认收货失败',
+        }
+      }
+
+      // 步骤2：自动完成订单（转账给卖家）
+      const completeResponse: ApiResponse<void> = await orderApi.completeOrder(orderId)
+
+      if (completeResponse.success) {
+        // 刷新订单列表获取最新状态
+        await getUserOrders()
         return {
           success: true,
-          message: response.message || '确认收货成功',
+          message: '确认收货并完成订单成功',
         }
       }
 
       return {
         success: false,
-        message: response.message || '确认收货失败',
+        message: completeResponse.message || '确认收货成功，但完成订单失败',
       }
     } catch (error: unknown) {
       console.error('确认收货错误:', error)
