@@ -61,6 +61,7 @@ export interface OrderListResponse {
   productImage: string
   totalAmount: number
   quantity: number
+  userRole: 'buyer' | 'seller' // 后端返回的用户角色
 }
 
 export interface OrderStatisticsResponse {

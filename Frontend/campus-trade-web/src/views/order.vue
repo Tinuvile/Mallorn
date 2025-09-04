@@ -95,7 +95,7 @@
                   </v-col>
                   <v-col cols="4" class="text-right">
                     <v-chip :color="getStatusColor(order.status)">
-                      {{ getStatusText(order.status, getUserRoleInOrder(order)) }}
+                      {{ getStatusDisplayText(order.status) }}
                     </v-chip>
                   </v-col>
                 </v-row>
@@ -108,11 +108,10 @@
                   </v-col>
                   <v-col cols="6">
                     <div class="text-h6">{{ order.productName }}</div>
-                    <div class="text-body-2">{{ order.productDescription }}</div>
+                    <div class="text-body-2">数量：{{ order.quantity }}</div>
                   </v-col>
                   <v-col cols="4" class="text-right">
                     <div class="text-h6">￥{{ order.totalAmount }}</div>
-                    <div class="text-body-2">数量：{{ order.quantity }}</div>
                     <!-- 订单卡片操作按钮 -->
                     <div class="mt-2" v-if="shouldShowCardButton(order)">
                       <v-btn
@@ -238,11 +237,7 @@
                 </v-list-item>
                 <v-list-item>
                   <div class="text-body-1 d-flex justify-space-between align-center">
-                    <span
-                      >订单状态：{{
-                        getStatusText(selectedOrder.status, currentUserRoleInOrder)
-                      }}</span
-                    >
+                    <span>订单状态：{{ getStatusDisplayText(selectedOrder.status) }}</span>
                     <!-- 订单状态行的操作按钮 -->
                     <v-btn
                       v-if="shouldShowDetailButton"
@@ -718,8 +713,17 @@
 <script setup>
   import { ref, computed, onMounted, onUnmounted } from 'vue'
   import { useRouter } from 'vue-router'
+  import { useOrderStore } from '@/stores/order'
+  import { useUserStore } from '@/stores/user'
+  import {
+    getStatusDisplayText,
+    getStatusColor,
+    canExecuteAction,
+  } from '@/utils/orderStatusMapping'
 
   const router = useRouter()
+  const orderStore = useOrderStore()
+  const userStore = useUserStore()
   const activeTab = ref('all')
   const showDialog = ref(false)
   const selectedOrder = ref(null)
@@ -871,142 +875,8 @@
     return titleMap[activeTab.value] || '我的订单'
   })
 
-  // 模拟订单数据
-  const orders = ref([
-    {
-      id: 1,
-      orderNumber: 'ORD20240101001',
-      orderDate: '2024-01-01 10:00:00',
-      status: 'pending',
-      productName: 'iPhone 14 Pro',
-      productDescription: '全新未拆封，256GB深空黑色',
-      productImage: '/path/to/iphone.jpg',
-      price: 8999.0,
-      quantity: 1,
-      totalAmount: 8999.0,
-      receiverName: '张三',
-      receiverPhone: '13800138000',
-      review: null, // 买家评价
-      reviewDate: null,
-      sellerResponse: null,
-      sellerResponseDate: null,
-      disputeStatus: 'none',
-    },
-    {
-      id: 2,
-      orderNumber: 'ORD20240102002',
-      orderDate: '2024-01-02 14:30:00',
-      status: 'processing',
-      productName: 'MacBook Pro 13英寸',
-      productDescription: 'M2芯片，512GB存储，9成新',
-      productImage: '/path/to/macbook.jpg',
-      price: 12999.0,
-      quantity: 1,
-      totalAmount: 12999.0,
-      receiverName: '李四',
-      receiverPhone: '13900139000',
-      review: null,
-      reviewDate: null,
-      sellerResponse: null,
-      sellerResponseDate: null,
-      disputeStatus: 'none',
-    },
-    {
-      id: 3,
-      orderNumber: 'ORD20240103003',
-      orderDate: '2024-01-03 09:15:00',
-      status: 'shipped',
-      productName: 'AirPods Pro 2代',
-      productDescription: '原装正品，使用3个月',
-      productImage: '/path/to/airpods.jpg',
-      price: 1299.0,
-      quantity: 1,
-      totalAmount: 1299.0,
-      receiverName: '王五',
-      receiverPhone: '13700137000',
-      review: null,
-      reviewDate: null,
-      sellerResponse: null,
-      sellerResponseDate: null,
-      disputeStatus: 'none',
-    },
-    {
-      id: 4,
-      orderNumber: 'ORD20240104004',
-      orderDate: '2024-01-04 16:45:00',
-      status: 'delivered',
-      productName: '华为Watch GT 3',
-      productDescription: '运动智能手表，黑色表带',
-      productImage: '/path/to/huawei-watch.jpg',
-      price: 899.0,
-      quantity: 1,
-      totalAmount: 899.0,
-      receiverName: '赵六',
-      receiverPhone: '13600136000',
-      review: null,
-      reviewDate: null,
-      sellerResponse: null,
-      sellerResponseDate: null,
-      disputeStatus: 'none',
-    },
-    {
-      id: 5,
-      orderNumber: 'ORD20240105005',
-      orderDate: '2024-01-05 11:20:00',
-      status: 'completed',
-      productName: '小米13 Ultra',
-      productDescription: '徕卡影像，黑色，128GB',
-      productImage: '/path/to/xiaomi.jpg',
-      price: 4599.0,
-      quantity: 1,
-      totalAmount: 4599.0,
-      receiverName: '钱七',
-      receiverPhone: '13500135000',
-      review: '商品质量很好，卖家发货很快！',
-      reviewDate: '2025-07-20T10:30:00Z',
-      sellerResponse: '谢谢您的好评，欢迎下次光临！',
-      sellerResponseDate: '2025-07-20T14:20:00Z',
-      disputeStatus: 'none',
-    },
-    {
-      id: 6,
-      orderNumber: 'ORD20250823001',
-      orderDate: '2025-08-23 09:00:00',
-      status: 'completed',
-      productName: 'iPad Air',
-      productDescription: 'M1芯片，256GB，天蓝色',
-      productImage: '/path/to/ipad.jpg',
-      price: 3999.0,
-      quantity: 1,
-      totalAmount: 3999.0,
-      receiverName: '测试用户',
-      receiverPhone: '13888888888',
-      review: '产品很不错，但是包装可以再仔细一些。',
-      reviewDate: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2小时前的评价
-      sellerResponse: null,
-      sellerResponseDate: null,
-      disputeStatus: 'none',
-    },
-    {
-      id: 7,
-      orderNumber: 'ORD20250820001',
-      orderDate: '2025-08-20 15:30:00',
-      status: 'completed',
-      productName: '机械键盘',
-      productDescription: '樱桃轴，RGB背光',
-      productImage: '/path/to/keyboard.jpg',
-      price: 299.0,
-      quantity: 1,
-      totalAmount: 299.0,
-      receiverName: '买家李明',
-      receiverPhone: '13777777777',
-      review: '键盘手感不错，但有一个按键有点松动。',
-      reviewDate: new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString(), // 72小时前（超过48小时）
-      sellerResponse: null,
-      sellerResponseDate: null,
-      disputeStatus: 'none',
-    },
-  ])
+  // 使用真实的订单数据
+  const orders = computed(() => orderStore.orders)
 
   // 根据状态筛选订单
   const filteredOrders = computed(() => {
@@ -1046,54 +916,6 @@
       (!selectedOrder.value.disputeStatus || selectedOrder.value.disputeStatus === 'none')
     )
   })
-
-  // 获取状态显示文本
-  const getStatusText = (status, userRole = null) => {
-    // 如果没有指定用户角色，使用通用的状态文本
-    if (!userRole) {
-      const statusMap = {
-        pending: '待付款',
-        processing: '待发货',
-        shipped: '已发货',
-        delivered: '待收货',
-        completed: '已完成',
-      }
-      return statusMap[status] || status
-    }
-
-    // 根据用户角色显示不同的状态文本
-    if (userRole === 'seller') {
-      const sellerStatusMap = {
-        pending: '待付款',
-        processing: '待发货',
-        shipped: '待收货', // 卖家视角：已发货后是待收货
-        delivered: '待收货',
-        completed: '已完成',
-      }
-      return sellerStatusMap[status] || status
-    } else {
-      const buyerStatusMap = {
-        pending: '待付款',
-        processing: '待发货',
-        shipped: '已发货', // 买家视角：已发货
-        delivered: '待收货',
-        completed: '已完成',
-      }
-      return buyerStatusMap[status] || status
-    }
-  }
-
-  // 获取状态颜色
-  const getStatusColor = status => {
-    const colorMap = {
-      pending: 'warning',
-      processing: 'info',
-      shipped: 'orange',
-      delivered: 'primary',
-      completed: 'success',
-    }
-    return colorMap[status] || 'grey'
-  }
 
   // 显示订单详情
   const showOrderDetails = order => {
@@ -1176,20 +998,28 @@
   const shouldShowStepButton = step => {
     if (!selectedOrder.value) return false
 
-    const currentStepValue = currentStep.value
-    const role = currentUserRoleInOrder.value
     const status = selectedOrder.value.status
+    const role = currentUserRoleInOrder.value
 
-    if (role === 'buyer') {
-      // 买家流程：待付款-待发货-已发货-已完成
-      if (step === 1 && currentStepValue === 1 && status === 'pending') return true
-      if (step === 3 && currentStepValue === 3 && (status === 'shipped' || status === 'delivered'))
-        return true
-      if (step === 4 && currentStepValue === 4 && status === 'completed') return true
-    } else {
-      // 卖家流程：待发货-待收货-已完成
-      if (step === 1 && currentStepValue === 1 && status === 'processing') return true
-      if (step === 3 && currentStepValue === 3 && status === 'completed') return true
+    // 步骤1：付款/发货
+    if (step === 1) {
+      if (role === 'buyer') {
+        return canExecuteAction(status, 'pay', 'buyer')
+      } else {
+        return canExecuteAction(status, 'ship', 'seller')
+      }
+    }
+    // 步骤3：确认收货/完成
+    if (step === 3) {
+      if (role === 'buyer') {
+        return canExecuteAction(status, 'confirm_delivery', 'buyer')
+      } else {
+        return status === 'completed'
+      }
+    }
+    // 步骤4：评价
+    if (step === 4) {
+      return status === 'completed' && role === 'buyer' && !selectedOrder.value.review
     }
 
     return false
@@ -1273,16 +1103,16 @@
     }
   }
 
-  // 更新订单状态
-  const updateOrderStatus = (orderId, newStatus) => {
-    // 更新订单列表中的状态
-    const orderIndex = orders.value.findIndex(order => order.id === orderId)
-    if (orderIndex !== -1) {
-      orders.value[orderIndex].status = newStatus
-    }
-    // 更新选中订单的状态
+  // 更新订单状态 - 现在由 store 自动处理，这里只需要刷新数据
+  const updateOrderStatus = async (orderId, newStatus) => {
+    // 刷新订单数据以获取最新状态
+    await loadOrders()
+    // 如果当前选中的订单被更新，也要更新选中订单的引用
     if (selectedOrder.value && selectedOrder.value.id === orderId) {
-      selectedOrder.value.status = newStatus
+      const updatedOrder = orders.value.find(order => order.id === orderId)
+      if (updatedOrder) {
+        selectedOrder.value = updatedOrder
+      }
     }
   }
 
@@ -1316,17 +1146,13 @@
       // 模拟API调用
       await new Promise(resolve => setTimeout(resolve, 1000))
 
-      // 更新订单的评价信息
-      const orderIndex = orders.value.findIndex(order => order.id === selectedOrder.value.id)
-      if (orderIndex !== -1) {
-        orders.value[orderIndex].review = reviewText.value
-        orders.value[orderIndex].reviewDate = new Date().toISOString()
-      }
+      // 重新加载订单数据以获取最新信息
+      await loadOrders()
 
-      // 更新选中订单的评价
-      if (selectedOrder.value) {
-        selectedOrder.value.review = reviewText.value
-        selectedOrder.value.reviewDate = new Date().toISOString()
+      // 更新选中订单的引用
+      const updatedOrder = orders.value.find(order => order.id === selectedOrder.value.id)
+      if (updatedOrder) {
+        selectedOrder.value = updatedOrder
       }
 
       // 关闭对话框
@@ -1349,17 +1175,13 @@
       // 模拟API调用
       await new Promise(resolve => setTimeout(resolve, 1000))
 
-      // 更新订单的回应信息
-      const orderIndex = orders.value.findIndex(order => order.id === selectedOrder.value.id)
-      if (orderIndex !== -1) {
-        orders.value[orderIndex].sellerResponse = responseText.value
-        orders.value[orderIndex].sellerResponseDate = new Date().toISOString()
-      }
+      // 重新加载订单数据以获取最新信息
+      await loadOrders()
 
-      // 更新选中订单的回应
-      if (selectedOrder.value) {
-        selectedOrder.value.sellerResponse = responseText.value
-        selectedOrder.value.sellerResponseDate = new Date().toISOString()
+      // 更新选中订单的引用
+      const updatedOrder = orders.value.find(order => order.id === selectedOrder.value.id)
+      if (updatedOrder) {
+        selectedOrder.value = updatedOrder
       }
 
       responseText.value = ''
@@ -1404,21 +1226,13 @@
       // 模拟API调用
       await new Promise(resolve => setTimeout(resolve, 1500))
 
-      // 更新订单的争议状态
-      const orderIndex = orders.value.findIndex(order => order.id === selectedOrder.value.id)
-      if (orderIndex !== -1) {
-        orders.value[orderIndex].disputeStatus = 'pending'
-        orders.value[orderIndex].disputeReason = disputeForm.value.reason
-        orders.value[orderIndex].disputeDescription = disputeForm.value.description
-        orders.value[orderIndex].disputeDate = new Date().toISOString()
-      }
+      // 重新加载订单数据以获取最新信息
+      await loadOrders()
 
-      // 更新选中订单的争议信息
-      if (selectedOrder.value) {
-        selectedOrder.value.disputeStatus = 'pending'
-        selectedOrder.value.disputeReason = disputeForm.value.reason
-        selectedOrder.value.disputeDescription = disputeForm.value.description
-        selectedOrder.value.disputeDate = new Date().toISOString()
+      // 更新选中订单的引用
+      const updatedOrder = orders.value.find(order => order.id === selectedOrder.value.id)
+      if (updatedOrder) {
+        selectedOrder.value = updatedOrder
       }
 
       closeDisputeDialog()
@@ -1630,32 +1444,55 @@
   // 添加用户角色（模拟，实际应从用户登录信息获取）
   const currentUserRole = ref('buyer') // 'buyer' 或 'seller'
 
-  // 根据订单和用户角色获取用户在该订单中的身份
+  // 根据订单获取用户在该订单中的身份 - 直接使用后端返回的角色
   const getUserRoleInOrder = order => {
-    // 这里应该根据订单的买家ID和卖家ID以及当前用户ID来判断
-    // 现在先模拟：奇数订单ID为买家，偶数订单ID为卖家
-    return order.id % 2 === 1 ? 'buyer' : 'seller'
+    // 直接返回后端提供的用户角色，避免前端重复计算
+    return order.userRole || 'buyer'
   }
 
   // 判断是否显示操作按钮（已移除，现在使用stepper中的按钮）
 
-  // 模拟 API 调用
+  // 真实 API 调用
   const shipOrder = async orderId => {
-    // 实际项目中这里需要调用后端 API
-    console.log('发货操作:', orderId)
-    // 模拟异步延迟
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    try {
+      console.log('发货操作:', orderId)
+      await orderStore.shipOrder(orderId)
+      console.log('发货成功')
+    } catch (error) {
+      console.error('发货失败:', error)
+      alert('发货失败，请重试')
+    }
   }
 
   const payOrder = async orderId => {
-    console.log('付款操作:', orderId)
-    // 这里可以集成支付宝沙盒
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    try {
+      console.log('付款操作:', orderId)
+      await orderStore.payOrder(orderId)
+      console.log('付款成功')
+    } catch (error) {
+      console.error('付款失败:', error)
+      alert('付款失败，请重试')
+    }
   }
 
   const confirmReceived = async orderId => {
-    console.log('确认收货操作:', orderId)
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    try {
+      console.log('确认收货操作:', orderId)
+      await orderStore.confirmDelivery(orderId)
+      console.log('确认收货成功')
+    } catch (error) {
+      console.error('确认收货失败:', error)
+      alert('确认收货失败，请重试')
+    }
+  }
+
+  // 加载订单数据
+  const loadOrders = async () => {
+    try {
+      await orderStore.getUserOrders()
+    } catch (error) {
+      console.error('加载订单数据失败:', error)
+    }
   }
 
   // 返回主页
@@ -1669,9 +1506,12 @@
     const role = getUserRoleInOrder(order)
 
     if (role === 'seller') {
-      return status === 'processing' // 卖家：待发货时显示发货按钮
+      return canExecuteAction(status, 'ship', 'seller') // 卖家：可发货时显示发货按钮
     } else {
-      return status === 'pending' || status === 'shipped' || status === 'delivered' // 买家：待付款、已发货或待收货时显示按钮
+      return (
+        canExecuteAction(status, 'pay', 'buyer') ||
+        canExecuteAction(status, 'confirm_delivery', 'buyer')
+      ) // 买家：可付款或可确认收货时显示按钮
     }
   }
 
@@ -1681,18 +1521,11 @@
     const role = getUserRoleInOrder(order)
 
     if (role === 'seller') {
-      return status === 'processing' ? '发货' : ''
+      return canExecuteAction(status, 'ship', 'seller') ? '发货' : ''
     } else {
-      switch (status) {
-        case 'pending':
-          return '付款'
-        case 'shipped':
-          return '确认收货'
-        case 'delivered':
-          return '确认收货'
-        default:
-          return ''
-      }
+      if (canExecuteAction(status, 'pay', 'buyer')) return '付款'
+      if (canExecuteAction(status, 'confirm_delivery', 'buyer')) return '确认收货'
+      return ''
     }
   }
 
@@ -1702,18 +1535,11 @@
     const role = getUserRoleInOrder(order)
 
     if (role === 'seller') {
-      return status === 'processing' ? 'success' : 'primary'
+      return canExecuteAction(status, 'ship', 'seller') ? 'success' : 'primary'
     } else {
-      switch (status) {
-        case 'pending':
-          return 'warning'
-        case 'shipped':
-          return 'success'
-        case 'delivered':
-          return 'success'
-        default:
-          return 'primary'
-      }
+      if (canExecuteAction(status, 'pay', 'buyer')) return 'warning'
+      if (canExecuteAction(status, 'confirm_delivery', 'buyer')) return 'success'
+      return 'primary'
     }
   }
 
@@ -1724,24 +1550,20 @@
 
     try {
       if (role === 'seller') {
-        if (status === 'processing') {
+        if (canExecuteAction(status, 'ship', 'seller')) {
           // 卖家发货操作
           await shipOrder(order.id)
-          updateOrderStatus(order.id, 'shipped')
+          await updateOrderStatus(order.id, 'shipped')
         }
       } else {
-        switch (status) {
-          case 'pending':
-            // 买家付款操作
-            await payOrder(order.id)
-            updateOrderStatus(order.id, 'processing')
-            break
-          case 'shipped':
-          case 'delivered':
-            // 买家确认收货操作
-            await confirmReceived(order.id)
-            updateOrderStatus(order.id, 'completed')
-            break
+        if (canExecuteAction(status, 'pay', 'buyer')) {
+          // 买家付款操作
+          await payOrder(order.id)
+          await updateOrderStatus(order.id, 'processing')
+        } else if (canExecuteAction(status, 'confirm_delivery', 'buyer')) {
+          // 买家确认收货操作
+          await confirmReceived(order.id)
+          await updateOrderStatus(order.id, 'completed')
         }
       }
     } catch (error) {
@@ -1789,8 +1611,10 @@
   }
 
   // 组件挂载和卸载时的事件监听
-  onMounted(() => {
+  onMounted(async () => {
     document.addEventListener('mousemove', trackMouse)
+    // 加载订单数据
+    await loadOrders()
   })
 
   onUnmounted(() => {

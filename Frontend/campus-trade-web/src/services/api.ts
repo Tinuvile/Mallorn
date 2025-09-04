@@ -440,18 +440,18 @@ export interface UserOrdersResponse {
 export interface UserBriefInfo {
   userId: number
   username: string
-  email?: string
+  nickname?: string
   avatarUrl?: string
+  creditScore?: number
 }
 
 // 商品简要信息接口
 export interface ProductBriefInfo {
   productId: number
-  productName: string
-  description?: string
+  title: string
   price: number
-  imageUrl?: string
-  category?: string
+  mainImageUrl?: string
+  status: string
 }
 
 // 订单状态枚举
@@ -491,7 +491,7 @@ export interface BackendOrderListResponse {
   finalPrice?: number
   status: string
   createTime: string
-  userRole: string
+  userRole: 'buyer' | 'seller' // 后端返回的用户角色
   isExpired?: boolean
 }
 
@@ -522,8 +522,8 @@ export const adaptOrderDetail = (backendData: BackendOrderDetailResponse): Order
           {
             id: backendData.productId,
             productId: backendData.productId,
-            productName: backendData.product.productName || '',
-            productImage: backendData.product.imageUrl || '',
+            productName: backendData.product.title || '',
+            productImage: backendData.product.mainImageUrl || '',
             specification: '',
             price: backendData.finalPrice || backendData.totalAmount || 0,
             quantity: 1,
@@ -551,10 +551,11 @@ export const adaptOrderList = (backendData: BackendOrderListResponse[]): OrderLi
     orderNumber: `ORD-${order.orderId.toString().padStart(6, '0')}`,
     orderDate: order.createTime,
     status: backendToFrontendStatus(order.status) as OrderStatus,
-    productName: order.product?.productName || '',
-    productImage: order.product?.imageUrl || '',
+    productName: order.product?.title || '未知商品',
+    productImage: order.product?.mainImageUrl || '/images/default-product.png',
     totalAmount: order.totalAmount || 0,
     quantity: 1, // 后端暂无此字段
+    userRole: order.userRole, // 保留后端返回的用户角色
   }))
 }
 
@@ -572,14 +573,39 @@ export const adaptUpdateStatusRequest = (
 export const orderApi = {
   // 创建订单
   createOrder: async (data: CreateOrderRequest): Promise<ApiResponse<OrderDetailResponse>> => {
-    const response = await api.post<ApiResponse<BackendOrderDetailResponse>>('/api/order', data)
-    if (response.data.success && response.data.data) {
+    const response = await api.post('/api/order', data)
+    const responseData = response.data
+
+    // 检查是否是 ApiResponse 格式
+    if (responseData.success !== undefined) {
+      // 标准 ApiResponse 格式
+      if (responseData.success && responseData.data) {
+        const adaptedData = adaptOrderDetail(responseData.data)
+        return {
+          ...responseData,
+          data: adaptedData,
+        }
+      }
+      return responseData as ApiResponse<OrderDetailResponse>
+    } else if (responseData.orderId) {
+      // 直接返回的订单对象
+      const adaptedData = adaptOrderDetail(responseData)
       return {
-        ...response.data,
-        data: adaptOrderDetail(response.data.data),
+        success: true,
+        message: '订单创建成功',
+        data: adaptedData,
+        error_code: undefined,
+        timestamp: new Date().toISOString(),
       }
     }
-    return response.data as unknown as ApiResponse<OrderDetailResponse>
+
+    return {
+      success: false,
+      message: '响应格式错误',
+      data: undefined,
+      error_code: 'INVALID_RESPONSE',
+      timestamp: new Date().toISOString(),
+    }
   },
 
   // 获取订单详情
@@ -607,19 +633,47 @@ export const orderApi = {
     if (filters?.pageIndex) params.append('pageIndex', filters.pageIndex.toString())
     if (filters?.pageSize) params.append('pageSize', filters.pageSize.toString())
 
-    const response = await api.get<ApiResponse<BackendUserOrdersResponse>>(
-      `/api/order?${params.toString()}`
-    )
-    if (response.data.success && response.data.data) {
+    const response = await api.get(`/api/order?${params.toString()}`)
+
+    // 检查是否是 ApiResponse 格式
+    if (response.data.success !== undefined) {
+      // 标准 ApiResponse 格式
+      if (response.data.success && response.data.data) {
+        const adaptedOrders = adaptOrderList(response.data.data.orders)
+        return {
+          ...response.data,
+          data: {
+            ...response.data.data,
+            orders: adaptedOrders,
+          },
+        }
+      }
+      return response.data as ApiResponse<UserOrdersResponse>
+    } else if (response.data.orders) {
+      // 直接返回的订单列表格式
+      const adaptedOrders = adaptOrderList(response.data.orders)
       return {
-        ...response.data,
+        success: true,
+        message: '获取订单成功',
         data: {
-          ...response.data.data,
-          orders: adaptOrderList(response.data.data.orders),
+          orders: adaptedOrders,
+          totalCount: response.data.totalCount || 0,
+          pageIndex: response.data.pageIndex || 1,
+          pageSize: response.data.pageSize || 10,
+          totalPages: response.data.totalPages || 1,
         },
+        error_code: undefined,
+        timestamp: new Date().toISOString(),
       }
     }
-    return response.data as unknown as ApiResponse<UserOrdersResponse>
+
+    return {
+      success: false,
+      message: '获取订单失败',
+      data: undefined,
+      error_code: 'NO_DATA',
+      timestamp: new Date().toISOString(),
+    }
   },
 
   // 获取商品订单列表
