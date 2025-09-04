@@ -579,24 +579,15 @@
                   class="mb-4"
                 ></v-select>
 
-                <div class="text-subtitle-1 mb-2">举报用户：</div>
-                <v-text-field
-                  v-model="reportFormData.targetUser"
-                  label="请输入被举报用户ID或用户名"
-                  variant="outlined"
-                  :rules="[v => !!v || '请输入被举报用户']"
-                  class="mb-4"
-                ></v-text-field>
-
-                <div class="text-subtitle-1 mb-2">相关订单（可选）：</div>
+                <div class="text-subtitle-1 mb-2">相关订单：</div>
                 <v-select
                   v-model="reportFormData.relatedOrder"
                   :items="orderOptions"
                   item-title="text"
                   item-value="value"
-                  label="请选择相关订单（如果适用）"
+                  label="请选择要举报的订单"
                   variant="outlined"
-                  clearable
+                  :rules="[v => !!v || '请选择要举报的订单']"
                   class="mb-4"
                 ></v-select>
 
@@ -715,6 +706,7 @@
   import { useRouter } from 'vue-router'
   import { useOrderStore } from '@/stores/order'
   import { useUserStore } from '@/stores/user'
+  import { reviewApi, reportApi } from '@/services/api'
   import {
     getStatusDisplayText,
     getStatusColor,
@@ -760,10 +752,10 @@
 
   // 争议原因选项
   const disputeReasons = [
-    { title: '评价内容不实', value: 'false_content' },
-    { title: '恶意评价', value: 'malicious' },
-    { title: '与实际交易不符', value: 'mismatch' },
-    { title: '其他原因', value: 'other' },
+    { title: '评价内容不实', value: '评价内容不实' },
+    { title: '恶意评价', value: '恶意评价' },
+    { title: '与实际交易不符', value: '与实际交易不符' },
+    { title: '其他原因', value: '其他原因' },
   ]
 
   // 举报相关变量
@@ -776,21 +768,18 @@
   // 举报表单数据
   const reportFormData = ref({
     type: '',
-    targetUser: '',
     relatedOrder: null,
     reason: '',
     evidenceFiles: [],
   })
 
-  // 举报类型选项
+  // 举报类型选项 - 映射到后端期望的中文类型
   const reportTypes = [
-    { text: '虚假交易', value: 'fake_transaction' },
-    { text: '欺诈行为', value: 'fraud' },
-    { text: '恶意评价', value: 'malicious_review' },
-    { text: '商品质量问题', value: 'quality_issue' },
-    { text: '服务态度恶劣', value: 'bad_service' },
-    { text: '违规商品', value: 'illegal_goods' },
-    { text: '其他问题', value: 'other' },
+    { text: '商品质量问题', value: '商品问题' },
+    { text: '服务态度恶劣', value: '服务问题' },
+    { text: '欺诈行为', value: '欺诈' },
+    { text: '虚假描述', value: '虚假描述' },
+    { text: '其他问题', value: '其他' },
   ]
 
   // 订单选项（用于举报表单）
@@ -1143,24 +1132,38 @@
 
     isSubmittingReview.value = true
     try {
-      // 模拟API调用
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // 调用真实API
+      const response = await reviewApi.createReview({
+        orderId: selectedOrder.value.id,
+        rating: 5, // 默认5星，可以从UI中获取
+        descAccuracy: 5, // 描述准确性，可以从UI中获取
+        serviceAttitude: 5, // 服务态度，可以从UI中获取
+        isAnonymous: false, // 默认不匿名，可以从UI中获取
+        content: reviewText.value.trim(),
+      })
 
-      // 重新加载订单数据以获取最新信息
-      await loadOrders()
+      if (response.success) {
+        // 重新加载订单数据以获取最新信息
+        await loadOrders()
 
-      // 更新选中订单的引用
-      const updatedOrder = orders.value.find(order => order.id === selectedOrder.value.id)
-      if (updatedOrder) {
-        selectedOrder.value = updatedOrder
+        // 更新选中订单的引用
+        const updatedOrder = orders.value.find(order => order.id === selectedOrder.value?.id)
+        if (updatedOrder) {
+          selectedOrder.value = updatedOrder
+        }
+
+        // 关闭对话框
+        closeReviewDialog()
+
+        console.log('评价提交成功:', response.message)
+        alert('评价提交成功！')
+      } else {
+        console.error('评价提交失败:', response.message)
+        alert(`评价提交失败：${response.message}`)
       }
-
-      // 关闭对话框
-      closeReviewDialog()
-
-      console.log('评价提交成功:', reviewText.value)
     } catch (error) {
       console.error('提交评价失败:', error)
+      alert('评价提交失败，请稍后重试')
     } finally {
       isSubmittingReview.value = false
     }
@@ -1172,22 +1175,40 @@
 
     isSubmittingResponse.value = true
     try {
-      // 模拟API调用
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // 先获取该订单的评价ID
+      const reviewResponse = await reviewApi.getOrderReview(selectedOrder.value.id)
 
-      // 重新加载订单数据以获取最新信息
-      await loadOrders()
-
-      // 更新选中订单的引用
-      const updatedOrder = orders.value.find(order => order.id === selectedOrder.value.id)
-      if (updatedOrder) {
-        selectedOrder.value = updatedOrder
+      if (!reviewResponse.success || !reviewResponse.data) {
+        alert('无法获取评价信息')
+        return
       }
 
-      responseText.value = ''
-      console.log('回应提交成功:', responseText.value)
+      // 调用真实API回应评价
+      const response = await reviewApi.createReviewResponse({
+        reviewId: reviewResponse.data.reviewId,
+        responseContent: responseText.value.trim(),
+      })
+
+      if (response.success) {
+        // 重新加载订单数据以获取最新信息
+        await loadOrders()
+
+        // 更新选中订单的引用
+        const updatedOrder = orders.value.find(order => order.id === selectedOrder.value?.id)
+        if (updatedOrder) {
+          selectedOrder.value = updatedOrder
+        }
+
+        responseText.value = ''
+        console.log('回应提交成功:', response.message)
+        alert('回应提交成功！')
+      } else {
+        console.error('回应提交失败:', response.message)
+        alert(`回应提交失败：${response.message}`)
+      }
     } catch (error) {
       console.error('提交回应失败:', error)
+      alert('回应提交失败，请稍后重试')
     } finally {
       isSubmittingResponse.value = false
     }
@@ -1216,29 +1237,44 @@
 
   // 提交争议申请
   const submitDispute = async () => {
-    if (!disputeFormRef.value) return
+    if (!disputeFormRef.value || !selectedOrder.value) return
 
     const { valid } = await disputeFormRef.value.validate()
     if (!valid) return
 
     isSubmittingDispute.value = true
     try {
-      // 模拟API调用
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      // 调用真实API
+      const response = await reportApi.createDispute({
+        orderId: selectedOrder.value.id,
+        reason: disputeForm.value.reason,
+        description: disputeForm.value.description,
+        evidenceFiles: disputeForm.value.evidenceFiles?.map(file => ({
+          fileType: file.type || 'image',
+          fileUrl: URL.createObjectURL(file), // 临时URL，实际应该上传到服务器
+        })),
+      })
 
-      // 重新加载订单数据以获取最新信息
-      await loadOrders()
+      if (response.success) {
+        // 重新加载订单数据以获取最新信息
+        await loadOrders()
 
-      // 更新选中订单的引用
-      const updatedOrder = orders.value.find(order => order.id === selectedOrder.value.id)
-      if (updatedOrder) {
-        selectedOrder.value = updatedOrder
+        // 更新选中订单的引用
+        const updatedOrder = orders.value.find(order => order.id === selectedOrder.value?.id)
+        if (updatedOrder) {
+          selectedOrder.value = updatedOrder
+        }
+
+        closeDisputeDialog()
+        console.log('争议申请提交成功:', response.message)
+        alert('争议申请提交成功！')
+      } else {
+        console.error('争议申请提交失败:', response.message)
+        alert(`争议申请提交失败：${response.message}`)
       }
-
-      closeDisputeDialog()
-      console.log('争议申请提交成功:', disputeForm.value)
     } catch (error) {
       console.error('提交争议申请失败:', error)
+      alert('争议申请提交失败，请稍后重试')
     } finally {
       isSubmittingDispute.value = false
     }
@@ -1260,21 +1296,24 @@
   // 举报相关方法
   const showReportDialog = () => {
     showReportDialogState.value = true
-    // 重置表单
+    // 重置表单，如果有选中的订单则自动设置
     reportFormData.value = {
       type: '',
-      targetUser: '',
-      relatedOrder: null,
+      relatedOrder: selectedOrder.value ? selectedOrder.value.id : null,
       reason: '',
       evidenceFiles: [],
     }
+
+    console.log('打开举报对话框，自动设置订单:', {
+      selectedOrder: selectedOrder.value,
+      relatedOrder: reportFormData.value.relatedOrder,
+    })
   }
 
   const closeReportDialog = () => {
     showReportDialogState.value = false
     reportFormData.value = {
       type: '',
-      targetUser: '',
       relatedOrder: null,
       reason: '',
       evidenceFiles: [],
@@ -1283,28 +1322,49 @@
 
   // 提交举报
   const submitReport = async () => {
-    if (!reportFormValid.value) return
+    // 验证表单
+    if (!reportForm.value) return
+
+    const { valid } = await reportForm.value.validate()
+    if (!valid) return
 
     isSubmittingReport.value = true
 
     try {
-      // 模拟API调用
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // 调用真实API，直接使用选择的订单ID
+      const orderId = reportFormData.value.relatedOrder
 
-      // 这里应该调用实际的API
-      console.log('举报信息:', {
-        type: reportFormData.value.type,
-        targetUser: reportFormData.value.targetUser,
+      console.log('举报参数检查:', {
+        orderId: orderId,
         relatedOrder: reportFormData.value.relatedOrder,
-        reason: reportFormData.value.reason,
-        evidenceFiles: reportFormData.value.evidenceFiles,
-        reportTime: new Date().toISOString(),
+        type: reportFormData.value.type,
+        description: reportFormData.value.reason,
       })
 
-      // 显示成功消息
-      alert('举报已提交，我们会在3个工作日内处理您的举报并通过站内信通知处理结果')
+      if (!orderId || orderId === 0) {
+        alert('请选择要举报的订单')
+        isSubmittingReport.value = false
+        return
+      }
 
-      closeReportDialog()
+      const response = await reportApi.createReport({
+        orderId: orderId,
+        type: reportFormData.value.type,
+        description: reportFormData.value.reason,
+        evidenceFiles: reportFormData.value.evidenceFiles?.map(file => ({
+          fileType: file.type || 'image',
+          fileUrl: URL.createObjectURL(file), // 临时URL，实际应该上传到服务器
+        })),
+      })
+
+      if (response.success) {
+        console.log('举报提交成功:', response.message)
+        alert('举报已提交，我们会在3个工作日内处理您的举报并通过站内信通知处理结果')
+        closeReportDialog()
+      } else {
+        console.error('举报提交失败:', response.message)
+        alert(`举报提交失败：${response.message}`)
+      }
     } catch (error) {
       console.error('提交举报失败:', error)
       alert('提交失败，请稍后重试')
