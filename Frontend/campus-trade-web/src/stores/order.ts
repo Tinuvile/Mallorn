@@ -2,6 +2,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { orderApi, type ApiResponse } from '@/services/api'
+import { getStatusDisplayText, canExecuteAction } from '@/utils/orderStatusMapping'
 
 // 订单状态枚举
 export enum OrderStatus {
@@ -10,7 +11,7 @@ export enum OrderStatus {
   SHIPPED = 'shipped',
   DELIVERED = 'delivered',
   COMPLETED = 'completed',
-  CANCELLED = 'cancelled'
+  CANCELLED = 'cancelled',
 }
 
 // DTO 接口定义（根据后端 DTO 结构）
@@ -130,57 +131,57 @@ export const useOrderStore = defineStore('order', () => {
   }
 
   // 创建订单
-const createOrder = async (request: CreateOrderRequest) => {
-  isLoading.value = true
-  try {
-    const response: ApiResponse<OrderDetailResponse> = await orderApi.createOrder(request)
+  const createOrder = async (request: CreateOrderRequest) => {
+    isLoading.value = true
+    try {
+      const response: ApiResponse<OrderDetailResponse> = await orderApi.createOrder(request)
 
-    if (response.success && response.data) {
-      // 将详细订单转换为列表格式并添加到订单列表开头
-      const orderList: OrderListResponse = {
-        id: response.data.id,
-        orderNumber: response.data.orderNumber,
-        orderDate: response.data.orderDate,
-        status: response.data.status,
-        productName: response.data.items[0]?.productName || '',
-        productImage: response.data.items[0]?.productImage || '',
-        totalAmount: response.data.totalAmount,
-        quantity: response.data.items.reduce((sum, item) => sum + item.quantity, 0)
+      if (response.success && response.data) {
+        // 将详细订单转换为列表格式并添加到订单列表开头
+        const orderList: OrderListResponse = {
+          id: response.data.id,
+          orderNumber: response.data.orderNumber,
+          orderDate: response.data.orderDate,
+          status: response.data.status,
+          productName: response.data.items[0]?.productName || '',
+          productImage: response.data.items[0]?.productImage || '',
+          totalAmount: response.data.totalAmount,
+          quantity: response.data.items.reduce((sum, item) => sum + item.quantity, 0),
+        }
+
+        orders.value.unshift(orderList)
+        currentOrder.value = response.data
+
+        // 更新本地存储
+        localStorage.setItem('userOrders', JSON.stringify(orders.value))
+
+        return {
+          success: true,
+          data: response.data,
+          message: response.message || '创建订单成功',
+        }
       }
-      
-      orders.value.unshift(orderList)
-      currentOrder.value = response.data
-      
-      // 更新本地存储
-      localStorage.setItem('userOrders', JSON.stringify(orders.value))
-      
-      return { 
-        success: true, 
-        data: response.data, 
-        message: response.message || '创建订单成功' 
+
+      return {
+        success: false,
+        message: response.message || '创建订单失败',
       }
-    }
+    } catch (error: unknown) {
+      console.error('创建订单错误:', error)
+      let message = '创建订单失败，请重试'
 
-    return { 
-      success: false, 
-      message: response.message || '创建订单失败' 
-    }
-  } catch (error: unknown) {
-    console.error('创建订单错误:', error)
-    let message = '创建订单失败，请重试'
-
-    if (error && typeof error === 'object' && 'response' in error) {
-      const err = error as { response?: { data?: { message?: string } } }
-      if (err.response?.data?.message) {
-        message = err.response.data.message
+      if (error && typeof error === 'object' && 'response' in error) {
+        const err = error as { response?: { data?: { message?: string } } }
+        if (err.response?.data?.message) {
+          message = err.response.data.message
+        }
       }
-    }
 
-    return { success: false, message }
-  } finally {
-    isLoading.value = false
+      return { success: false, message }
+    } finally {
+      isLoading.value = false
+    }
   }
-}
 
   // 获取订单详情
   const getOrderDetail = async (orderId: number) => {
@@ -190,16 +191,16 @@ const createOrder = async (request: CreateOrderRequest) => {
 
       if (response.success && response.data) {
         currentOrder.value = response.data
-        return { 
-          success: true, 
-          data: response.data, 
-          message: response.message || '获取订单详情成功' 
+        return {
+          success: true,
+          data: response.data,
+          message: response.message || '获取订单详情成功',
         }
       }
 
-      return { 
-        success: false, 
-        message: response.message || '获取订单详情失败' 
+      return {
+        success: false,
+        message: response.message || '获取订单详情失败',
       }
     } catch (error: unknown) {
       console.error('获取订单详情错误:', error)
@@ -233,16 +234,16 @@ const createOrder = async (request: CreateOrderRequest) => {
         orders.value = response.data.orders
         // 保存到本地存储
         localStorage.setItem('userOrders', JSON.stringify(orders.value))
-        return { 
-          success: true, 
-          data: response.data, 
-          message: response.message || '获取订单成功' 
+        return {
+          success: true,
+          data: response.data,
+          message: response.message || '获取订单成功',
         }
       }
 
-      return { 
-        success: false, 
-        message: response.message || '获取订单失败' 
+      return {
+        success: false,
+        message: response.message || '获取订单失败',
       }
     } catch (error: unknown) {
       console.error('获取订单列表错误:', error)
@@ -268,16 +269,16 @@ const createOrder = async (request: CreateOrderRequest) => {
       const response: ApiResponse<OrderListResponse[]> = await orderApi.getProductOrders(productId)
 
       if (response.success && response.data) {
-        return { 
-          success: true, 
-          data: response.data, 
-          message: response.message || '获取商品订单成功' 
+        return {
+          success: true,
+          data: response.data,
+          message: response.message || '获取商品订单成功',
         }
       }
 
-      return { 
-        success: false, 
-        message: response.message || '获取商品订单失败' 
+      return {
+        success: false,
+        message: response.message || '获取商品订单失败',
       }
     } catch (error: unknown) {
       console.error('获取商品订单错误:', error)
@@ -303,16 +304,16 @@ const createOrder = async (request: CreateOrderRequest) => {
 
       if (response.success && response.data) {
         statistics.value = response.data
-        return { 
-          success: true, 
-          data: response.data, 
-          message: response.message || '获取统计成功' 
+        return {
+          success: true,
+          data: response.data,
+          message: response.message || '获取统计成功',
         }
       }
 
-      return { 
-        success: false, 
-        message: response.message || '获取统计失败' 
+      return {
+        success: false,
+        message: response.message || '获取统计失败',
       }
     } catch (error: unknown) {
       console.error('获取订单统计错误:', error)
@@ -341,7 +342,7 @@ const createOrder = async (request: CreateOrderRequest) => {
           orders.value[orderIndex].status = request.status
           localStorage.setItem('userOrders', JSON.stringify(orders.value))
         }
-        
+
         // 如果当前查看的就是这个订单，也更新
         if (currentOrder.value && currentOrder.value.id === orderId) {
           currentOrder.value.status = request.status
@@ -349,16 +350,16 @@ const createOrder = async (request: CreateOrderRequest) => {
             currentOrder.value.trackingInfo = request.trackingInfo
           }
         }
-        
-        return { 
-          success: true, 
-          message: response.message || '更新订单状态成功' 
+
+        return {
+          success: true,
+          message: response.message || '更新订单状态成功',
         }
       }
 
-      return { 
-        success: false, 
-        message: response.message || '更新订单状态失败' 
+      return {
+        success: false,
+        message: response.message || '更新订单状态失败',
       }
     } catch (error: unknown) {
       console.error('更新订单状态错误:', error)
@@ -383,15 +384,15 @@ const createOrder = async (request: CreateOrderRequest) => {
       if (response.success) {
         // 更新订单状态为待发货
         await updateOrderStatus(orderId, { status: OrderStatus.PROCESSING })
-        return { 
-          success: true, 
-          message: response.message || '付款确认成功' 
+        return {
+          success: true,
+          message: response.message || '付款确认成功',
         }
       }
 
-      return { 
-        success: false, 
-        message: response.message || '付款确认失败' 
+      return {
+        success: false,
+        message: response.message || '付款确认失败',
       }
     } catch (error: unknown) {
       console.error('确认付款错误:', error)
@@ -415,19 +416,19 @@ const createOrder = async (request: CreateOrderRequest) => {
 
       if (response.success) {
         // 更新订单状态为已发货
-        await updateOrderStatus(orderId, { 
-          status: OrderStatus.SHIPPED, 
-          trackingInfo: request?.trackingInfo 
+        await updateOrderStatus(orderId, {
+          status: OrderStatus.SHIPPED,
+          trackingInfo: request?.trackingInfo,
         })
-        return { 
-          success: true, 
-          message: response.message || '发货成功' 
+        return {
+          success: true,
+          message: response.message || '发货成功',
         }
       }
 
-      return { 
-        success: false, 
-        message: response.message || '发货失败' 
+      return {
+        success: false,
+        message: response.message || '发货失败',
       }
     } catch (error: unknown) {
       console.error('发货错误:', error)
@@ -452,15 +453,15 @@ const createOrder = async (request: CreateOrderRequest) => {
       if (response.success) {
         // 更新订单状态为待收货
         await updateOrderStatus(orderId, { status: OrderStatus.DELIVERED })
-        return { 
-          success: true, 
-          message: response.message || '确认收货成功' 
+        return {
+          success: true,
+          message: response.message || '确认收货成功',
         }
       }
 
-      return { 
-        success: false, 
-        message: response.message || '确认收货失败' 
+      return {
+        success: false,
+        message: response.message || '确认收货失败',
       }
     } catch (error: unknown) {
       console.error('确认收货错误:', error)
@@ -485,22 +486,22 @@ const createOrder = async (request: CreateOrderRequest) => {
       if (response.success) {
         // 更新订单状态为已完成
         await updateOrderStatus(orderId, { status: OrderStatus.COMPLETED })
-        
+
         // 如果提供了评价，更新当前订单的评价信息
         if (currentOrder.value && currentOrder.value.id === orderId && review) {
           currentOrder.value.review = review
           currentOrder.value.reviewDate = new Date().toISOString()
         }
-        
-        return { 
-          success: true, 
-          message: response.message || '订单完成成功' 
+
+        return {
+          success: true,
+          message: response.message || '订单完成成功',
         }
       }
 
-      return { 
-        success: false, 
-        message: response.message || '订单完成失败' 
+      return {
+        success: false,
+        message: response.message || '订单完成失败',
       }
     } catch (error: unknown) {
       console.error('完成订单错误:', error)
@@ -524,24 +525,24 @@ const createOrder = async (request: CreateOrderRequest) => {
 
       if (response.success && response.data) {
         if (response.data.success) {
-          // 支付成功，更新订单状态为待发货
-          await updateOrderStatus(orderId, { status: OrderStatus.PROCESSING })
-          return { 
-            success: true, 
+          // 支付成功，刷新订单列表
+          await getUserOrders()
+          return {
+            success: true,
             message: response.data.message || '支付成功',
-            amount: response.data.amount
+            amount: response.data.amount,
           }
         } else {
-          return { 
-            success: false, 
-            message: response.data.message || '支付失败' 
+          return {
+            success: false,
+            message: response.data.message || '支付失败',
           }
         }
       }
 
-      return { 
-        success: false, 
-        message: response.message || '支付失败' 
+      return {
+        success: false,
+        message: response.message || '支付失败',
       }
     } catch (error: unknown) {
       console.error('支付订单错误:', error)
@@ -565,19 +566,19 @@ const createOrder = async (request: CreateOrderRequest) => {
 
       if (response.success) {
         // 更新订单状态为已取消
-        await updateOrderStatus(orderId, { 
-          status: OrderStatus.CANCELLED, 
-          reason: request?.reason 
+        await updateOrderStatus(orderId, {
+          status: OrderStatus.CANCELLED,
+          reason: request?.reason,
         })
-        return { 
-          success: true, 
-          message: response.message || '取消订单成功' 
+        return {
+          success: true,
+          message: response.message || '取消订单成功',
         }
       }
 
-      return { 
-        success: false, 
-        message: response.message || '取消订单失败' 
+      return {
+        success: false,
+        message: response.message || '取消订单失败',
       }
     } catch (error: unknown) {
       console.error('取消订单错误:', error)
@@ -619,7 +620,7 @@ const createOrder = async (request: CreateOrderRequest) => {
     currentOrder,
     isLoading,
     statistics,
-    
+
     // 方法
     initializeOrders,
     createOrder,
@@ -636,6 +637,6 @@ const createOrder = async (request: CreateOrderRequest) => {
     cancelOrder,
     getOrdersByStatus,
     getOrderById,
-    clearOrders
+    clearOrders,
   }
 })
