@@ -48,10 +48,10 @@ namespace CampusTrade.API.Services.Review
                     throw new InvalidOperationException("订单未完成，无法评论");
 
                 // 第四步：检查是否已评论过（每个订单只能评论一次）
-                bool alreadyReviewed = await _context.Reviews
-                    .AnyAsync(r => r.OrderId == dto.OrderId);
+                var existingReview = await _context.Reviews
+                    .FirstOrDefaultAsync(r => r.OrderId == dto.OrderId);
 
-                if (alreadyReviewed)
+                if (existingReview != null)
                     throw new InvalidOperationException("该订单已提交评论，无法重复评论");
 
                 // 第五步：创建新的评论实体对象（设置各字段）
