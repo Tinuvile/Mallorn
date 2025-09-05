@@ -609,6 +609,17 @@ namespace CampusTrade.API.Services.Order
                     Description = $"订单 {order.OrderId} 成功完成，卖家获得信用加分"
                 }, autoSave: false);
 
+                // 4. 将商品状态更新为已下架（因为已经售出）
+                if (order.ProductId > 0)
+                {
+                    var product = await _unitOfWork.Products.GetByPrimaryKeyAsync(order.ProductId);
+                    if (product != null && product.Status != Models.Entities.Product.ProductStatus.OffShelf)
+                    {
+                        await _unitOfWork.Products.SetProductStatusAsync(order.ProductId, Models.Entities.Product.ProductStatus.OffShelf);
+                        _logger.LogInformation("订单 {OrderId} 完成，商品 {ProductId} 状态已更新为已下架", orderId, order.ProductId);
+                    }
+                }
+
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
 

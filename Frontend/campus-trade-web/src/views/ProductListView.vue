@@ -282,7 +282,7 @@
   const filters = reactive({
     minPrice: null,
     maxPrice: null,
-    status: null,
+    status: '在售',
   })
 
   // 计算属性

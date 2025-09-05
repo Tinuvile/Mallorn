@@ -85,6 +85,7 @@ namespace CampusTrade.API.Repositories.Implementations
                     var result = await DebitInternalAsync(userId, amount, reason);
                     if (result)
                     {
+                        await _context.SaveChangesAsync(); // 修复：添加SaveChanges
                         await transaction.CommitAsync();
                     }
                     else
@@ -95,7 +96,7 @@ namespace CampusTrade.API.Repositories.Implementations
                 }
                 else
                 {
-                    // 使用现有事务
+                    // 使用现有事务 - 让外层UnitOfWork负责SaveChanges
                     return await DebitInternalAsync(userId, amount, reason);
                 }
             }
@@ -115,8 +116,17 @@ namespace CampusTrade.API.Repositories.Implementations
             {
                 return false;
             }
+
+            // 更新账户余额 - 强化实体追踪
+            var originalBalance = account.Balance;
             account.Balance -= amount;
+
+            // 确保EF正确追踪此修改
+            _context.Entry(account).Property(x => x.Balance).IsModified = true;
             _context.VirtualAccounts.Update(account);
+
+            // 添加日志以便调试
+            Console.WriteLine($"DebitInternalAsync: 用户{userId}, 原余额{originalBalance}, 扣减{amount}, 新余额{account.Balance}");
             return true;
         }
         /// <summary>
@@ -165,13 +175,22 @@ namespace CampusTrade.API.Repositories.Implementations
             var account = await GetByUserIdAsync(userId);
             if (account == null)
             {
+                // 创建新账户
                 account = new VirtualAccount { UserId = userId, Balance = amount, CreatedAt = DateTime.UtcNow };
                 await AddAsync(account);
             }
             else
             {
+                // 更新现有账户余额 - 强化实体追踪
+                var originalBalance = account.Balance;
                 account.Balance += amount;
+
+                // 确保EF正确追踪此修改
+                _context.Entry(account).Property(x => x.Balance).IsModified = true;
                 _context.VirtualAccounts.Update(account);
+
+                // 添加日志以便调试
+                Console.WriteLine($"CreditInternalAsync: 用户{userId}, 原余额{originalBalance}, 增加{amount}, 新余额{account.Balance}");
             }
             return true;
         }
