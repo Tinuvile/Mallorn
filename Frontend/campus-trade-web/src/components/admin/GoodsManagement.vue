@@ -3,9 +3,9 @@
     <!-- 操作按钮区 -->
     <div class="actions-bar">
       <div class="left-actions">
-        <button class="action-btn primary" @click="showAddDialog = true">
-          <span>➕</span>
-          新增商品
+        <button class="action-btn secondary" @click="refreshData">
+          <span>🔄</span>
+          刷新数据
         </button>
         <button 
           class="action-btn danger" 
@@ -20,7 +20,9 @@
           v-model="search" 
           placeholder="搜索商品..." 
           class="search-input"
+          @keyup.enter="performSearch"
         >
+        <button class="search-btn" @click="performSearch">搜索</button>
       </div>
     </div>
 
@@ -48,29 +50,29 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="item in filteredGoods" :key="item.id" :class="{ loading: loading }">
+            <tr v-for="item in filteredGoods" :key="item.productId" :class="{ loading: loading }">
               <td>
                 <input 
                   type="checkbox" 
-                  :value="item.id"
+                  :value="item.productId"
                   v-model="selectedGoods"
                 >
               </td>
               <td>
                 <div class="product-image">
-                  <img :src="item.image" :alt="item.name" />
+                  <img :src="item.image" :alt="item.title" />
                 </div>
               </td>
-              <td class="product-name">{{ item.name }}</td>
-              <td>{{ item.category }}</td>
-              <td class="price">¥{{ item.price }}</td>
+              <td class="product-name">{{ item.title }}</td>
+              <td>{{ item.categoryName }}</td>
+              <td class="price">¥{{ item.basePrice }}</td>
               <td>{{ item.condition }}</td>
               <td>
                 <span class="status-tag" :class="getStatusClass(item.status)">
-                  {{ item.status }}
+                  {{ getStatusText(item.status) }}
                 </span>
               </td>
-              <td>{{ item.createdAt }}</td>
+              <td>{{ new Date(item.createdAt || item.publish_time || '').toLocaleDateString() }}</td>
               <td>
                 <div class="table-actions">
                   <button class="table-action-btn view" @click="viewDetails(item)" title="查看详情">
@@ -88,107 +90,41 @@
           </tbody>
         </table>
       </div>
-    </div>
-
-    <!-- 新增/编辑商品模态框 -->
-    <div v-if="showAddDialog" class="modal-overlay" @click="closeAddDialog">
-      <div class="modal-content large" @click.stop>
-        <div class="modal-header">
-          <h3>{{ editingGoods ? '编辑商品' : '新增商品' }}</h3>
-          <button class="modal-close" @click="closeAddDialog">✕</button>
+      
+      <!-- 分页组件 -->
+      <div class="pagination-container" v-if="totalPages > 1">
+        <div class="pagination-info">
+          共 {{ totalCount }} 条记录，第 {{ pageIndex + 1 }} / {{ totalPages }} 页
         </div>
-        <div class="modal-body">
-          <form @submit.prevent="saveGoods" class="goods-form">
-            <div class="form-grid">
-              <div class="form-item">
-                <label>商品名称 *</label>
-                <input 
-                  v-model="goodsForm.name" 
-                  type="text" 
-                  class="form-input"
-                  :class="{ error: nameError }"
-                  @blur="validateName"
-                >
-                <span v-if="nameError" class="error-message">{{ nameError }}</span>
-              </div>
-              <div class="form-item">
-                <label>价格 *</label>
-                <div class="price-input">
-                  <span class="currency">¥</span>
-                  <input 
-                    v-model="goodsForm.price" 
-                    type="number" 
-                    class="form-input"
-                    :class="{ error: priceError }"
-                    @blur="validatePrice"
-                  >
-                </div>
-                <span v-if="priceError" class="error-message">{{ priceError }}</span>
-              </div>
-              <div class="form-item">
-                <label>商品分类 *</label>
-                <select 
-                  v-model="goodsForm.category" 
-                  class="form-select"
-                  :class="{ error: categoryError }"
-                  @blur="validateCategory"
-                >
-                  <option value="">请选择分类</option>
-                  <option v-for="category in categories" :key="category" :value="category">
-                    {{ category }}
-                  </option>
-                </select>
-                <span v-if="categoryError" class="error-message">{{ categoryError }}</span>
-              </div>
-              <div class="form-item">
-                <label>商品成色 *</label>
-                <select 
-                  v-model="goodsForm.condition" 
-                  class="form-select"
-                  :class="{ error: conditionError }"
-                  @blur="validateCondition"
-                >
-                  <option value="">请选择成色</option>
-                  <option v-for="condition in conditions" :key="condition" :value="condition">
-                    {{ condition }}
-                  </option>
-                </select>
-                <span v-if="conditionError" class="error-message">{{ conditionError }}</span>
-              </div>
-            </div>
-            <div class="form-item full-width">
-              <label>商品描述 *</label>
-              <textarea 
-                v-model="goodsForm.description" 
-                class="form-textarea"
-                :class="{ error: descriptionError }"
-                rows="4"
-                @blur="validateDescription"
-              ></textarea>
-              <span v-if="descriptionError" class="error-message">{{ descriptionError }}</span>
-            </div>
-            <div class="form-item full-width">
-              <label>商品图片</label>
-              <div class="file-upload">
-                <input 
-                  type="file" 
-                  multiple 
-                  accept="image/*"
-                  @change="handleFileUpload"
-                  class="file-input"
-                >
-                <div class="upload-hint">支持多张图片上传，建议尺寸 800x800px</div>
-              </div>
-            </div>
-            <div class="form-actions">
-              <button type="button" class="action-btn secondary" @click="closeAddDialog">
-                取消
-              </button>
-              <button type="submit" class="action-btn primary" :disabled="!isFormValid || saving">
-                {{ saving ? '保存中...' : '保存' }}
-              </button>
-            </div>
-          </form>
+        <div class="pagination-buttons">
+          <button 
+            class="pagination-btn" 
+            :disabled="pageIndex === 0"
+            @click="changePage(0)"
+          >
+            首页
+          </button>
+          <button 
+            class="pagination-btn" 
+            :disabled="pageIndex === 0"
+            @click="changePage(pageIndex - 1)"
+          >
+            上一页
+          </button>
+          <button 
+            class="pagination-btn" 
+            :disabled="pageIndex >= totalPages - 1"
+            @click="changePage(pageIndex + 1)"
+          >
+            下一页
+          </button>
+          <button 
+            class="pagination-btn" 
+            :disabled="pageIndex >= totalPages - 1"
+            @click="changePage(totalPages - 1)"
+          >
+            末页
+          </button>
         </div>
       </div>
     </div>
@@ -203,21 +139,21 @@
         <div class="modal-body" v-if="selectedGoodsDetail">
           <div class="goods-detail">
             <div class="detail-image">
-              <img :src="selectedGoodsDetail.image" :alt="selectedGoodsDetail.name">
+              <img :src="selectedGoodsDetail.image" :alt="selectedGoodsDetail.title">
             </div>
             <div class="detail-info">
               <div class="detail-grid">
                 <div class="detail-item">
                   <label>商品名称</label>
-                  <div>{{ selectedGoodsDetail.name }}</div>
+                  <div>{{ selectedGoodsDetail.title }}</div>
                 </div>
                 <div class="detail-item">
                   <label>价格</label>
-                  <div class="price">¥{{ selectedGoodsDetail.price }}</div>
+                  <div class="price">¥{{ selectedGoodsDetail.basePrice }}</div>
                 </div>
                 <div class="detail-item">
                   <label>分类</label>
-                  <div>{{ selectedGoodsDetail.category }}</div>
+                  <div>{{ selectedGoodsDetail.categoryName }}</div>
                 </div>
                 <div class="detail-item">
                   <label>成色</label>
@@ -227,13 +163,13 @@
                   <label>状态</label>
                   <div>
                     <span class="status-tag" :class="getStatusClass(selectedGoodsDetail.status)">
-                      {{ selectedGoodsDetail.status }}
+                      {{ getStatusText(selectedGoodsDetail.status) }}
                     </span>
                   </div>
                 </div>
                 <div class="detail-item">
                   <label>发布时间</label>
-                  <div>{{ selectedGoodsDetail.createdAt }}</div>
+                  <div>{{ new Date(selectedGoodsDetail.createdAt || selectedGoodsDetail.publish_time || '').toLocaleDateString() }}</div>
                 </div>
               </div>
               <div class="detail-description">
@@ -242,6 +178,98 @@
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 编辑商品模态框 -->
+    <div v-if="showEditDialog" class="modal-overlay" @click="closeEditDialog">
+      <div class="modal-content large" @click.stop>
+        <div class="modal-header">
+          <h3>编辑商品</h3>
+          <button class="modal-close" @click="closeEditDialog">✕</button>
+        </div>
+        <div class="modal-body">
+          <form @submit.prevent="saveGoods" class="goods-form">
+            <div class="form-grid">
+              <div class="form-item">
+                <label>商品名称 *</label>
+                <input 
+                  v-model="goodsForm.title" 
+                  type="text" 
+                  class="form-input"
+                  :class="{ error: nameError }"
+                  @blur="validateName"
+                >
+                <span v-if="nameError" class="error-message">{{ nameError }}</span>
+              </div>
+              <div class="form-item">
+                <label>价格 *</label>
+                <div class="price-input">
+                  <span class="currency">¥</span>
+                  <input 
+                    v-model="goodsForm.basePrice" 
+                    type="number" 
+                    class="form-input"
+                    :class="{ error: priceError }"
+                    @blur="validatePrice"
+                  >
+                </div>
+                <span v-if="priceError" class="error-message">{{ priceError }}</span>
+              </div>
+              <div class="form-item">
+                <label>商品分类 *</label>
+                <select 
+                  v-model="goodsForm.categoryId" 
+                  class="form-select"
+                  :class="{ error: categoryError }"
+                  @blur="validateCategory"
+                >
+                  <option value="">请选择分类</option>
+                  <option v-for="category in categories" :key="category.categoryId" :value="category.categoryId.toString()">
+                    {{ category.name }}
+                  </option>
+                </select>
+                <span v-if="categoryError" class="error-message">{{ categoryError }}</span>
+              </div>
+              <div class="form-item">
+                <label>商品状态</label>
+                <select v-model="goodsForm.status" class="form-select">
+                  <option value="在售">在售</option>
+                  <option value="已下架">已下架</option>
+                  <option value="交易中">交易中</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-item full-width">
+              <label>商品描述 *</label>
+              <textarea 
+                v-model="goodsForm.description" 
+                class="form-textarea"
+                :class="{ error: descriptionError }"
+                rows="4"
+                @blur="validateDescription"
+              ></textarea>
+              <span v-if="descriptionError" class="error-message">{{ descriptionError }}</span>
+            </div>
+            <div class="form-item full-width">
+              <label>管理员备注</label>
+              <textarea 
+                v-model="goodsForm.adminNote" 
+                class="form-textarea"
+                rows="3"
+                placeholder="管理员操作备注（可选）"
+              ></textarea>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="action-btn secondary" @click="closeEditDialog">
+                取消
+              </button>
+              <button type="submit" class="action-btn primary" :disabled="!isFormValid || saving">
+                {{ saving ? '保存中...' : '保存修改' }}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
@@ -270,19 +298,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { adminApi, type AdminProduct, type AdminProductQuery, type AdminUpdateProductRequest, type BatchProductOperationRequest } from '@/services/api'
 
 // 定义接口
-interface Goods {
-  id: number
-  name: string
-  category: string
-  price: number
-  condition: string
-  status: string
-  image: string
-  description: string
-  createdAt: string
+interface Goods extends AdminProduct {
+  // 添加一些界面需要的字段
+  condition?: string
+  image?: string
+  // 为了向后兼容，添加旧字段名的别名
+  productId?: number
+  basePrice?: number
+  categoryId?: number
+  categoryName?: string
+  sellerId?: number
+  sellerName?: string
+  createdAt?: string
+  updatedAt?: string
+  imageUrls?: string[]
 }
 
 // 响应式数据
@@ -292,12 +325,20 @@ const deleting = ref(false)
 const search = ref('')
 const selectedGoods = ref<number[]>([])
 const showAddDialog = ref(false)
+const showEditDialog = ref(false)
 const showDetailDialog = ref(false)
 const showDeleteDialog = ref(false)
 const editingGoods = ref(false)
+const currentEditingGoods = ref<Goods | null>(null)
 const selectedGoodsDetail = ref<Goods | null>(null)
 const goodsToDelete = ref<Goods[]>([])
 const deleteMessage = ref('')
+
+// 分页信息
+const pageIndex = ref(0)
+const pageSize = ref(20)
+const totalCount = ref(0)
+const totalPages = ref(0)
 
 // 表单验证错误
 const nameError = ref('')
@@ -308,76 +349,146 @@ const descriptionError = ref('')
 
 // 表单数据
 const goodsForm = reactive({
-  name: '',
-  price: '',
-  category: '',
+  title: '',
+  basePrice: '',
+  categoryId: '',
   condition: '',
   description: '',
+  status: '',
+  adminNote: '',
   images: [] as File[]
 })
 
 // 选项数据
-const categories = [
-  '手机数码', '电脑配件', '图书教材', '生活用品', '服装配饰', '运动器材'
-]
-
+const categories = ref<Array<{ categoryId: number; name: string }>>([])
 const conditions = [
   '全新', '99新', '95新', '9成新', '8成新', '7成新'
 ]
 
-// 模拟商品数据
-const goodsList = ref<Goods[]>([
-  {
-    id: 1,
-    name: 'iPhone 13 Pro',
-    category: '手机数码',
-    price: 5999,
-    condition: '99新',
-    status: '在售',
-    image: 'https://via.placeholder.com/60',
-    description: '个人自用iPhone 13 Pro，成色很新，无磕碰无划痕',
-    createdAt: '2025-01-20'
-  },
-  {
-    id: 2,
-    name: '高等数学教材',
-    category: '图书教材',
-    price: 35,
-    condition: '9成新',
-    status: '已售出',
-    image: 'https://via.placeholder.com/60',
-    description: '大一高数教材，内容完整，有少量笔记',
-    createdAt: '2025-01-18'
-  }
-])
+// 商品数据
+const goodsList = ref<Goods[]>([])
+
+// 查询参数
+const queryParams = reactive<AdminProductQuery>({
+  pageIndex: 0,
+  pageSize: 20,
+  status: undefined,
+  categoryId: undefined,
+  searchKeyword: ''
+})
 
 // 计算属性
 const filteredGoods = computed(() => {
-  if (!search.value) return goodsList.value
-  return goodsList.value.filter(goods => 
-    goods.name.toLowerCase().includes(search.value.toLowerCase()) ||
-    goods.category.includes(search.value)
-  )
+  let filtered = goodsList.value
+  
+  if (search.value) {
+    filtered = filtered.filter(goods => 
+      goods.title.toLowerCase().includes(search.value.toLowerCase()) ||
+      (goods.categoryName && goods.categoryName.includes(search.value))
+    )
+  }
+  
+  return filtered
 })
 
 const isFormValid = computed(() => {
-  return goodsForm.name && 
-         goodsForm.price && 
-         goodsForm.category && 
-         goodsForm.condition && 
+  // 编辑模式下，只要有任何一个字段有值且没有错误就认为表单有效
+  if (editingGoods.value) {
+    return (goodsForm.title || goodsForm.basePrice || goodsForm.categoryId || goodsForm.description) &&
+           !nameError.value &&
+           !priceError.value &&
+           !categoryError.value &&
+           !descriptionError.value
+  }
+  // 新增模式下需要所有必要字段
+  return goodsForm.title && 
+         goodsForm.basePrice && 
+         goodsForm.categoryId && 
          goodsForm.description &&
          !nameError.value &&
          !priceError.value &&
          !categoryError.value &&
-         !conditionError.value &&
          !descriptionError.value
 })
 
+// API 调用方法
+const fetchGoods = async () => {
+  try {
+    loading.value = true
+    
+    const query: AdminProductQuery = {
+      ...queryParams,
+      searchKeyword: search.value || undefined
+    }
+    
+    const response = await adminApi.getManagedProducts(query)
+    
+    if (response.success && response.data) {
+      goodsList.value = response.data.products.map(product => ({
+        // 新的API结构字段
+        product_id: product.product_id,
+        title: product.title,
+        description: product.description || '',
+        base_price: product.base_price,
+        status: product.status,
+        publish_time: product.publish_time,
+        view_count: product.view_count,
+        main_image_url: product.main_image_url,
+        thumbnail_url: product.thumbnail_url,
+        user: product.user,
+        category: product.category,
+        days_until_auto_remove: product.days_until_auto_remove,
+        is_popular: product.is_popular,
+        tags: product.tags || [],
+        // 向后兼容的字段映射
+        productId: product.product_id,
+        basePrice: product.base_price,
+        categoryId: product.category.category_id,
+        categoryName: product.category.name,
+        sellerId: product.user.user_id,
+        sellerName: product.user.username || product.user.name || '未知用户',
+        createdAt: product.publish_time,
+        updatedAt: product.publish_time,
+        imageUrls: product.main_image_url ? [product.main_image_url] : [],
+        // 界面特定字段
+        condition: '9成新',
+        image: product.main_image_url || product.thumbnail_url || 'https://via.placeholder.com/60'
+      }))
+      totalCount.value = response.data.totalCount
+      totalPages.value = Math.ceil(response.data.totalCount / pageSize.value)
+    }
+  } catch (error) {
+    console.error('获取商品列表失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+const fetchCategories = async () => {
+  try {
+    const response = await adminApi.getManagedCategories()
+    
+    if (response.success && response.data) {
+      // 这里需要获取分类的详细信息，现在先使用模拟数据
+      categories.value = [
+        { categoryId: 1, name: '手机数码' },
+        { categoryId: 2, name: '电脑配件' },
+        { categoryId: 3, name: '图书教材' },
+        { categoryId: 4, name: '生活用品' },
+        { categoryId: 5, name: '服装配饰' },
+        { categoryId: 6, name: '运动器材' }
+      ]
+    }
+  } catch (error) {
+    console.error('获取分类列表失败:', error)
+  }
+}
+
 // 验证方法
 const validateName = () => {
-  if (!goodsForm.name) {
+  if (!goodsForm.title) {
     nameError.value = '商品名称不能为空'
-  } else if (goodsForm.name.length > 50) {
+  } else if (goodsForm.title.length > 50) {
     nameError.value = '商品名称不能超过50个字符'
   } else {
     nameError.value = ''
@@ -385,9 +496,9 @@ const validateName = () => {
 }
 
 const validatePrice = () => {
-  if (!goodsForm.price) {
+  if (!goodsForm.basePrice) {
     priceError.value = '价格不能为空'
-  } else if (parseFloat(goodsForm.price) <= 0) {
+  } else if (parseFloat(goodsForm.basePrice) <= 0) {
     priceError.value = '价格必须大于0'
   } else {
     priceError.value = ''
@@ -395,11 +506,12 @@ const validatePrice = () => {
 }
 
 const validateCategory = () => {
-  categoryError.value = goodsForm.category ? '' : '请选择商品分类'
+  categoryError.value = goodsForm.categoryId ? '' : '请选择商品分类'
 }
 
 const validateCondition = () => {
-  conditionError.value = goodsForm.condition ? '' : '请选择商品成色'
+  // 管理员编辑时condition不是必需的
+  conditionError.value = ''
 }
 
 const validateDescription = () => {
@@ -415,51 +527,115 @@ const validateDescription = () => {
 // 方法
 const getStatusClass = (status: string) => {
   const classes: Record<string, string> = {
+    'active': 'status-active',
+    'sold': 'status-sold',
+    'inactive': 'status-offline',
+    'pending': 'status-pending',
     '在售': 'status-active',
     '已售出': 'status-sold',
     '已下架': 'status-offline',
-    '审核中': 'status-pending'
+    '交易中': 'status-pending'
   }
   return classes[status] || 'status-default'
+}
+
+const getStatusText = (status: string) => {
+  const statusMap: Record<string, string> = {
+    'active': '在售',
+    'sold': '已售出',
+    'inactive': '已下架',
+    'pending': '审核中',
+    '在售': '在售',
+    '已售出': '已售出',
+    '已下架': '已下架',
+    '交易中': '交易中'
+  }
+  return statusMap[status] || status
 }
 
 const toggleSelectAll = (event: Event) => {
   const target = event.target as HTMLInputElement
   if (target.checked) {
-    selectedGoods.value = filteredGoods.value.map(item => item.id)
+    selectedGoods.value = filteredGoods.value.map(item => item.productId || item.product_id).filter(id => id !== undefined) as number[]
   } else {
     selectedGoods.value = []
   }
 }
 
-const viewDetails = (item: Goods) => {
-  selectedGoodsDetail.value = item
-  showDetailDialog.value = true
+const viewDetails = async (item: Goods) => {
+  try {
+    // 使用正确的产品ID字段
+    const productId = item.productId || item.product_id
+    const response = await adminApi.getProductDetailForAdmin(productId)
+    
+    if (response.success && response.data) {
+      // 将后端数据映射为前端格式
+      const product = response.data
+      selectedGoodsDetail.value = {
+        // 新的API结构字段
+        product_id: product.product_id,
+        title: product.title,
+        description: product.description || '',
+        base_price: product.base_price,
+        status: product.status,
+        publish_time: product.publish_time,
+        view_count: product.view_count,
+        main_image_url: product.main_image_url,
+        thumbnail_url: product.thumbnail_url,
+        user: product.user,
+        category: product.category,
+        days_until_auto_remove: product.days_until_auto_remove,
+        is_popular: product.is_popular,
+        tags: product.tags || [],
+        // 向后兼容的字段映射
+        productId: product.product_id,
+        basePrice: product.base_price,
+        categoryId: product.category.category_id,
+        categoryName: product.category.name,
+        sellerId: product.user.user_id,
+        sellerName: product.user.username || product.user.name || '未知用户',
+        createdAt: product.publish_time,
+        updatedAt: product.publish_time,
+        imageUrls: product.main_image_url ? [product.main_image_url] : [],
+        condition: item.condition,
+        image: item.image
+      }
+      showDetailDialog.value = true
+    }
+  } catch (error) {
+    console.error('获取商品详情失败:', error)
+  }
 }
 
 const editGoods = (item: Goods) => {
   editingGoods.value = true
+  currentEditingGoods.value = item
   Object.assign(goodsForm, {
-    name: item.name,
-    price: item.price.toString(),
-    category: item.category,
-    condition: item.condition,
+    title: item.title,
+    basePrice: (item.basePrice || item.base_price)?.toString() || '0',
+    categoryId: (item.categoryId || item.category?.category_id)?.toString() || '0',
+    condition: item.condition || '9成新',
     description: item.description,
+    status: item.status,
+    adminNote: '',
     images: []
   })
-  showAddDialog.value = true
+  showEditDialog.value = true
 }
 
 const deleteGoods = (item: Goods) => {
   goodsToDelete.value = [item]
-  deleteMessage.value = `确定要删除商品"${item.name}"吗？`
+  deleteMessage.value = `确定要删除商品"${item.title}"吗？`
   showDeleteDialog.value = true
 }
 
 const deleteSelectedGoods = () => {
   if (selectedGoods.value.length === 0) return
   
-  const items = goodsList.value.filter(item => selectedGoods.value.includes(item.id))
+  const items = goodsList.value.filter(item => {
+    const id = item.productId || item.product_id
+    return id && selectedGoods.value.includes(id)
+  })
   goodsToDelete.value = items
   deleteMessage.value = `确定要删除选中的${selectedGoods.value.length}个商品吗？`
   showDeleteDialog.value = true
@@ -468,15 +644,46 @@ const deleteSelectedGoods = () => {
 const confirmDelete = async () => {
   deleting.value = true
   try {
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const idsToDelete = goodsToDelete.value.map(item => item.productId || item.product_id).filter(id => id !== undefined) as number[]
     
-    const idsToDelete = goodsToDelete.value.map(item => item.id)
-    goodsList.value = goodsList.value.filter(item => !idsToDelete.includes(item.id))
+    console.log('准备删除的商品ID:', idsToDelete)
+    console.log('删除的商品对象:', goodsToDelete.value)
     
+    if (idsToDelete.length === 1) {
+      // 单个删除
+      console.log('执行单个删除，ID:', idsToDelete[0])
+      await adminApi.deleteProductAsAdmin(idsToDelete[0], '管理员删除')
+      alert('商品删除成功！')
+    } else {
+      // 批量删除
+      const batchRequest: BatchProductOperationRequest = {
+        productIds: idsToDelete,
+        operationType: 'delete',
+        reason: '管理员批量删除'
+      }
+      console.log('执行批量删除，请求数据:', batchRequest)
+      await adminApi.batchOperateProducts(batchRequest)
+      alert(`成功删除 ${idsToDelete.length} 个商品！`)
+    }
+    
+    // 删除成功后刷新列表
+    await fetchGoods()
     selectedGoods.value = []
     showDeleteDialog.value = false
   } catch (error) {
     console.error('删除失败:', error)
+    let errorMessage = '删除失败，请检查网络连接或联系管理员'
+    if (error instanceof Error) {
+      errorMessage = `删除失败: ${error.message}`
+    } else if (error && typeof error === 'object' && 'response' in error) {
+      const axiosError = error as any
+      if (axiosError.response?.data?.message) {
+        errorMessage = `删除失败: ${axiosError.response.data.message}`
+      } else if (axiosError.response?.status) {
+        errorMessage = `删除失败: HTTP ${axiosError.response.status}`
+      }
+    }
+    alert(errorMessage)
   } finally {
     deleting.value = false
   }
@@ -494,49 +701,78 @@ const saveGoods = async () => {
   validateName()
   validatePrice()
   validateCategory()
-  validateCondition()
   validateDescription()
   
   if (!isFormValid.value) return
   
   saving.value = true
   try {
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    if (editingGoods.value) {
-      console.log('编辑商品:', goodsForm)
-    } else {
-      const newGoods: Goods = {
-        id: Date.now(),
-        name: goodsForm.name,
-        category: goodsForm.category,
-        price: parseFloat(goodsForm.price),
-        condition: goodsForm.condition,
-        description: goodsForm.description,
-        status: '在售',
-        image: 'https://via.placeholder.com/60',
-        createdAt: new Date().toISOString().split('T')[0]
+    if (currentEditingGoods.value) {
+      const updateRequest: AdminUpdateProductRequest = {}
+      
+      // 只包含有值的字段
+      if (goodsForm.title && goodsForm.title.trim()) updateRequest.title = goodsForm.title.trim()
+      if (goodsForm.description && goodsForm.description.trim()) updateRequest.description = goodsForm.description.trim()
+      if (goodsForm.basePrice && goodsForm.basePrice.trim() && !isNaN(parseFloat(goodsForm.basePrice)) && parseFloat(goodsForm.basePrice) > 0) {
+        updateRequest.basePrice = parseFloat(goodsForm.basePrice)
       }
-      goodsList.value.unshift(newGoods)
+      if (goodsForm.categoryId && goodsForm.categoryId.trim() && !isNaN(parseInt(goodsForm.categoryId)) && parseInt(goodsForm.categoryId) > 0) {
+        updateRequest.categoryId = parseInt(goodsForm.categoryId)
+      }
+      if (goodsForm.status && goodsForm.status.trim()) updateRequest.status = goodsForm.status
+      if (goodsForm.adminNote && goodsForm.adminNote.trim()) updateRequest.adminNote = goodsForm.adminNote
+      
+      // 如果没有任何字段要更新，则不执行请求
+      if (Object.keys(updateRequest).length === 0) {
+        alert('请至少修改一个字段')
+        return
+      }
+      
+      const productId = currentEditingGoods.value.productId || currentEditingGoods.value.product_id!
+      console.log('更新请求数据:', updateRequest)
+      console.log('商品ID:', productId)
+      
+      await adminApi.updateProductAsAdmin(productId, updateRequest)
+      alert('商品信息更新成功！')
+    } else {
+      alert('找不到要更新的商品信息')
+      return
     }
     
-    closeAddDialog()
+    // 保存成功后刷新列表
+    await fetchGoods()
+    closeEditDialog()
   } catch (error) {
     console.error('保存失败:', error)
+    let errorMessage = '保存失败，请检查输入信息或联系管理员'
+    if (error instanceof Error) {
+      errorMessage = `保存失败: ${error.message}`
+    } else if (error && typeof error === 'object' && 'response' in error) {
+      const axiosError = error as any
+      if (axiosError.response?.data?.message) {
+        errorMessage = `保存失败: ${axiosError.response.data.message}`
+      } else if (axiosError.response?.status) {
+        errorMessage = `保存失败: HTTP ${axiosError.response.status}`
+      }
+    }
+    alert(errorMessage)
   } finally {
     saving.value = false
   }
 }
 
-const closeAddDialog = () => {
-  showAddDialog.value = false
+const closeEditDialog = () => {
+  showEditDialog.value = false
   editingGoods.value = false
+  currentEditingGoods.value = null
   Object.assign(goodsForm, {
-    name: '',
-    price: '',
-    category: '',
+    title: '',
+    basePrice: '',
+    categoryId: '',
     condition: '',
     description: '',
+    status: '',
+    adminNote: '',
     images: []
   })
   // 清空错误信息
@@ -546,6 +782,33 @@ const closeAddDialog = () => {
   conditionError.value = ''
   descriptionError.value = ''
 }
+
+// 刷新数据
+const refreshData = () => {
+  selectedGoods.value = []
+  fetchGoods()
+  fetchCategories()
+}
+
+// 分页方法
+const changePage = (newPageIndex: number) => {
+  queryParams.pageIndex = newPageIndex
+  pageIndex.value = newPageIndex
+  fetchGoods()
+}
+
+// 搜索方法
+const performSearch = () => {
+  queryParams.pageIndex = 0
+  pageIndex.value = 0
+  fetchGoods()
+}
+
+// 组件挂载时获取数据
+onMounted(() => {
+  fetchGoods()
+  fetchCategories()
+})
 </script>
 
 <style scoped>
@@ -614,6 +877,7 @@ const closeAddDialog = () => {
 .search-box {
   display: flex;
   align-items: center;
+  gap: 8px;
 }
 
 .search-input {
@@ -627,6 +891,21 @@ const closeAddDialog = () => {
 .search-input:focus {
   outline: none;
   border-color: #FF85A2;
+}
+
+.search-btn {
+  padding: 10px 16px;
+  background-color: #FF85A2;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+}
+
+.search-btn:hover {
+  background-color: #ff6b90;
 }
 
 /* 表格样式 */
@@ -974,6 +1253,48 @@ const closeAddDialog = () => {
   text-align: center;
 }
 
+/* 分页样式 */
+.pagination-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-top: 1px solid #eee;
+  background-color: #fafafa;
+}
+
+.pagination-info {
+  font-size: 14px;
+  color: #666;
+}
+
+.pagination-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.pagination-btn {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  background-color: white;
+  color: #666;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background-color: #FF85A2;
+  color: white;
+  border-color: #FF85A2;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .actions-bar {
@@ -991,6 +1312,15 @@ const closeAddDialog = () => {
     width: 100%;
     max-width: 200px;
     margin: 0 auto;
+  }
+  
+  .pagination-container {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .pagination-buttons {
+    justify-content: center;
   }
 }
 </style>

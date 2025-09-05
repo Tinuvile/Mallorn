@@ -138,6 +138,14 @@ namespace CampusTrade.API.Repositories.Implementations
         }
 
         /// <summary>
+        /// 获取指定日期范围内的用户数量
+        /// </summary>
+        public async Task<int> GetUserCountByDateRangeAsync(DateTime startDate, DateTime endDate)
+        {
+            return await _dbSet.CountAsync(u => u.CreatedAt >= startDate && u.CreatedAt < endDate);
+        }
+
+        /// <summary>
         /// 获取信用分数范围内的用户
         /// </summary>
         public async Task<IEnumerable<User>> GetUsersByCreditRangeAsync(decimal minCredit, decimal maxCredit)

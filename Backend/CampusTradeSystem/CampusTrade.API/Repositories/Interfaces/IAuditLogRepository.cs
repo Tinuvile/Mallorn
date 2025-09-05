@@ -32,6 +32,7 @@ namespace CampusTrade.API.Repositories.Interfaces
         /// <param name="pageSize">页大小</param>
         /// <param name="adminId">管理员ID筛选</param>
         /// <param name="actionType">操作类型筛选</param>
+        /// <param name="categoryId">商品分类ID筛选（筛选超级管理员和对应分类模块管理员的日志）</param>
         /// <param name="startDate">起始时间</param>
         /// <param name="endDate">结束时间</param>
         /// <returns>审计日志列表和总数</returns>
@@ -40,6 +41,7 @@ namespace CampusTrade.API.Repositories.Interfaces
             int pageSize,
             int? adminId = null,
             string? actionType = null,
+            int? categoryId = null,
             DateTime? startDate = null,
             DateTime? endDate = null);
 
@@ -60,5 +62,13 @@ namespace CampusTrade.API.Repositories.Interfaces
         /// <param name="detail">详细描述</param>
         /// <returns>审计日志ID</returns>
         Task<int> LogAdminActionAsync(int adminId, string actionType, int? targetId = null, string? detail = null);
+        
+        /// <summary>
+        /// 获取指定日期范围内的操作数量
+        /// </summary>
+        /// <param name="startDate">起始日期</param>
+        /// <param name="endDate">结束日期</param>
+        /// <returns>操作数量</returns>
+        Task<int> GetOperationCountByDateRangeAsync(DateTime startDate, DateTime endDate);
     }
 }

@@ -115,7 +115,7 @@ const router = createRouter({
 })
 
 // 路由守卫
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
 
   // 初始化认证状态
@@ -127,6 +127,47 @@ router.beforeEach((to, from, next) => {
   if (to.meta.guest && isLoggedIn) {
     next('/')
     return
+  }
+
+  // 检查是否需要管理员权限
+  if (to.meta.requiresRole) {
+    if (!isLoggedIn) {
+      next('/login')
+      return
+    }
+
+    try {
+      // 动态导入 adminApi 以避免循环依赖
+      const { adminApi } = await import('@/services/api')
+      
+      // 验证管理员权限
+      const response = await adminApi.getCurrentAdminInfo()
+      
+      if (!response.success || !response.data) {
+        // 不是管理员，跳转到首页
+        next('/')
+        return
+      }
+
+      const adminRole = response.data.role
+      const requiredRole = to.meta.requiresRole
+
+      // 检查特定角色权限
+      if (requiredRole === 'system_admin' && adminRole !== 'super') {
+        next('/')
+        return
+      }
+
+      if (requiredRole === 'moderator' && !['super', 'category_admin'].includes(adminRole)) {
+        next('/')
+        return
+      }
+
+    } catch (error) {
+      console.error('验证管理员权限失败:', error)
+      next('/')
+      return
+    }
   }
 
   next()

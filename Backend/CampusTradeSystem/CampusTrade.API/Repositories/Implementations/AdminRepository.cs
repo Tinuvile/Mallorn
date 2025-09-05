@@ -123,6 +123,14 @@ namespace CampusTrade.API.Repositories.Implementations
             stats["最近活跃管理员"] = recentActiveCount;
             return stats;
         }
+
+        /// <summary>
+        /// 获取总管理员数量
+        /// </summary>
+        public async Task<int> GetActiveAdminCountAsync()
+        {
+            return await _dbSet.CountAsync();
+        }
         #endregion
 
         #region 更新操作

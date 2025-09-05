@@ -82,6 +82,13 @@ namespace CampusTrade.API.Repositories.Interfaces
         /// <returns>活跃用户总数</returns>
         Task<int> GetActiveUserCountAsync();
         /// <summary>
+        /// 获取指定日期范围内的用户数量
+        /// </summary>
+        /// <param name="startDate">起始日期</param>
+        /// <param name="endDate">结束日期</param>
+        /// <returns>用户数量</returns>
+        Task<int> GetUserCountByDateRangeAsync(DateTime startDate, DateTime endDate);
+        /// <summary>
         /// 根据信用分数范围获取用户
         /// </summary>
         /// <param name="minCredit">最小信用分</param>
