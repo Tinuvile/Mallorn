@@ -62,7 +62,7 @@ namespace CampusTrade.API.Repositories.Interfaces
         /// <param name="detail">详细描述</param>
         /// <returns>审计日志ID</returns>
         Task<int> LogAdminActionAsync(int adminId, string actionType, int? targetId = null, string? detail = null);
-        
+
         /// <summary>
         /// 获取指定日期范围内的操作数量
         /// </summary>
