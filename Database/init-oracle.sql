@@ -399,7 +399,7 @@ CREATE TABLE admins (
 CREATE TABLE audit_logs (
     log_id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     admin_id NUMBER NOT NULL,
-    action_type VARCHAR2(20) CHECK (action_type IN ('封禁用户','修改权限','处理举报')),
+    action_type VARCHAR2(20) CHECK (action_type IN ('封禁用户','修改权限','处理举报','更新商品','删除商品','批量操作')),
     target_id NUMBER,
     log_detail CLOB,
     log_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -34,6 +34,13 @@ namespace CampusTrade.API.Repositories.Interfaces
         /// </summary>
         Task<int> GetTotalProductsNumberAsync();
         /// <summary>
+        /// 获取指定日期范围内的商品数量
+        /// </summary>
+        /// <param name="startDate">起始日期</param>
+        /// <param name="endDate">结束日期</param>
+        /// <returns>商品数量</returns>
+        Task<int> GetProductCountByDateRangeAsync(DateTime startDate, DateTime endDate);
+        /// <summary>
         /// 获取浏览量最高的商品
         /// </summary>
         Task<IEnumerable<Product>> GetTopViewProductsAsync(int count);

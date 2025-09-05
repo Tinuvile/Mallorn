@@ -17,11 +17,11 @@
         
         <div class="right-section">
           <div class="admin-info">
-            <span class="admin-name">{{ adminInfo.name }}</span>
+            <span class="admin-name">{{ adminInfo.username || '加载中...' }}</span>
           </div>
           <v-btn 
             fab
-            to="/"
+            @click="logout"
             class="logout-btn"
             color="white"
             size="46"
@@ -42,6 +42,9 @@
           </div>
         </div>
       </div>
+
+      <!-- 管理员导航 -->
+      <AdminNavigation />
 
       <!-- 功能切换标签 -->
       <div class="tabs-container">
@@ -77,18 +80,60 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import GoodsManagement from '@/components/admin/GoodsManagement.vue'
 import ReportModeration from '@/components/admin/ReportModeration.vue'
+import AdminNavigation from '@/components/admin/AdminNavigation.vue'
+import { adminApi, type AdminInfo } from '@/services/api'
+
+const router = useRouter()
 
 // 响应式数据
 const activeTab = ref('goods')
 const currentModule = ref('电子产品')
+const loading = ref(false)
 
-const adminInfo = reactive({
-  name: '张三',
-  id: 'admin001',
-  module: '电子产品'
+const adminInfo = reactive<Partial<AdminInfo>>({
+  adminId: 0,
+  username: '',
+  email: '',
+  role: '',
+  roleDisplayName: '',
+  assignedCategoryName: ''
+})
+
+// 获取管理员信息
+const fetchAdminInfo = async () => {
+  try {
+    loading.value = true
+    const response = await adminApi.getCurrentAdminInfo()
+    
+    if (response.success && response.data) {
+      Object.assign(adminInfo, response.data)
+      currentModule.value = response.data.assignedCategoryName || '全部分类'
+    }
+  } catch (error) {
+    console.error('获取管理员信息失败:', error)
+    // 如果获取失败，可能是权限问题，跳转到登录页
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    router.push('/login')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 登出功能
+const logout = () => {
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+  router.push('/')
+}
+
+// 组件挂载时获取管理员信息
+onMounted(() => {
+  fetchAdminInfo()
 })
 </script>
 

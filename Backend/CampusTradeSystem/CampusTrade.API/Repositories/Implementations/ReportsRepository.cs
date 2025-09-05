@@ -197,6 +197,13 @@ namespace CampusTrade.API.Repositories.Implementations
         {
             return await _dbSet.GroupBy(r => r.ReporterId).ToDictionaryAsync(g => g.Key, g => g.Count());
         }
+        /// <summary>
+        /// 获取待处理举报数量
+        /// </summary>
+        public async Task<int> GetPendingReportsCountAsync()
+        {
+            return await _dbSet.CountAsync(r => r.Status == "待处理");
+        }
         #endregion
     }
 }
