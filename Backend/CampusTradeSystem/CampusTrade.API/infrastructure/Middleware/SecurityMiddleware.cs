@@ -177,13 +177,13 @@ public class SecurityMiddleware
     private async Task<bool> IsRateLimited(string ipAddress, string path)
     {
         // 对于获取用户信息的API，使用更宽松的限制
-        var isProfileEndpoint = path.ToLower().Contains("/auth/profile") || 
+        var isProfileEndpoint = path.ToLower().Contains("/auth/profile") ||
                                path.ToLower().Contains("/auth/user/");
-        
+
         // 对于静态资源和API，使用不同的限制策略
         var maxRequests = isProfileEndpoint ? _maxRequestsPerMinute * 2 : _maxRequestsPerMinute;
         var timeWindow = isProfileEndpoint ? TimeSpan.FromMinutes(1) : TimeSpan.FromMinutes(1);
-        
+
         var key = $"rate_limit:{ipAddress}:{(isProfileEndpoint ? "profile" : "general")}";
         var currentCount = _cache.Get<int>(key);
 
