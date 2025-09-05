@@ -83,7 +83,7 @@ namespace CampusTrade.API.Repositories.Implementations
             // 基于分类筛选：显示超级管理员和对应分类的模块管理员的日志
             if (categoryId.HasValue)
             {
-                query = query.Where(log => 
+                query = query.Where(log =>
                     log.Admin.Role == Admin.Roles.Super || // 超级管理员
                     (log.Admin.Role == Admin.Roles.CategoryAdmin && log.Admin.AssignedCategory == categoryId.Value) // 对应分类的模块管理员
                 );

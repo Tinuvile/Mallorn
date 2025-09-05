@@ -56,7 +56,7 @@ namespace CampusTrade.API.Repositories.Interfaces
         /// </summary>
         /// <returns>统计信息字典</returns>
         Task<Dictionary<string, int>> GetAdminStatisticsAsync();
-        
+
         /// <summary>
         /// 获取活跃管理员数量
         /// </summary>

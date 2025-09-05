@@ -923,7 +923,7 @@ namespace CampusTrade.API.Services.Admin
         {
             try
             {
-                _logger.LogInformation("管理员更新商品请求 - AdminId: {AdminId}, ProductId: {ProductId}, UpdateDto: {@UpdateDto}", 
+                _logger.LogInformation("管理员更新商品请求 - AdminId: {AdminId}, ProductId: {ProductId}, UpdateDto: {@UpdateDto}",
                     adminId, productId, updateDto);
 
                 // 验证数据
@@ -982,9 +982,9 @@ namespace CampusTrade.API.Services.Admin
 
                 if (updateDto.BasePrice.HasValue && updateDto.BasePrice.Value != productToUpdate.BasePrice)
                 {
-                    _logger.LogInformation("更新价格: 原值={OldPrice}, 新值={NewPrice}, 类型={PriceType}", 
+                    _logger.LogInformation("更新价格: 原值={OldPrice}, 新值={NewPrice}, 类型={PriceType}",
                         productToUpdate.BasePrice, updateDto.BasePrice.Value, updateDto.BasePrice.Value.GetType());
-                    
+
                     // 验证价格范围 - Oracle NUMBER(10,2) 限制
                     if (updateDto.BasePrice.Value <= 0)
                     {
@@ -994,7 +994,7 @@ namespace CampusTrade.API.Services.Admin
                     {
                         return (false, "商品价格超出允许范围（最大99999999.99元）");
                     }
-                    
+
                     changes.Add($"价格: {productToUpdate.BasePrice} -> {updateDto.BasePrice.Value}");
                     productToUpdate.BasePrice = updateDto.BasePrice.Value;
                     hasChanges = true;
@@ -1365,7 +1365,7 @@ namespace CampusTrade.API.Services.Admin
             catch (Exception ex)
             {
                 _serilogLogger.Error(ex, "获取管理员统计信息异常");
-                
+
                 // 返回默认统计数据，避免前端显示错误
                 return new Dictionary<string, object>
                 {
