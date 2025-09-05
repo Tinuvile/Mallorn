@@ -462,7 +462,7 @@
 
   // 加载用户详细信息
   const loadUserProfile = async () => {
-    if (!userStore.isLoggedIn) {
+    if (!userStore.isLoggedIn || userStore.isLoadingProfile) {
       return
     }
 
@@ -490,9 +490,10 @@
   })
 
   // 监听登录状态变化，自动刷新用户信息
-  watch(isLoggedIn, newValue => {
-    if (newValue) {
-      // 用户登录时，加载用户信息
+  watch(isLoggedIn, (newValue, oldValue) => {
+    if (newValue && !oldValue) {
+      // 仅在从未登录变为已登录时才加载用户信息
+      console.log('登录状态变化，加载用户信息')
       loadUserProfile()
     }
   })
