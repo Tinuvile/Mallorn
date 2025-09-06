@@ -351,6 +351,81 @@ namespace CampusTrade.API.Controllers
         }
 
         /// <summary>
+        /// 获取用户消息列表（包括议价、换物、系统通知等）
+        /// </summary>
+        /// <param name="userId">用户ID</param>
+        /// <param name="category">消息分类：system, bargain, reply, swap</param>
+        /// <param name="pageSize">页大小</param>
+        /// <param name="pageIndex">页索引</param>
+        /// <returns>消息列表</returns>
+        [HttpGet("user/{userId}/messages")]
+        public async Task<IActionResult> GetUserMessages(
+            int userId,
+            [FromQuery] string? category = null,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] int pageIndex = 0)
+        {
+            try
+            {
+                var messages = await _notifiService.GetUserMessagesAsync(userId, category, pageSize, pageIndex);
+                return Ok(new
+                {
+                    success = true,
+                    data = messages
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取用户消息时发生异常");
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "系统异常，请稍后重试"
+                });
+            }
+        }
+
+        /// <summary>
+        /// 标记消息为已读
+        /// </summary>
+        /// <param name="userId">用户ID</param>
+        /// <param name="messageId">消息ID</param>
+        /// <returns>操作结果</returns>
+        [HttpPost("user/{userId}/messages/{messageId}/read")]
+        public async Task<IActionResult> MarkMessageAsRead(int userId, int messageId)
+        {
+            try
+            {
+                var result = await _notifiService.MarkMessageAsReadAsync(userId, messageId);
+                if (result)
+                {
+                    return Ok(new
+                    {
+                        success = true,
+                        message = "消息已标记为已读"
+                    });
+                }
+                else
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "标记失败，消息不存在或无权限"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "标记消息已读时发生异常");
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "系统异常，请稍后重试"
+                });
+            }
+        }
+
+        /// <summary>
         /// 生成系统优化建议
         /// </summary>
         private List<string> GenerateRecommendations(

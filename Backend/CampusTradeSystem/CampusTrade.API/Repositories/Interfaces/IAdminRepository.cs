@@ -58,6 +58,12 @@ namespace CampusTrade.API.Repositories.Interfaces
         Task<Dictionary<string, int>> GetAdminStatisticsAsync();
 
         /// <summary>
+        /// 获取活跃管理员数量
+        /// </summary>
+        /// <returns>活跃管理员数量</returns>
+        Task<int> GetActiveAdminCountAsync();
+
+        /// <summary>
         /// 获取管理员详细信息（包含用户和分类信息）
         /// </summary>
         /// <param name="adminId">管理员ID</param>

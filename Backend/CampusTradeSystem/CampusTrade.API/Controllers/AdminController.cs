@@ -396,6 +396,7 @@ namespace CampusTrade.API.Controllers
         /// <param name="pageSize">页大小</param>
         /// <param name="targetAdminId">目标管理员ID筛选</param>
         /// <param name="actionType">操作类型筛选</param>
+        /// <param name="categoryId">分类ID（筛选超级管理员和该分类的模块管理员）</param>
         /// <param name="startDate">起始时间</param>
         /// <param name="endDate">结束时间</param>
         /// <returns>所有审计日志</returns>
@@ -405,6 +406,7 @@ namespace CampusTrade.API.Controllers
             [FromQuery] int pageSize = 10,
             [FromQuery] int? targetAdminId = null,
             [FromQuery] string? actionType = null,
+            [FromQuery] int? categoryId = null,
             [FromQuery] DateTime? startDate = null,
             [FromQuery] DateTime? endDate = null)
         {
@@ -422,7 +424,7 @@ namespace CampusTrade.API.Controllers
                 }
 
                 var (logs, totalCount) = await _adminService.GetAllAuditLogsAsync(
-                    currentAdmin.AdminId, pageIndex, pageSize, targetAdminId, actionType, startDate, endDate);
+                    currentAdmin.AdminId, pageIndex, pageSize, targetAdminId, actionType, categoryId, startDate, endDate);
 
                 return Ok(ApiResponse.CreateSuccess(new
                 {
@@ -628,6 +630,9 @@ namespace CampusTrade.API.Controllers
         {
             try
             {
+                // 记录接收到的数据
+                _logger.LogInformation("收到商品更新请求 - ProductId: {ProductId}, UpdateDto: {@UpdateDto}", productId, updateDto);
+
                 // 获取当前用户ID
                 var userId = User.GetUserId();
                 if (userId == 0)

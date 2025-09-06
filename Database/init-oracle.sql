@@ -399,7 +399,7 @@ CREATE TABLE admins (
 CREATE TABLE audit_logs (
     log_id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     admin_id NUMBER NOT NULL,
-    action_type VARCHAR2(20) CHECK (action_type IN ('封禁用户','修改权限','处理举报')),
+    action_type VARCHAR2(20) CHECK (action_type IN ('封禁用户','修改权限','处理举报','更新商品','删除商品','批量操作')),
     target_id NUMBER,
     log_detail CLOB,
     log_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -617,17 +617,17 @@ BEGIN
         :NEW.expire_time := CURRENT_TIMESTAMP + INTERVAL '30' MINUTE;
     END IF;
 END;
-/
-
--- 换物请求抽象订单触发器
-CREATE OR REPLACE TRIGGER trg_exchange_abstract
-    BEFORE INSERT ON exchange_requests
-    FOR EACH ROW
-BEGIN
-    -- 先插入抽象订单
-    INSERT INTO abstract_orders (abstract_order_id, order_type) 
-    VALUES (:NEW.exchange_id, 'exchange');
-END;
+-- 换物请求抽象订单触发器已移除
+-- 现在由ExchangeService手动管理抽象订单的创建
+-- CREATE OR REPLACE TRIGGER trg_exchange_abstract
+--     BEFORE INSERT ON exchange_requests
+--     FOR EACH ROW
+-- BEGIN
+--     -- 先插入抽象订单
+--     INSERT INTO abstract_orders (abstract_order_id, order_type) 
+--     VALUES (:NEW.exchange_id, 'exchange');
+-- END;
+-- /
 /
 
 -- 用户注册时自动创建虚拟账户

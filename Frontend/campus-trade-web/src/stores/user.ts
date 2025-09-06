@@ -42,6 +42,9 @@ export const useUserStore = defineStore('user', () => {
   const token = ref<string>('')
   const refreshToken = ref<string>('')
   const isLoggedIn = ref<boolean>(false)
+  
+  // 添加防重复请求的标志
+  const isLoadingProfile = ref<boolean>(false)
 
   // 初始化用户状态
   const initializeAuth = () => {
@@ -371,6 +374,13 @@ export const useUserStore = defineStore('user', () => {
 
   // 获取用户详细信息（包含虚拟账户等）
   const getUserProfile = async () => {
+    // 防止重复请求
+    if (isLoadingProfile.value) {
+      console.log('getUserProfile already in progress, skipping...')
+      return { success: false, message: '正在获取用户信息，请稍候...' }
+    }
+
+    isLoadingProfile.value = true
     try {
       const response = await authApi.getUserProfile()
 
@@ -417,6 +427,8 @@ export const useUserStore = defineStore('user', () => {
       }
 
       return { success: false, message }
+    } finally {
+      isLoadingProfile.value = false
     }
   }
 
@@ -491,6 +503,7 @@ export const useUserStore = defineStore('user', () => {
     token,
     refreshToken,
     isLoggedIn,
+    isLoadingProfile,
     initializeAuth,
     login,
     register,

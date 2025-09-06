@@ -95,6 +95,10 @@ namespace CampusTrade.API.Repositories.Interfaces
         /// 获取用户举报统计
         /// </summary>
         Task<Dictionary<int, int>> GetUserReportStatisticsAsync();
+        /// <summary>
+        /// 获取待处理举报数量
+        /// </summary>
+        Task<int> GetPendingReportsCountAsync();
         #endregion
     }
 }

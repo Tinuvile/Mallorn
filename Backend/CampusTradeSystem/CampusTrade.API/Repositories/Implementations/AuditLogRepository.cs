@@ -64,6 +64,7 @@ namespace CampusTrade.API.Repositories.Implementations
             int pageSize,
             int? adminId = null,
             string? actionType = null,
+            int? categoryId = null,
             DateTime? startDate = null,
             DateTime? endDate = null)
         {
@@ -78,6 +79,15 @@ namespace CampusTrade.API.Repositories.Implementations
 
             if (!string.IsNullOrEmpty(actionType))
                 query = query.Where(log => log.ActionType == actionType);
+
+            // 基于分类筛选：显示超级管理员和对应分类的模块管理员的日志
+            if (categoryId.HasValue)
+            {
+                query = query.Where(log =>
+                    log.Admin.Role == Admin.Roles.Super || // 超级管理员
+                    (log.Admin.Role == Admin.Roles.CategoryAdmin && log.Admin.AssignedCategory == categoryId.Value) // 对应分类的模块管理员
+                );
+            }
 
             if (startDate.HasValue)
                 query = query.Where(log => log.LogTime >= startDate.Value);
@@ -154,6 +164,14 @@ namespace CampusTrade.API.Repositories.Implementations
             await _context.SaveChangesAsync();
 
             return auditLog.LogId;
+        }
+
+        /// <summary>
+        /// 获取指定日期范围内的操作数量
+        /// </summary>
+        public async Task<int> GetOperationCountByDateRangeAsync(DateTime startDate, DateTime endDate)
+        {
+            return await _dbSet.CountAsync(log => log.LogTime >= startDate && log.LogTime < endDate);
         }
     }
 }
