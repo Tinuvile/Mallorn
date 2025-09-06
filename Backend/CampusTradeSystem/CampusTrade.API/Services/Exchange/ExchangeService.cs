@@ -14,6 +14,7 @@ namespace CampusTrade.API.Services.Exchange
     {
         private readonly IExchangeRequestsRepository _exchangeRequestsRepository;
         private readonly IRepository<Models.Entities.Product> _productsRepository;
+        private readonly IRepository<AbstractOrder> _abstractOrderRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<ExchangeService> _logger;
         private readonly NotifiService _notificationService;
@@ -21,12 +22,14 @@ namespace CampusTrade.API.Services.Exchange
         public ExchangeService(
             IExchangeRequestsRepository exchangeRequestsRepository,
             IRepository<Models.Entities.Product> productsRepository,
+            IRepository<AbstractOrder> abstractOrderRepository,
             IUnitOfWork unitOfWork,
             ILogger<ExchangeService> logger,
             NotifiService notificationService)
         {
             _exchangeRequestsRepository = exchangeRequestsRepository;
             _productsRepository = productsRepository;
+            _abstractOrderRepository = abstractOrderRepository;
             _unitOfWork = unitOfWork;
             _logger = logger;
             _notificationService = notificationService;
@@ -80,17 +83,27 @@ namespace CampusTrade.API.Services.Exchange
                     return (false, "该商品已有待处理的换物请求", null);
                 }
 
-                // 4. 创建换物请求
+                // 4. 创建抽象订单，让Oracle触发器自动分配ID
+                var abstractOrder = new AbstractOrder
+                {
+                    OrderType = AbstractOrder.OrderTypes.Exchange
+                };
+                await _abstractOrderRepository.AddAsync(abstractOrder);
+                await _unitOfWork.SaveChangesAsync();
+
+                // 5. 创建换物请求，使用抽象订单的ID
                 var request = new ExchangeRequest
                 {
+                    ExchangeId = abstractOrder.AbstractOrderId,
                     OfferProductId = exchangeRequest.OfferProductId,
                     RequestProductId = exchangeRequest.RequestProductId,
                     Terms = exchangeRequest.Terms,
-                    Status = "待回应",
+                    Status = "等待回应",
                     CreatedAt = DateTime.UtcNow
                 };
 
                 await _exchangeRequestsRepository.AddAsync(request);
+                await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
                 // 发送换物请求通知给被请求商品的所有者
@@ -156,7 +169,7 @@ namespace CampusTrade.API.Services.Exchange
                     return (false, "无权限操作此换物请求");
                 }
 
-                if (request.Status != "待回应")
+                if (request.Status != "等待回应")
                 {
                     return (false, "换物请求状态不允许回应");
                 }
@@ -165,7 +178,7 @@ namespace CampusTrade.API.Services.Exchange
                 await _exchangeRequestsRepository.UpdateExchangeStatusAsync(request.ExchangeId, exchangeResponse.Status);
 
                 // 4. 如果同意换物，更新商品状态
-                if (exchangeResponse.Status == "同意")
+                if (exchangeResponse.Status == "接受")
                 {
                     var offerProduct = await _productsRepository.GetByPrimaryKeyAsync(request.OfferProductId);
                     if (offerProduct != null && requestProduct != null)
