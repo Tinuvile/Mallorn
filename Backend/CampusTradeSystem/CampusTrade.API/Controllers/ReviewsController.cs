@@ -1,6 +1,6 @@
 using CampusTrade.API.Infrastructure.Extensions;
-using CampusTrade.API.Models.DTOs.Review;
 using CampusTrade.API.Models.DTOs.Common;
+using CampusTrade.API.Models.DTOs.Review;
 using CampusTrade.API.Services.Review;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

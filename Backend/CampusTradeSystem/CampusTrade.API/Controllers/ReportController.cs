@@ -1,8 +1,8 @@
+using CampusTrade.API.Infrastructure.Extensions;
 using CampusTrade.API.Models.DTOs.Common;
 using CampusTrade.API.Models.DTOs.Report;
 using CampusTrade.API.Services.Interfaces;
 using CampusTrade.API.Services.Report;
-using CampusTrade.API.Infrastructure.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

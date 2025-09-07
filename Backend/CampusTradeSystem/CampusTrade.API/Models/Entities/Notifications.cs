@@ -126,7 +126,7 @@ namespace CampusTrade.API.Models.Entities
                 if (Template != null && !string.IsNullOrEmpty(Template.TemplateContent))
                 {
                     return Infrastructure.Utils.Notificate.Notifihelper.ReplaceTemplateParams(
-                        Template.TemplateContent, 
+                        Template.TemplateContent,
                         TemplateParams ?? "{}");
                 }
                 return "通知内容获取失败";
