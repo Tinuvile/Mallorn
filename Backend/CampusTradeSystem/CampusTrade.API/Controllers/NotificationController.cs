@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using CampusTrade.API.Infrastructure.Extensions;
 using CampusTrade.API.Infrastructure.Utils.Notificate;
 using CampusTrade.API.Services.Auth;
 using CampusTrade.API.Services.Notification;
@@ -467,6 +468,46 @@ namespace CampusTrade.API.Controllers
                 recommendations.Add("✅ 系统运行状态良好，继续保持当前配置");
 
             return recommendations;
+        }
+
+        /// <summary>
+        /// 获取议价对话历史
+        /// </summary>
+        /// <param name="orderId">订单ID</param>
+        /// <returns>议价对话历史</returns>
+        [HttpGet("bargain-conversation/{orderId}")]
+        public async Task<IActionResult> GetBargainConversation(int orderId)
+        {
+            try
+            {
+                var userId = User.GetUserId();
+                var conversation = await _notifiService.GetBargainConversationAsync(orderId, userId);
+
+                return Ok(new
+                {
+                    success = true,
+                    data = conversation,
+                    message = "获取议价对话历史成功"
+                });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning("获取议价对话历史认证失败: {Message}", ex.Message);
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "认证失败"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取议价对话历史时发生错误，订单：{OrderId}", orderId);
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "系统内部错误"
+                });
+            }
         }
     }
 

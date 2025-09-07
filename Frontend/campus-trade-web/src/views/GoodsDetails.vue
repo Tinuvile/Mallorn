@@ -214,7 +214,9 @@
             ></textarea>
           </div>
           <!-- 出价按钮 -->
-          <button class="confirm-offer-btn" @click="submitOffer">确定出价</button>
+          <button class="confirm-offer-btn" @click="submitOffer" :disabled="submittingOffer">
+            {{ submittingOffer ? '提交中...' : '确定出价' }}
+          </button>
 
           <!-- 关闭按钮 -->
           <button class="close-btn" @click="showNegotiateModal = false">×</button>
@@ -239,9 +241,14 @@
           <!-- 换物商品选择区域 -->
           <div class="price-section">
             <p class="seller-price">选择您的商品:</p>
+            <!-- 加载状态 -->
+            <div v-if="loadingUserGoods" class="text-center py-4">
+              <v-progress-circular indeterminate size="24"></v-progress-circular>
+              <span class="ml-2">加载中...</span>
+            </div>
             <!-- 空状态判断 -->
-            <div v-if="userGoods.length === 0" class="no-goods-tip">
-              你没有发布的产品，请先去发布产品
+            <div v-else-if="userGoods.length === 0" class="no-goods-tip">
+              你没有可用于换物的商品，请先去发布商品
               <v-btn text color="primary" small @click="navigateToRelease">去发布</v-btn>
             </div>
             <v-radio-group v-model="selectedSwapGoods" class="mb-3" v-else>
@@ -272,7 +279,9 @@
           </div>
 
           <!-- 提交按钮 -->
-          <button class="confirm-offer-btn" @click="submitSwap">提交换物</button>
+          <button class="confirm-offer-btn" @click="submitSwap" :disabled="submittingSwap">
+            {{ submittingSwap ? '提交中...' : '提交换物' }}
+          </button>
 
           <!-- 关闭按钮 -->
           <button class="close-btn" @click="showSwapModal = false">×</button>
@@ -407,7 +416,7 @@
 <script setup>
   import { ref, onMounted, onUnmounted, computed } from 'vue'
   import { useRouter, useRoute } from 'vue-router'
-  import { productApi } from '@/services/api'
+  import { productApi, orderApi, bargainApi, exchangeApi } from '@/services/api'
 
   const router = useRouter()
   const route = useRoute()
@@ -514,8 +523,17 @@
 
   // 议价留言状态
   const userReason = ref('')
+  // 提交议价状态
+  const submittingOffer = ref(false)
+
+  // 获取当前用户ID
+  const getCurrentUserId = () => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    return user.userId || null
+  }
+
   // 修改提交议价方法（包含留言信息）
-  const submitOffer = () => {
+  const submitOffer = async () => {
     if (!selectedColor.value) {
       alert('请先选择商品型号')
       return
@@ -525,14 +543,75 @@
       return
     }
 
-    // 构造包含留言的提示信息
-    const reasonText = userReason.value ? `\n出价理由：${userReason.value}` : ''
-    alert(`您的出价 ¥${userOffer.value} 已提交，请等待卖家回复${reasonText}`)
+    const userId = getCurrentUserId()
+    if (!userId) {
+      alert('请先登录')
+      return
+    }
 
-    // 清空状态
-    userOffer.value = ''
-    userReason.value = ''
-    showNegotiateModal.value = false
+    console.log('当前用户ID:', userId) // 调试日志
+    console.log('商品详情:', productDetail.value) // 调试日志
+    console.log(
+      '商品所有者ID:',
+      productDetail.value?.user?.user_id || productDetail.value?.user?.userId
+    ) // 调试日志
+
+    // 检查是否是自己的商品
+    const productOwnerId = productDetail.value?.user?.user_id || productDetail.value?.user?.userId
+    if (productOwnerId === userId) {
+      alert('不能对自己的商品进行议价')
+      return
+    }
+
+    submittingOffer.value = true
+
+    try {
+      // 创建订单
+      const orderData = {
+        productId: parseInt(productId.value),
+        finalPrice: parseFloat(userOffer.value),
+        remarks: userReason.value || `议价请求，规格：${selectedColor.value}`,
+      }
+
+      console.log('发送的订单数据:', orderData) // 调试日志
+
+      const orderResponse = await orderApi.createOrder(orderData)
+
+      if (orderResponse.success && orderResponse.data) {
+        // 创建议价请求
+        const bargainData = {
+          orderId: orderResponse.data.orderId,
+          proposedPrice: parseFloat(userOffer.value),
+        }
+
+        const bargainResponse = await bargainApi.createBargainRequest(bargainData)
+
+        if (bargainResponse.success) {
+          const reasonText = userReason.value ? `\n出价理由：${userReason.value}` : ''
+          alert(`您的出价 ¥${userOffer.value} 已提交，请等待卖家回复${reasonText}`)
+
+          // 清空状态
+          userOffer.value = ''
+          userReason.value = ''
+          showNegotiateModal.value = false
+        } else {
+          alert(bargainResponse.message || '议价请求提交失败')
+        }
+      } else {
+        console.error('订单创建失败:', orderResponse)
+        alert(orderResponse.message || '创建订单失败')
+      }
+    } catch (error) {
+      console.error('提交议价失败:', error)
+      if (error.response && error.response.data) {
+        console.error('错误响应数据:', error.response.data)
+        alert(error.response.data.message || '提交议价失败')
+      } else {
+        alert('提交议价失败，请稍后重试')
+      }
+    } finally {
+      submittingOffer.value = false
+    }
   }
 
   // 换物相关状态
@@ -540,30 +619,68 @@
   const selectedSwapGoods = ref(null) // 记录选择的换物商品
   const swapReason = ref('') // 换物说明
 
-  // 模拟用户自己发布的未售出商品数据（实际应从接口获取）
-  const userGoods = ref([
-    {
-      id: 1,
-      name: '闲置相机',
-      price: 800,
-      status: 'unsold',
-    },
-    {
-      id: 2,
-      name: '二手书籍',
-      price: 150,
-      status: 'unsold',
-    },
-    {
-      id: 3,
-      name: '运动背包',
-      price: 200,
-      status: 'unsold',
-    },
-  ])
+  // 用户自己发布的商品数据
+  const userGoods = ref([])
+  const loadingUserGoods = ref(false)
+
+  // 获取用户商品列表
+  const loadUserGoods = async () => {
+    const userId = getCurrentUserId()
+    if (!userId) return
+
+    loadingUserGoods.value = true
+    try {
+      const response = await productApi.getUserProducts(userId, 0, 50, '在售')
+      console.log('用户商品响应:', response) // 调试日志
+
+      if (response.success && response.data) {
+        // 检查数据结构
+        console.log('完整响应数据:', response) // 调试日志
+        console.log('response.data类型:', typeof response.data) // 调试日志
+        console.log('response.data内容:', response.data) // 调试日志
+
+        const products = response.data.products || response.data.items || response.data
+        console.log('提取的products:', products) // 调试日志
+        console.log('products类型:', typeof products) // 调试日志
+        console.log('products是否为数组:', Array.isArray(products)) // 调试日志
+
+        // 确保products是数组
+        if (Array.isArray(products)) {
+          // 只显示在售的商品用于换物，排除当前商品
+          userGoods.value = products
+            .filter(product => {
+              const productId_num = product.product_id || product.productId || product.id
+              const currentProductId = parseInt(productId.value)
+              return (
+                productId_num !== currentProductId &&
+                (product.status === '在售' || product.status === 'OnSale')
+              )
+            })
+            .map(product => ({
+              id: product.product_id || product.productId || product.id,
+              name: product.title || product.name,
+              price: product.base_price || product.price,
+              status: 'onsale',
+            }))
+        } else {
+          console.error('products不是数组:', products)
+          userGoods.value = []
+        }
+
+        console.log('处理后的商品列表:', userGoods.value) // 调试日志
+      }
+    } catch (error) {
+      console.error('获取用户商品失败:', error)
+    } finally {
+      loadingUserGoods.value = false
+    }
+  }
+
+  // 换物提交状态
+  const submittingSwap = ref(false)
 
   // 换物提交方法
-  const submitSwap = () => {
+  const submitSwap = async () => {
     if (!selectedColor.value) {
       alert('请先选择目标商品型号')
       return
@@ -573,16 +690,58 @@
       return
     }
 
-    // 构造提示信息
-    const reasonText = swapReason.value ? `\n换物说明：${swapReason.value}` : ''
-    alert(
-      `已提交换物请求：用【${selectedSwapGoods.value.name}】交换【${productName.value}】${reasonText}`
-    )
+    const userId = getCurrentUserId()
+    if (!userId) {
+      alert('请先登录')
+      return
+    }
 
-    // 清空状态
-    selectedSwapGoods.value = null
-    swapReason.value = ''
-    showSwapModal.value = false
+    // 检查是否是自己的商品
+    if (productDetail.value?.user?.user_id === userId) {
+      alert('不能与自己的商品进行换物')
+      return
+    }
+
+    submittingSwap.value = true
+
+    try {
+      // 创建换物请求
+      const exchangeData = {
+        offerProductId: selectedSwapGoods.value.id,
+        requestProductId: parseInt(productId.value),
+        terms: swapReason.value || '无特殊说明',
+      }
+
+      console.log('换物请求数据:', exchangeData) // 调试日志
+      console.log('选中的商品:', selectedSwapGoods.value) // 调试日志
+
+      const response = await exchangeApi.createExchangeRequest(exchangeData)
+
+      if (response.success) {
+        const reasonText = swapReason.value ? `\n换物说明：${swapReason.value}` : ''
+        alert(
+          `已提交换物请求：用【${selectedSwapGoods.value.name}】交换【${productName.value}】${reasonText}`
+        )
+
+        // 清空状态
+        selectedSwapGoods.value = null
+        swapReason.value = ''
+        showSwapModal.value = false
+      } else {
+        console.error('换物请求失败:', response)
+        alert(response.message || '换物请求提交失败')
+      }
+    } catch (error) {
+      console.error('提交换物失败:', error)
+      if (error.response && error.response.data) {
+        console.error('错误响应数据:', error.response.data)
+        alert(error.response.data.message || '换物请求提交失败')
+      } else {
+        alert('提交换物失败，请稍后重试')
+      }
+    } finally {
+      submittingSwap.value = false
+    }
   }
 
   // 跳转到商品发布页面方法
@@ -701,6 +860,8 @@
     handleScroll()
     // 加载商品详情
     loadProductDetail()
+    // 加载用户商品列表
+    loadUserGoods()
   })
 
   // 组件卸载时移除滚动监听
@@ -878,10 +1039,17 @@
     border-radius: 4px;
     font-size: 16px;
     cursor: pointer;
+    transition: background-color 0.3s ease;
   }
 
-  .confirm-offer-btn:hover {
+  .confirm-offer-btn:hover:not(:disabled) {
     background-color: #0056b3;
+  }
+
+  .confirm-offer-btn:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.7;
   }
 
   .close-btn {
