@@ -2,6 +2,7 @@ using CampusTrade.API.Models.DTOs.Common;
 using CampusTrade.API.Models.DTOs.Report;
 using CampusTrade.API.Services.Interfaces;
 using CampusTrade.API.Services.Report;
+using CampusTrade.API.Infrastructure.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -32,16 +33,12 @@ namespace CampusTrade.API.Controllers
         /// <param name="request">举报创建请求</param>
         /// <returns>创建结果</returns>
         [HttpPost]
-        public async Task<IActionResult> CreateReport([FromBody] CreateReportDto request)
+        public async Task<ActionResult<ApiResponse<object>>> CreateReport([FromBody] CreateReportDto request)
         {
             try
             {
-                // 获取当前用户ID（从JWT Token中获取）
-                var userIdClaim = User.FindFirst("userId")?.Value;
-                if (!int.TryParse(userIdClaim, out int reporterId))
-                {
-                    return Unauthorized(ApiResponse.CreateError("用户身份验证失败"));
-                }
+                // 获取当前用户ID
+                int reporterId = User.GetUserId();
 
                 // 转换证据文件信息
                 var evidenceFiles = request.EvidenceFiles?.Select(ef => new EvidenceFileInfo
@@ -59,15 +56,65 @@ namespace CampusTrade.API.Controllers
 
                 if (result.Success)
                 {
-                    return Ok(ApiResponse.CreateSuccess(new { reportId = result.ReportId }, result.Message));
+                    return Ok(ApiResponse<object>.CreateSuccess(new { reportId = result.ReportId }, result.Message));
                 }
 
-                return BadRequest(ApiResponse.CreateError(result.Message));
+                return BadRequest(ApiResponse<object>.CreateError(result.Message));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "创建举报时发生异常");
-                return StatusCode(500, ApiResponse.CreateError("系统异常，请稍后重试"));
+                return StatusCode(500, ApiResponse<object>.CreateError("系统异常，请稍后重试"));
+            }
+        }
+
+        /// <summary>
+        /// 创建争议评价
+        /// </summary>
+        /// <param name="request">争议评价创建请求</param>
+        /// <returns>创建结果</returns>
+        [HttpPost("dispute")]
+        public async Task<ActionResult<ApiResponse<object>>> CreateDispute([FromBody] CreateDisputeDto request)
+        {
+            try
+            {
+                // 获取当前用户ID
+                int reporterId = User.GetUserId();
+
+                // 转换证据文件信息
+                var evidenceFiles = request.EvidenceFiles?.Select(ef => new EvidenceFileInfo
+                {
+                    FileType = ef.FileType,
+                    FileUrl = ef.FileUrl
+                }).ToList();
+
+                // 创建争议评价举报（类型为"争议评价"）
+                var result = await _reportService.CreateReportAsync(
+                    request.OrderId,
+                    reporterId,
+                    "争议评价",
+                    $"争议原因: {request.Reason}\n详细描述: {request.Description}",
+                    evidenceFiles);
+
+                if (result.Success)
+                {
+                    return Ok(ApiResponse<object>.CreateSuccess(new
+                    {
+                        disputeId = result.ReportId,
+                        orderId = request.OrderId,
+                        reason = request.Reason,
+                        description = request.Description,
+                        status = "pending",
+                        createTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                    }, result.Message));
+                }
+
+                return BadRequest(ApiResponse<object>.CreateError(result.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "创建争议评价时发生异常");
+                return StatusCode(500, ApiResponse<object>.CreateError("系统异常，请稍后重试"));
             }
         }
 

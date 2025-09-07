@@ -1066,6 +1066,19 @@ export const fileApi = {
     })
   },
 
+  // 上传举报证据文件
+  uploadReportEvidence: (
+    file: File
+  ): Promise<
+    ApiResponse<{ fileName: string; fileUrl: string; thumbnailUrl?: string; fileSize: number }>
+  > => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post('/api/File/upload/report-evidence', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+
   // 批量上传文件
   batchUploadFiles: (
     files: File[],
@@ -1074,6 +1087,18 @@ export const fileApi = {
     const formData = new FormData()
     files.forEach(file => formData.append('files', file))
     formData.append('fileType', fileType)
+    return api.post('/api/File/upload/batch', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+
+  // 批量上传举报证据文件
+  batchUploadReportEvidence: (
+    files: File[]
+  ): Promise<ApiResponse<Array<{ fileName: string; fileUrl: string; fileSize: number }>>> => {
+    const formData = new FormData()
+    files.forEach(file => formData.append('files', file))
+    formData.append('fileType', 'ReportEvidence')
     return api.post('/api/File/upload/batch', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
@@ -1194,6 +1219,150 @@ export const rechargeApi = {
     pageSize = 10
   ): Promise<ApiResponse<UserRechargeRecordsResponse>> => {
     return api.get(`/api/recharge/records?pageIndex=${pageIndex}&pageSize=${pageSize}`)
+  },
+}
+
+// 评价相关接口定义
+export interface CreateReviewRequest {
+  orderId: number
+  rating: number
+  descAccuracy: number
+  serviceAttitude: number
+  isAnonymous: boolean
+  content?: string
+}
+
+export interface ReviewResponse {
+  reviewId: number
+  orderId: number
+  rating: number
+  descAccuracy: number
+  serviceAttitude: number
+  isAnonymous: boolean
+  content?: string
+  createTime: string
+  sellerResponse?: string
+  sellerResponseTime?: string
+}
+
+export interface ReviewListResponse {
+  reviews: ReviewResponse[]
+  totalCount: number
+  pageIndex: number
+  pageSize: number
+  totalPages: number
+}
+
+// 举报相关接口定义
+export interface CreateReportRequest {
+  orderId: number
+  type: string
+  description?: string
+  evidenceFiles?: EvidenceFile[]
+}
+
+export interface EvidenceFile {
+  fileType: string
+  fileUrl: string
+}
+
+export interface ReportResponse {
+  reportId: number
+  orderId: number
+  reporterId: number
+  type: string
+  description?: string
+  status: string
+  priority?: number
+  createTime: string
+  updateTime?: string
+}
+
+export interface ReportListResponse {
+  reports: ReportResponse[]
+  totalCount: number
+  pageIndex: number
+  pageSize: number
+  totalPages: number
+}
+
+// 争议评价相关接口
+export interface CreateDisputeRequest {
+  orderId: number
+  reason: string
+  description: string
+  evidenceFiles?: EvidenceFile[]
+}
+
+export interface DisputeResponse {
+  disputeId: number
+  orderId: number
+  reason: string
+  description: string
+  status: string
+  createTime: string
+  resolveTime?: string
+}
+
+// 卖家回应评价相关接口
+export interface CreateReviewResponseRequest {
+  reviewId: number
+  responseContent: string
+}
+
+// 评价相关API
+export const reviewApi = {
+  // 创建评价
+  createReview: (data: CreateReviewRequest): Promise<ApiResponse<ReviewResponse>> => {
+    return api.post('/api/reviews', data)
+  },
+
+  // 获取订单评价
+  getOrderReview: (orderId: number): Promise<ApiResponse<ReviewResponse>> => {
+    return api.get(`/api/reviews/order/${orderId}`)
+  },
+
+  // 获取商品评价列表
+  getProductReviews: (
+    productId: number,
+    pageIndex = 1,
+    pageSize = 10
+  ): Promise<ApiResponse<ReviewListResponse>> => {
+    return api.get(`/api/reviews/item/${productId}?pageIndex=${pageIndex}&pageSize=${pageSize}`)
+  },
+
+  // 卖家回应评价
+  createReviewResponse: (data: CreateReviewResponseRequest): Promise<ApiResponse<void>> => {
+    return api.post('/api/reviews/response', data)
+  },
+}
+
+// 举报相关API
+export const reportApi = {
+  // 创建举报
+  createReport: (data: CreateReportRequest): Promise<ApiResponse<ReportResponse>> => {
+    // 转换属性名以匹配后端DTO
+    const payload = {
+      order_id: data.orderId,
+      type: data.type,
+      description: data.description,
+      evidence_files: data.evidenceFiles?.map(file => ({
+        file_type: file.fileType,
+        file_url: file.fileUrl,
+      })),
+    }
+    console.log('发送到后端的举报数据:', JSON.stringify(payload, null, 2))
+    return api.post('/api/report', payload)
+  },
+
+  // 获取用户举报列表
+  getUserReports: (pageIndex = 1, pageSize = 10): Promise<ApiResponse<ReportListResponse>> => {
+    return api.get(`/api/report/user?pageIndex=${pageIndex}&pageSize=${pageSize}`)
+  },
+
+  // 创建争议评价
+  createDispute: (data: CreateDisputeRequest): Promise<ApiResponse<DisputeResponse>> => {
+    return api.post('/api/report/dispute', data)
   },
 }
 

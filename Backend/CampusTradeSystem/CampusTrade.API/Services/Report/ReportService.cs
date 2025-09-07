@@ -99,9 +99,15 @@ namespace CampusTrade.API.Services.Report
                 {
                     foreach (var evidence in evidenceFiles)
                     {
+                        // 映射英文文件类型到中文
+                        var mappedFileType = MapFileTypeToChineseWithValidation(evidence.FileType);
+
+                        _serilogLogger.Information("添加证据文件 - 原始类型: {OriginalType}, 映射类型: {MappedType}, URL: {FileUrl}",
+                            evidence.FileType, mappedFileType, evidence.FileUrl);
+
                         await _reportsRepository.AddReportEvidenceAsync(
                             report.ReportId,
-                            evidence.FileType,
+                            mappedFileType,
                             evidence.FileUrl);
                         evidenceCount++;
                     }
@@ -168,9 +174,15 @@ namespace CampusTrade.API.Services.Report
                 // 添加证据文件
                 foreach (var evidence in evidenceFiles)
                 {
+                    // 映射英文文件类型到中文
+                    var mappedFileType = MapFileTypeToChineseWithValidation(evidence.FileType);
+
+                    _serilogLogger.Information("添加单独证据文件 - 原始类型: {OriginalType}, 映射类型: {MappedType}, URL: {FileUrl}",
+                        evidence.FileType, mappedFileType, evidence.FileUrl);
+
                     await _reportsRepository.AddReportEvidenceAsync(
                         reportId,
-                        evidence.FileType,
+                        mappedFileType,
                         evidence.FileUrl);
                 }
 
@@ -401,6 +413,30 @@ namespace CampusTrade.API.Services.Report
                 "其他" => 3,
                 _ => 3
             };
+        }
+
+        /// <summary>
+        /// 映射英文文件类型到中文，并进行验证
+        /// </summary>
+        /// <param name="englishFileType">英文文件类型</param>
+        /// <returns>中文文件类型</returns>
+        /// <exception cref="ArgumentException">当文件类型无效时抛出异常</exception>
+        private string MapFileTypeToChineseWithValidation(string englishFileType)
+        {
+            var mappedType = englishFileType.ToLowerInvariant() switch
+            {
+                "image" or "img" or "picture" or "photo" => "图片",
+                "video" or "vid" or "movie" => "视频",
+                "document" or "doc" or "file" or "pdf" => "文档",
+                // 如果已经是中文，直接返回
+                "图片" => "图片",
+                "视频" => "视频",
+                "文档" => "文档",
+                _ => throw new ArgumentException($"不支持的文件类型: {englishFileType}")
+            };
+
+            _serilogLogger.Debug("文件类型映射 - 输入: {Input}, 输出: {Output}", englishFileType, mappedType);
+            return mappedType;
         }
     }
 
