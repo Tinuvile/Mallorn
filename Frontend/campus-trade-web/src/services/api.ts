@@ -1538,6 +1538,11 @@ export const notificationApi = {
   markMessageAsRead: (userId: number, messageId: number): Promise<ApiResponse<void>> => {
     return api.post(`/api/notification/user/${userId}/messages/${messageId}/read`)
   },
+
+  // 获取议价对话历史
+  getBargainConversation: (orderId: number): Promise<ApiResponse<any[]>> => {
+    return api.get(`/api/notification/bargain-conversation/${orderId}`)
+  },
 }
 
 // 议价相关接口数据格式
@@ -1549,8 +1554,8 @@ export interface BargainRequestDto {
 
 export interface BargainResponseDto {
   negotiationId: number
-  action: 'accept' | 'reject' | 'counter'
-  counterPrice?: number
+  status: '接受' | '拒绝' | '反报价'
+  proposedPrice?: number
   rejectReason?: string
 }
 

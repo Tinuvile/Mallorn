@@ -157,15 +157,63 @@ namespace CampusTrade.API.Services.Bargain
                     return (false, "议价状态不允许回应");
                 }
 
-                // 2. 更新议价状态
-                await _negotiationsRepository.UpdateNegotiationStatusAsync(negotiation.NegotiationId, bargainResponse.Status);
-
-                // 3. 如果接受议价，更新订单价格
-                if (bargainResponse.Status == "接受")
+                // 2. 根据回应类型处理
+                if (bargainResponse.Status == "反报价")
                 {
-                    if (order != null)
+                    // 反报价：创建新的议价记录
+                    if (!bargainResponse.ProposedPrice.HasValue)
                     {
-                        order.TotalAmount = negotiation.ProposedPrice;
+                        return (false, "反报价时必须提供新的报价");
+                    }
+
+                    // 更新当前议价状态为反报价
+                    await _negotiationsRepository.UpdateNegotiationStatusAsync(negotiation.NegotiationId, "反报价");
+
+                    // 创建新的议价记录（角色互换）
+                    var counterNegotiation = new Negotiation
+                    {
+                        OrderId = negotiation.OrderId,
+                        ProposedPrice = bargainResponse.ProposedPrice.Value,
+                        Status = "等待回应",
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    await _negotiationsRepository.AddAsync(counterNegotiation);
+
+                    // 发送反报价通知给买家
+                    try
+                    {
+                        var product = await _productsRepository.GetByPrimaryKeyAsync(order.ProductId);
+                        var notificationParams = new Dictionary<string, object>
+                        {
+                            ["productTitle"] = product?.Title ?? "商品",
+                            ["originalPrice"] = negotiation.ProposedPrice,
+                            ["counterPrice"] = bargainResponse.ProposedPrice.Value
+                        };
+
+                        await _notificationService.CreateNotificationAsync(
+                            order.BuyerId,
+                            16, // 卖家反报价通知模板ID
+                            notificationParams,
+                            order.OrderId);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "发送反报价通知失败");
+                    }
+                }
+                else
+                {
+                    // 接受或拒绝：更新议价状态
+                    await _negotiationsRepository.UpdateNegotiationStatusAsync(negotiation.NegotiationId, bargainResponse.Status);
+
+                    // 如果接受议价，更新订单价格
+                    if (bargainResponse.Status == "接受")
+                    {
+                        if (order != null)
+                        {
+                            order.TotalAmount = negotiation.ProposedPrice;
+                        }
                     }
                 }
 

@@ -249,12 +249,21 @@ namespace CampusTrade.API.Services.Notification
                 var productImage = negotiation.Order.Product.ProductImages
                     .FirstOrDefault()?.ImageUrl ?? "/images/default-product.png";
 
+                var contentText = negotiation.Status switch
+                {
+                    "等待回应" => $"您向卖家提出议价请求，心理价位：￥{negotiation.ProposedPrice}，等待卖家回应",
+                    "接受" => $"卖家已接受您的议价！成交价格：￥{negotiation.ProposedPrice}",
+                    "拒绝" => $"卖家拒绝了您的议价请求",
+                    "反报价" => $"卖家给出反报价，等待您的回应",
+                    _ => $"您对商品《{negotiation.Order.Product.Title}》提出了议价 ￥{negotiation.ProposedPrice}，当前状态：{negotiation.Status}"
+                };
+
                 bargainMessages.Add(new
                 {
                     id = negotiation.NegotiationId,
                     type = "bargain",
                     sender = negotiation.Order.Seller?.FullName ?? "卖家",
-                    content = $"您对商品《{negotiation.Order.Product.Title}》提出了议价 ￥{negotiation.ProposedPrice}，当前状态：{negotiation.Status}",
+                    content = contentText,
                     time = FormatTime(negotiation.CreatedAt),
                     read = negotiation.Status != "等待回应",
                     productName = negotiation.Order.Product.Title,
@@ -274,12 +283,21 @@ namespace CampusTrade.API.Services.Notification
                 var productImage = negotiation.Order.Product.ProductImages
                     .FirstOrDefault()?.ImageUrl ?? "/images/default-product.png";
 
+                var contentText = negotiation.Status switch
+                {
+                    "等待回应" => $"买家提出议价请求，心理价位：￥{negotiation.ProposedPrice}，请您选择回应方式",
+                    "接受" => $"您已接受买家的议价！成交价格：￥{negotiation.ProposedPrice}",
+                    "拒绝" => $"您已拒绝买家的议价请求",
+                    "反报价" => $"您已给出反报价，等待买家回应",
+                    _ => $"买家对您的商品《{negotiation.Order.Product.Title}》提出了议价 ￥{negotiation.ProposedPrice}，当前状态：{negotiation.Status}"
+                };
+
                 bargainMessages.Add(new
                 {
                     id = negotiation.NegotiationId,
                     type = "bargain",
                     sender = negotiation.Order.Buyer?.FullName ?? "买家",
-                    content = $"买家对您的商品《{negotiation.Order.Product.Title}》提出了议价 ￥{negotiation.ProposedPrice}，当前状态：{negotiation.Status}",
+                    content = contentText,
                     time = FormatTime(negotiation.CreatedAt),
                     read = negotiation.Status != "等待回应",
                     productName = negotiation.Order.Product.Title,
@@ -341,12 +359,20 @@ namespace CampusTrade.API.Services.Notification
                 var offerProductImage = request.OfferProduct.ProductImages
                     .FirstOrDefault()?.ImageUrl ?? "/images/default-product.png";
 
+                var contentText = request.Status switch
+                {
+                    "等待回应" => $"用户提出换物请求：希望用《{request.OfferProduct.Title}》换取您的《{request.RequestProduct.Title}》，请选择是否接受",
+                    "接受" => $"您已接受换物请求：《{request.OfferProduct.Title}》换《{request.RequestProduct.Title}》",
+                    "拒绝" => $"您已拒绝换物请求：《{request.OfferProduct.Title}》换《{request.RequestProduct.Title}》",
+                    _ => $"换物请求：{request.OfferProduct.User?.Username ?? "匿名用户"}希望用《{request.OfferProduct.Title}》与您的《{request.RequestProduct.Title}》交换"
+                };
+
                 swapMessages.Add(new
                 {
                     id = request.ExchangeId,
                     type = "swap",
                     sender = request.OfferProduct.User?.Username ?? "匿名用户",
-                    content = $"换物请求：{request.OfferProduct.User?.Username ?? "匿名用户"}希望用《{request.OfferProduct.Title}》与您的《{request.RequestProduct.Title}》交换",
+                    content = contentText,
                     time = FormatTime(request.CreatedAt),
                     read = request.Status != "等待回应", // 等待回应状态为未读
                     swapProductName = request.OfferProduct.Title,
@@ -379,12 +405,20 @@ namespace CampusTrade.API.Services.Notification
                 var requestProductImage = request.RequestProduct.ProductImages
                     .FirstOrDefault()?.ImageUrl ?? "/images/default-product.png";
 
+                var contentText = request.Status switch
+                {
+                    "等待回应" => $"您发起的换物请求：用《{request.OfferProduct.Title}》换取《{request.RequestProduct.Title}》，等待对方回应",
+                    "接受" => $"换物请求已被接受：《{request.OfferProduct.Title}》换《{request.RequestProduct.Title}》",
+                    "拒绝" => $"换物请求被拒绝：《{request.OfferProduct.Title}》换《{request.RequestProduct.Title}》",
+                    _ => $"换物请求：您向{request.RequestProduct.User?.Username ?? "匿名用户"}发起了换物请求，希望用《{request.OfferProduct.Title}》换取《{request.RequestProduct.Title}》"
+                };
+
                 swapMessages.Add(new
                 {
                     id = request.ExchangeId,
                     type = "swap",
                     sender = "我的换物请求",
-                    content = $"换物请求：您向{request.RequestProduct.User?.Username ?? "匿名用户"}发起了换物请求，希望用《{request.OfferProduct.Title}》换取《{request.RequestProduct.Title}》",
+                    content = contentText,
                     time = FormatTime(request.CreatedAt),
                     read = true, // 自己发起的请求标记为已读
                     swapProductName = request.RequestProduct.Title,
@@ -460,6 +494,100 @@ namespace CampusTrade.API.Services.Notification
             {
                 return "通知内容解析失败";
             }
+        }
+
+        /// <summary>
+        /// 获取议价对话历史
+        /// </summary>
+        /// <param name="orderId">订单ID</param>
+        /// <param name="userId">用户ID（用于权限验证）</param>
+        /// <returns>议价对话历史</returns>
+        public async Task<List<object>> GetBargainConversationAsync(int orderId, int userId)
+        {
+            var conversations = new List<object>();
+
+            // 验证用户是否有权限查看此订单的议价记录
+            var order = await _context.Orders
+                .Include(o => o.Product)
+                .FirstOrDefaultAsync(o => o.OrderId == orderId);
+
+            if (order == null || (order.BuyerId != userId && order.SellerId != userId))
+            {
+                return conversations;
+            }
+
+            // 获取该订单的所有议价记录，按时间顺序排序
+            var negotiations = await _context.Negotiations
+                .Include(n => n.Order)
+                .ThenInclude(o => o.Buyer)
+                .Include(n => n.Order)
+                .ThenInclude(o => o.Seller)
+                .Include(n => n.Order)
+                .ThenInclude(o => o.Product)
+                .Where(n => n.OrderId == orderId)
+                .OrderBy(n => n.CreatedAt) // 按时间正序排序，展示对话流程
+                .ToListAsync();
+
+            foreach (var negotiation in negotiations)
+            {
+                var isFromBuyer = userId == order.BuyerId;
+                var messageContent = "";
+                var sender = "";
+
+                // 根据议价状态和用户角色生成对话内容
+                if (negotiation.Status == "等待回应")
+                {
+                    if (isFromBuyer)
+                    {
+                        messageContent = $"我提出议价：￥{negotiation.ProposedPrice}";
+                        sender = "我";
+                    }
+                    else
+                    {
+                        messageContent = $"买家提出议价：￥{negotiation.ProposedPrice}";
+                        sender = order.Buyer?.FullName ?? "买家";
+                    }
+                }
+                else if (negotiation.Status == "反报价")
+                {
+                    if (isFromBuyer)
+                    {
+                        messageContent = $"卖家反报价：￥{negotiation.ProposedPrice}";
+                        sender = order.Seller?.FullName ?? "卖家";
+                    }
+                    else
+                    {
+                        messageContent = $"我反报价：￥{negotiation.ProposedPrice}";
+                        sender = "我";
+                    }
+                }
+                else if (negotiation.Status == "接受")
+                {
+                    var accepter = isFromBuyer ? "卖家" : "买家";
+                    messageContent = $"{accepter}接受了议价：￥{negotiation.ProposedPrice}";
+                    sender = "系统";
+                }
+                else if (negotiation.Status == "拒绝")
+                {
+                    var rejecter = isFromBuyer ? "卖家" : "买家";
+                    messageContent = $"{rejecter}拒绝了议价";
+                    sender = "系统";
+                }
+
+                conversations.Add(new
+                {
+                    id = negotiation.NegotiationId,
+                    sender = sender,
+                    content = messageContent,
+                    time = FormatTime(negotiation.CreatedAt),
+                    status = negotiation.Status,
+                    price = negotiation.ProposedPrice,
+                    isFromCurrentUser = (isFromBuyer && negotiation.Status == "等待回应") ||
+                                       (!isFromBuyer && negotiation.Status == "反报价")
+                });
+            }
+
+            return conversations;
         }
 
         /// <summary>

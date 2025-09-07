@@ -617,6 +617,7 @@ BEGIN
         :NEW.expire_time := CURRENT_TIMESTAMP + INTERVAL '30' MINUTE;
     END IF;
 END;
+
 -- 换物请求抽象订单触发器已移除
 -- 现在由ExchangeService手动管理抽象订单的创建
 -- CREATE OR REPLACE TRIGGER trg_exchange_abstract
