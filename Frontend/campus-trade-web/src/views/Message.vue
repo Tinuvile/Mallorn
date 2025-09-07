@@ -170,8 +170,14 @@
             </div>
           </div>
 
-          <!-- 已处理状态提示-->
-          <div v-if="currentBargainMessage.bargainStatus !== 'pending'" class="text-center">
+          <!-- 已处理状态提示（接受或拒绝）-->
+          <div
+            v-if="
+              currentBargainMessage.bargainStatus === 'accepted' ||
+              currentBargainMessage.bargainStatus === 'rejected'
+            "
+            class="text-center"
+          >
             <v-icon
               :icon="
                 currentBargainMessage.bargainStatus === 'accepted'
@@ -218,11 +224,8 @@
           </p>
         </v-card-text>
 
-        <!-- 按钮区域条件渲染 -->
-        <v-card-actions
-          class="justify-end"
-          v-if="currentBargainMessage.bargainStatus === 'pending'"
-        >
+        <!-- 按钮区域条件渲染 - 基于canRespond字段判断 -->
+        <v-card-actions class="justify-end" v-if="currentBargainMessage.canRespond">
           <v-btn text @click="handleReject">拒绝</v-btn>
           <v-btn text color="warning" @click="handleCounterOffer">反报价</v-btn>
           <v-btn color="primary" text @click="showConfirmDialog = true">接受</v-btn>

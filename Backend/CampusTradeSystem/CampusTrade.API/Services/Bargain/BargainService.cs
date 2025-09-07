@@ -54,9 +54,9 @@ namespace CampusTrade.API.Services.Bargain
                     return (false, "订单不存在", null);
                 }
 
-                if (order.BuyerId == userId)
+                if (order.SellerId == userId)
                 {
-                    return (false, "不能对自己的订单发起议价", null);
+                    return (false, "不能对自己的商品发起议价", null);
                 }
 
                 if (order.Status != "待付款")
@@ -138,23 +138,57 @@ namespace CampusTrade.API.Services.Bargain
             {
                 await _unitOfWork.BeginTransactionAsync();
 
-                // 1. 获取议价记录
+                // 1. 获取议价记录 - 如果传递的记录状态不是"等待回应"，尝试找到对应的等待回应记录
                 var negotiation = await _negotiationsRepository.GetByPrimaryKeyAsync(bargainResponse.NegotiationId);
                 if (negotiation == null)
                 {
                     return (false, "议价记录不存在");
                 }
 
-                // 通过订单获取卖家信息验证权限
+                // 如果当前记录状态不是"等待回应"，尝试找到同订单的最新"等待回应"记录
+                if (negotiation.Status != "等待回应")
+                {
+                    var latestNegotiation = await _negotiationsRepository.GetLatestNegotiationAsync(negotiation.OrderId);
+                    if (latestNegotiation != null && latestNegotiation.Status == "等待回应")
+                    {
+                        negotiation = latestNegotiation;
+                        _logger.LogInformation("自动切换到最新的等待回应记录，议价ID: {NegotiationId}", negotiation.NegotiationId);
+                    }
+                    else
+                    {
+                        return (false, "议价状态不允许回应");
+                    }
+                }
+
+                // 通过订单获取买卖双方信息验证权限
                 var order = await _ordersRepository.GetByPrimaryKeyAsync(negotiation.OrderId);
-                if (order == null || order.SellerId != userId)
+                if (order == null)
+                {
+                    return (false, "订单不存在");
+                }
+
+                // 验证用户是否为买家或卖家
+                if (order.BuyerId != userId && order.SellerId != userId)
                 {
                     return (false, "无权限操作此议价");
                 }
 
-                if (negotiation.Status != "等待回应")
+                // 根据议价流程验证具体权限：
+                // 需要分析当前议价是第几轮，来判断谁有权限回应
+                var allNegotiations = await _negotiationsRepository.GetByOrderIdAsync(negotiation.OrderId);
+                var orderedNegotiations = allNegotiations.OrderBy(n => n.CreatedAt).ToList();
+                var currentIndex = orderedNegotiations.FindIndex(n => n.NegotiationId == negotiation.NegotiationId);
+
+                // 第1轮（index=0）：买家发起，卖家回应
+                // 第2轮（index=1）：卖家反报价，买家回应  
+                // 第3轮（index=2）：买家再反报价，卖家回应
+                // 以此类推：偶数轮买家发起卖家回应，奇数轮卖家发起买家回应
+                bool shouldBeSellerResponse = (currentIndex % 2 == 0); // 偶数轮卖家回应
+                bool isSellerUser = (order.SellerId == userId);
+
+                if (shouldBeSellerResponse != isSellerUser)
                 {
-                    return (false, "议价状态不允许回应");
+                    return (false, "无权限操作此议价");
                 }
 
                 // 2. 根据回应类型处理
