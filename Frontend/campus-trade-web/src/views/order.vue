@@ -323,9 +323,63 @@
               <div v-if="isViewingReview">
                 <div class="text-h6 mb-3">买家评价：</div>
                 <v-card variant="outlined" class="pa-4">
-                  <div class="text-body-1">{{ selectedOrder?.review || '暂无评价' }}</div>
-                  <div v-if="selectedOrder?.reviewDate" class="text-caption text-grey mt-2">
-                    评价时间：{{ formatDate(selectedOrder.reviewDate) }}
+                  <!-- 评分显示 -->
+                  <div v-if="selectedOrder?.rating" class="mb-3">
+                    <div class="d-flex align-center mb-2">
+                      <span class="text-body-2 mr-2">总体评分：</span>
+                      <v-rating
+                        :model-value="selectedOrder.rating"
+                        color="yellow-darken-3"
+                        size="small"
+                        readonly
+                        density="compact"
+                      ></v-rating>
+                      <span class="ml-2 text-body-2">({{ selectedOrder.rating }}/5)</span>
+                    </div>
+
+                    <!-- 详细评分 -->
+                    <div
+                      v-if="selectedOrder?.descAccuracy || selectedOrder?.serviceAttitude"
+                      class="mb-2"
+                    >
+                      <div v-if="selectedOrder.descAccuracy" class="d-flex align-center mb-1">
+                        <span class="text-caption mr-2" style="min-width: 80px">描述准确：</span>
+                        <v-rating
+                          :model-value="selectedOrder.descAccuracy"
+                          color="blue-darken-3"
+                          size="x-small"
+                          readonly
+                          density="compact"
+                        ></v-rating>
+                        <span class="ml-2 text-caption">({{ selectedOrder.descAccuracy }}/5)</span>
+                      </div>
+                      <div v-if="selectedOrder.serviceAttitude" class="d-flex align-center">
+                        <span class="text-caption mr-2" style="min-width: 80px">服务态度：</span>
+                        <v-rating
+                          :model-value="selectedOrder.serviceAttitude"
+                          color="green-darken-3"
+                          size="x-small"
+                          readonly
+                          density="compact"
+                        ></v-rating>
+                        <span class="ml-2 text-caption"
+                          >({{ selectedOrder.serviceAttitude }}/5)</span
+                        >
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 评价内容 -->
+                  <div class="text-body-1 mb-2">{{ selectedOrder?.review || '暂无评价内容' }}</div>
+
+                  <!-- 评价信息 -->
+                  <div class="d-flex justify-space-between align-center">
+                    <div v-if="selectedOrder?.reviewDate" class="text-caption text-grey">
+                      评价时间：{{ formatDate(selectedOrder.reviewDate) }}
+                    </div>
+                    <div v-if="selectedOrder?.isAnonymous" class="text-caption text-orange">
+                      <v-chip size="x-small" color="orange" variant="tonal">匿名评价</v-chip>
+                    </div>
                   </div>
                 </v-card>
 
@@ -427,17 +481,88 @@
 
               <!-- 编辑模式 -->
               <div v-else>
-                <div class="text-h6 mb-3">请对此商品进行评价：</div>
-                <v-textarea
-                  v-model="reviewText"
-                  label="请输入您的评价"
-                  placeholder="分享您对商品的使用感受..."
-                  rows="4"
-                  variant="outlined"
-                  counter="500"
-                  maxlength="500"
-                  :rules="reviewRules"
-                ></v-textarea>
+                <div class="text-h6 mb-4">请对此商品进行评价：</div>
+
+                <!-- 评分区域 -->
+                <div class="mb-4">
+                  <!-- 总体评分 -->
+                  <div class="mb-3">
+                    <div class="text-body-1 mb-2 font-weight-medium">总体评分：</div>
+                    <div class="d-flex align-center">
+                      <v-rating
+                        v-model="overallRating"
+                        color="yellow-darken-3"
+                        size="large"
+                        hover
+                      ></v-rating>
+                      <span class="ml-3 text-body-2">({{ overallRating }}/5)</span>
+                    </div>
+                  </div>
+
+                  <!-- 详细评分 -->
+                  <div class="mb-3">
+                    <div class="text-body-2 mb-2">详细评分：</div>
+
+                    <!-- 描述准确性 -->
+                    <div class="d-flex align-center mb-2">
+                      <span class="text-body-2 mr-3" style="min-width: 100px">描述准确：</span>
+                      <v-rating
+                        v-model="descAccuracy"
+                        color="blue-darken-3"
+                        size="small"
+                        hover
+                        density="compact"
+                      ></v-rating>
+                      <span class="ml-2 text-caption">({{ descAccuracy }}/5)</span>
+                    </div>
+
+                    <!-- 服务态度 -->
+                    <div class="d-flex align-center mb-2">
+                      <span class="text-body-2 mr-3" style="min-width: 100px">服务态度：</span>
+                      <v-rating
+                        v-model="serviceAttitude"
+                        color="green-darken-3"
+                        size="small"
+                        hover
+                        density="compact"
+                      ></v-rating>
+                      <span class="ml-2 text-caption">({{ serviceAttitude }}/5)</span>
+                    </div>
+                  </div>
+
+                  <!-- 匿名选项 -->
+                  <div class="mb-3">
+                    <v-checkbox
+                      v-model="isAnonymous"
+                      label="匿名评价"
+                      color="primary"
+                      density="compact"
+                      hide-details
+                    >
+                      <template #label>
+                        <span class="text-body-2">匿名评价</span>
+                        <span class="text-caption text-grey ml-1"
+                          >(其他用户将看不到您的用户名)</span
+                        >
+                      </template>
+                    </v-checkbox>
+                  </div>
+                </div>
+
+                <!-- 评价内容 -->
+                <div class="mb-3">
+                  <div class="text-body-1 mb-2 font-weight-medium">评价内容：</div>
+                  <v-textarea
+                    v-model="reviewText"
+                    label="请输入您的评价"
+                    placeholder="分享您对商品的使用感受..."
+                    rows="4"
+                    variant="outlined"
+                    counter="500"
+                    maxlength="500"
+                    :rules="reviewRules"
+                  ></v-textarea>
+                </div>
               </div>
             </v-card-text>
 
@@ -450,7 +575,7 @@
                 v-if="!isViewingReview"
                 color="primary"
                 @click="submitReview"
-                :disabled="!reviewText.trim()"
+                :disabled="overallRating === 0"
                 :loading="isSubmittingReview"
               >
                 发布评价
@@ -733,6 +858,12 @@
   const isViewingReview = ref(false)
   const isSubmittingReview = ref(false)
 
+  // 评分相关变量
+  const overallRating = ref(5) // 总体评分
+  const descAccuracy = ref(5) // 描述准确性
+  const serviceAttitude = ref(5) // 服务态度
+  const isAnonymous = ref(false) // 是否匿名
+
   // 回应评价相关变量
   const responseText = ref('')
   const isSubmittingResponse = ref(false)
@@ -790,11 +921,10 @@
     }))
   })
 
-  // 评价输入验证规则
+  // 评价输入验证规则（评价内容可选，但如果填写则需要满足长度要求）
   const reviewRules = [
-    v => !!v || '请输入评价内容',
-    v => (v && v.length >= 5) || '评价内容至少需要5个字符',
-    v => (v && v.length <= 500) || '评价内容不能超过500个字符',
+    v => !v || v.length >= 5 || '评价内容至少需要5个字符',
+    v => !v || v.length <= 500 || '评价内容不能超过500个字符',
   ]
 
   // 回应验证规则
@@ -1113,9 +1243,43 @@
   }
 
   // 显示评价详情
-  const showReviewDetails = () => {
-    isViewingReview.value = true
-    showReviewDialogState.value = true
+  const showReviewDetails = async () => {
+    try {
+      isViewingReview.value = true
+      showReviewDialogState.value = true
+
+      // 从后端获取最新的评价详情
+      if (selectedOrder.value?.id) {
+        const reviewResponse = await reviewApi.getOrderReview(selectedOrder.value.id)
+
+        if (reviewResponse.success && reviewResponse.data) {
+          // 更新订单中的评价信息
+          if (selectedOrder.value) {
+            selectedOrder.value.review = reviewResponse.data.content || selectedOrder.value.review
+            selectedOrder.value.rating = reviewResponse.data.rating
+            selectedOrder.value.reviewDate = reviewResponse.data.createTime
+            selectedOrder.value.sellerResponse = reviewResponse.data.sellerResponse
+            selectedOrder.value.sellerResponseDate = reviewResponse.data.sellerResponseTime
+
+            // 可以根据需要添加更多字段
+            selectedOrder.value.descAccuracy = reviewResponse.data.descAccuracy
+            selectedOrder.value.serviceAttitude = reviewResponse.data.serviceAttitude
+            selectedOrder.value.isAnonymous = reviewResponse.data.isAnonymous
+          }
+
+          console.log('评价详情获取成功:', reviewResponse.data)
+        } else {
+          console.warn('获取评价详情失败:', reviewResponse.message)
+          // 如果获取失败，仍然显示现有数据，但给用户提示
+          if (!selectedOrder.value.review) {
+            console.log('当前订单没有评价数据')
+          }
+        }
+      }
+    } catch (error) {
+      console.error('获取评价详情时发生错误:', error)
+      // 发生错误时仍然显示对话框，使用现有数据
+    }
   }
 
   // 关闭评价对话框
@@ -1124,22 +1288,29 @@
     reviewText.value = ''
     isViewingReview.value = false
     isSubmittingReview.value = false
+
+    // 重置评分值
+    overallRating.value = 5
+    descAccuracy.value = 5
+    serviceAttitude.value = 5
+    isAnonymous.value = false
   }
 
   // 提交评价
   const submitReview = async () => {
-    if (!reviewText.value.trim() || !selectedOrder.value) return
+    // 只要有总体评分和选中的订单就可以提交
+    if (overallRating.value === 0 || !selectedOrder.value) return
 
     isSubmittingReview.value = true
     try {
-      // 调用真实API
+      // 调用真实API，使用用户实际输入的评分
       const response = await reviewApi.createReview({
         orderId: selectedOrder.value.id,
-        rating: 5, // 默认5星，可以从UI中获取
-        descAccuracy: 5, // 描述准确性，可以从UI中获取
-        serviceAttitude: 5, // 服务态度，可以从UI中获取
-        isAnonymous: false, // 默认不匿名，可以从UI中获取
-        content: reviewText.value.trim(),
+        rating: overallRating.value, // 使用用户选择的总体评分
+        descAccuracy: descAccuracy.value, // 使用用户选择的描述准确性评分
+        serviceAttitude: serviceAttitude.value, // 使用用户选择的服务态度评分
+        isAnonymous: isAnonymous.value, // 使用用户选择的匿名设置
+        content: reviewText.value.trim() || null, // 如果没有输入内容则传null
       })
 
       if (response.success) {
