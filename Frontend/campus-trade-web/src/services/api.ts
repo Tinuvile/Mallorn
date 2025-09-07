@@ -1752,42 +1752,42 @@ export interface BatchProductOperationRequest {
 }
 
 export interface ReportItem {
-  reportId: number
-  orderId: number
+  report_id: number
+  order_id: number
   type: string
   priority?: number
   status: string
   description?: string
-  createTime: string
-  evidenceCount: number
+  create_time: string
+  evidence_count: number
 }
 
 export interface ReportDetail {
-  reportId: number
-  orderId: number
+  report_id: number
+  order_id: number
   type: string
   priority?: number
   status: string
   description?: string
-  createTime: string
+  create_time: string
   reporter?: {
-    userId: number
+    user_id: number
     username: string
   }
   evidences: Array<{
-    evidenceId: number
-    fileType: string
-    fileUrl: string
-    uploadedAt: string
+    evidence_id: number
+    file_type: string
+    file_url: string
+    uploaded_at: string
   }>
 }
 
 export interface HandleReportRequest {
-  handleResult: string
-  handleNote?: string
-  applyPenalty?: boolean
-  penaltyType?: string
-  penaltyDuration?: number
+  HandleResult: string
+  HandleNote?: string
+  ApplyPenalty?: boolean
+  PenaltyType?: string
+  PenaltyDuration?: number
 }
 
 export interface AdminReportsResponse {
@@ -1912,6 +1912,21 @@ export const adminApi = {
     return api.post(`/api/admin/reports/${reportId}/handle`, data)
   },
 
+  // 获取举报详情（管理员专用）
+  getReportDetail: (reportId: number): Promise<ApiResponse<ReportDetail>> => {
+    return api.get(`/api/admin/reports/${reportId}`)
+  },
+
+  // 获取举报审核历史
+  getReportAuditHistory: (reportId: number): Promise<ApiResponse<Array<{
+    timestamp: string
+    action: string
+    moderator: string
+    comment: string
+  }>>> => {
+    return api.get(`/api/admin/reports/${reportId}/history`)
+  },
+
   // 验证举报处理权限
   validateReportPermission: (
     reportId: number
@@ -1968,6 +1983,87 @@ export const adminApi = {
     if (endDate) params.append('endDate', endDate.toISOString())
 
     return api.get(`/api/admin/audit-logs?${params.toString()}`)
+  },
+
+  // 权限管理相关API
+  
+  // 获取所有管理员列表（仅系统管理员）
+  getAllAdmins: (
+    pageIndex: number = 0,
+    pageSize: number = 100,
+    role?: string,
+    searchKeyword?: string
+  ): Promise<ApiResponse<{
+    admins: Array<{
+      adminId: number
+      username: string
+      role: string
+      assignedCategory?: number
+      email?: string
+      isActive: boolean
+    }>
+    pagination: {
+      pageIndex: number
+      pageSize: number
+      totalCount: number
+      totalPages: number
+    }
+  }>> => {
+    const params = new URLSearchParams()
+    params.append('pageIndex', pageIndex.toString())
+    params.append('pageSize', pageSize.toString())
+    if (role) params.append('role', role)
+    if (searchKeyword) params.append('searchKeyword', searchKeyword)
+
+    return api.get(`/api/admin?${params.toString()}`)
+  },
+
+  // 分配分类管理员权限
+  assignCategoryAdmin: (data: {
+    username: string
+    email: string
+    categoryId: number
+  }): Promise<ApiResponse<{
+    adminId: number
+    message: string
+  }>> => {
+    return api.post('/api/admin/assign', {
+      username: data.username,
+      email: data.email,
+      role: 'category_admin',
+      assignedCategory: data.categoryId
+    })
+  },
+
+  // 修改管理员分类权限
+  updateAdminCategory: (
+    adminId: number,
+    newCategoryId: number
+  ): Promise<ApiResponse<{
+    message: string
+  }>> => {
+    return api.put(`/api/admin/${adminId}`, { assignedCategory: newCategoryId })
+  },
+
+  // 撤销管理员权限
+  revokeAdminPermission: (adminId: number): Promise<ApiResponse<{
+    message: string
+  }>> => {
+    return api.delete(`/api/admin/${adminId}`)
+  },
+
+  // 获取管理员详细信息
+  getAdminDetail: (adminId: number): Promise<ApiResponse<{
+    adminId: number
+    username: string
+    email: string
+    role: string
+    assignedCategory?: number
+    createdAt: string
+    lastLoginAt?: string
+    isActive: boolean
+  }>> => {
+    return api.get(`/api/admin/${adminId}`)
   },
 }
 

@@ -173,5 +173,18 @@ namespace CampusTrade.API.Repositories.Implementations
         {
             return await _dbSet.CountAsync(log => log.LogTime >= startDate && log.LogTime < endDate);
         }
+
+        /// <summary>
+        /// 获取特定举报的审核历史
+        /// </summary>
+        public async Task<IEnumerable<AuditLog>> GetReportAuditHistoryAsync(int reportId)
+        {
+            return await _dbSet
+                .Where(log => log.ActionType == AuditLog.ActionTypes.HandleReport && log.TargetId == reportId)
+                .Include(log => log.Admin)
+                    .ThenInclude(admin => admin.User)
+                .OrderBy(log => log.LogTime)
+                .ToListAsync();
+        }
     }
 }

@@ -70,5 +70,12 @@ namespace CampusTrade.API.Repositories.Interfaces
         /// <param name="endDate">结束日期</param>
         /// <returns>操作数量</returns>
         Task<int> GetOperationCountByDateRangeAsync(DateTime startDate, DateTime endDate);
+
+        /// <summary>
+        /// 获取特定举报的审核历史
+        /// </summary>
+        /// <param name="reportId">举报ID</param>
+        /// <returns>审核历史日志列表</returns>
+        Task<IEnumerable<AuditLog>> GetReportAuditHistoryAsync(int reportId);
     }
 }

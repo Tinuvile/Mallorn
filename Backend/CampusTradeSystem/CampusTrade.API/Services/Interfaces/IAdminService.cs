@@ -18,6 +18,14 @@ namespace CampusTrade.API.Services.Interfaces
         Task<(bool Success, string Message, int? AdminId)> CreateAdminAsync(CreateAdminDto createDto, int operatorAdminId);
 
         /// <summary>
+        /// 通过用户名创建管理员
+        /// </summary>
+        /// <param name="createDto">创建管理员DTO</param>
+        /// <param name="operatorAdminId">操作员管理员ID</param>
+        /// <returns>创建结果</returns>
+        Task<(bool Success, string Message, int? AdminId)> CreateAdminByUsernameAsync(CreateAdminByUsernameDto createDto, int operatorAdminId);
+
+        /// <summary>
         /// 更新管理员信息
         /// </summary>
         /// <param name="adminId">管理员ID</param>
@@ -86,6 +94,22 @@ namespace CampusTrade.API.Services.Interfaces
             int pageIndex,
             int pageSize,
             string? status = null);
+
+        /// <summary>
+        /// 获取举报详情（管理员专用）
+        /// </summary>
+        /// <param name="reportId">举报ID</param>
+        /// <param name="adminId">管理员ID</param>
+        /// <returns>举报详情</returns>
+        Task<object?> GetReportDetailAsync(int reportId, int adminId);
+
+        /// <summary>
+        /// 获取举报审核历史
+        /// </summary>
+        /// <param name="reportId">举报ID</param>
+        /// <param name="adminId">管理员ID</param>
+        /// <returns>审核历史列表</returns>
+        Task<IEnumerable<object>?> GetReportAuditHistoryAsync(int reportId, int adminId);
         #endregion
 
         #region 权限验证

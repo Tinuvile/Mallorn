@@ -56,6 +56,28 @@ namespace CampusTrade.API.Repositories.Interfaces
         /// <param name="reportId">举报ID</param>
         /// <returns>一级分类信息</returns>
         Task<Category?> GetReportProductPrimaryCategoryAsync(int reportId);
+
+        /// <summary>
+        /// 分页获取指定分类的举报
+        /// </summary>
+        /// <param name="categoryId">分类ID</param>
+        /// <param name="pageIndex">页索引</param>
+        /// <param name="pageSize">页大小</param>
+        /// <param name="status">状态筛选</param>
+        /// <param name="type">类型筛选</param>
+        /// <param name="priority">优先级筛选</param>
+        /// <param name="startDate">开始日期</param>
+        /// <param name="endDate">结束日期</param>
+        /// <returns>举报列表和总数</returns>
+        Task<(IEnumerable<Reports> Reports, int TotalCount)> GetPagedReportsByCategoryAsync(
+            int categoryId, 
+            int pageIndex, 
+            int pageSize, 
+            string? status = null, 
+            string? type = null, 
+            int? priority = null, 
+            DateTime? startDate = null, 
+            DateTime? endDate = null);
         #endregion
 
         #region 更新操作
