@@ -139,7 +139,7 @@ namespace CampusTrade.API.Services.Notification
             {
                 var systemNotifications = await _context.Notifications
                     .Include(n => n.Template)
-                    .Where(n => n.RecipientId == userId && 
+                    .Where(n => n.RecipientId == userId &&
                                (n.Template!.TemplateName.Contains("系统") || n.Template.TemplateName.Contains("管理员")))
                     .OrderByDescending(n => n.CreatedAt)
                     .Skip(pageIndex * pageSize)
@@ -154,7 +154,7 @@ namespace CampusTrade.API.Services.Notification
                         read = n.SendStatus == Models.Entities.Notification.SendStatuses.Success
                     })
                     .ToListAsync();
-                
+
                 messages.AddRange(systemNotifications.Cast<object>());
             }
 
@@ -178,8 +178,8 @@ namespace CampusTrade.API.Services.Notification
                 var replyMessages = await _context.Notifications
                     .Include(n => n.Template)
                     .Include(n => n.Recipient)
-                    .Where(n => n.RecipientId == userId && 
-                               !n.Template!.TemplateName.Contains("系统") && 
+                    .Where(n => n.RecipientId == userId &&
+                               !n.Template!.TemplateName.Contains("系统") &&
                                !n.Template.TemplateName.Contains("管理员") &&
                                !n.Template.TemplateName.Contains("议价") &&
                                !n.Template.TemplateName.Contains("换物"))
@@ -196,7 +196,7 @@ namespace CampusTrade.API.Services.Notification
                         read = n.SendStatus == Models.Entities.Notification.SendStatuses.Success
                     })
                     .ToListAsync();
-                
+
                 messages.AddRange(replyMessages.Cast<object>());
             }
 
@@ -209,7 +209,7 @@ namespace CampusTrade.API.Services.Notification
         private async Task<List<object>> GetBargainMessagesAsync(int userId, int pageSize, int pageIndex)
         {
             var bargainMessages = new List<object>();
-            
+
             // 从议价表中查询用户相关的议价记录
             // 1. 用户作为买家发起的议价
             var buyerNegotiations = await _context.Negotiations
@@ -248,7 +248,7 @@ namespace CampusTrade.API.Services.Notification
             {
                 var productImage = negotiation.Order.Product.ProductImages
                     .FirstOrDefault()?.ImageUrl ?? "/images/default-product.png";
-                
+
                 bargainMessages.Add(new
                 {
                     id = negotiation.NegotiationId,
@@ -273,7 +273,7 @@ namespace CampusTrade.API.Services.Notification
             {
                 var productImage = negotiation.Order.Product.ProductImages
                     .FirstOrDefault()?.ImageUrl ?? "/images/default-product.png";
-                
+
                 bargainMessages.Add(new
                 {
                     id = negotiation.NegotiationId,
@@ -451,7 +451,7 @@ namespace CampusTrade.API.Services.Notification
                 if (notification.Template != null)
                 {
                     return Notifihelper.ReplaceTemplateParams(
-                        notification.Template.TemplateContent, 
+                        notification.Template.TemplateContent,
                         notification.TemplateParams ?? "{}");
                 }
                 return "通知内容获取失败";
