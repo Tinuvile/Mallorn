@@ -19,7 +19,7 @@
             :key="i"
             :value="category.value"
             :active="currentCategory === category.value" 
-            @click="currentCategory = category.value" 
+            @click="handleCategoryChange(category.value)" 
             :color="category.color"  
             rounded="lg"  
             class="mb-2" 
@@ -35,7 +35,20 @@
       <!-- 右侧消息列表 -->
       <v-main>
         <v-container>
-          <v-list style="background-color: white; border-radius: 0;" rounded="lg">
+          <!-- 加载状态 -->
+          <div v-if="loading" class="text-center py-4">
+            <v-progress-circular indeterminate color="primary"></v-progress-circular>
+            <p class="mt-2">正在加载消息...</p>
+          </div>
+          
+          <!-- 消息列表 -->
+          <v-list v-else style="background-color: white; border-radius: 0;" rounded="lg">
+            <!-- 空状态提示 -->
+            <div v-if="filteredMessages.length === 0" class="text-center py-8">
+              <v-icon size="48" color="grey">mdi-message-outline</v-icon>
+              <p class="text-grey mt-2">暂无消息</p>
+            </div>
+            
             <!-- 使用过滤后的消息列表 -->
             <v-list-item 
               v-for="(message, index) in filteredMessages" 
@@ -177,14 +190,16 @@
   >
     <v-card>
       <v-card-title class="d-flex justify-space-between align-center">
-        <span class="text-h5">{{ currentSwapMessage.sender }} 的换物请求</span>
+        <span class="text-h5">
+          {{ currentSwapMessage.userRole === 'sender' ? '我的换物请求' : currentSwapMessage.sender + ' 的换物请求' }}
+        </span>
         <v-btn icon @click="showSwapDialog = false">
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </v-card-title>
       
       <v-card-text>
-        <!-- 对方商品信息 -->
+        <!-- 商品信息显示 -->
         <v-row align="center" class="mb-4">
           <v-col cols="3">
             <v-img 
@@ -209,26 +224,48 @@
           </v-col>
         </v-row>
 
-       <!-- 换物说明（条件显示） -->
-        <p class="text-body-2" v-if="currentSwapMessage.swapStatus === 'pending'">
-          对方希望用以上商品与您的商品交换，是否接受？
-        </p>
-
-        <!-- 已处理状态提示（新增） -->
-        <div v-if="currentSwapMessage.swapStatus !== 'pending'" class="text-center">
-          <v-icon 
-            :icon="currentSwapMessage.swapStatus === 'accepted' ? 'mdi-check-circle' : 'mdi-alert-circle'"
-            :color="currentSwapMessage.swapStatus === 'accepted' ? 'green' : 'red'"
-            size="48"
-          ></v-icon>
-          <p class="mt-2">
-            {{ currentSwapMessage.swapStatus === 'accepted' ? '已成功接受换物请求！' : '已拒绝换物请求' }}
+        <!-- 换物说明（根据角色显示不同内容） -->
+        <div v-if="currentSwapMessage.userRole === 'sender'">
+          <!-- 发起者视角 -->
+          <p class="text-body-2 mb-3">
+            您向对方发起了换物请求，希望用您的《{{ currentSwapMessage.myProductName }}》换取对方的《{{ currentSwapMessage.otherProductName }}》
           </p>
+          
+          <!-- 请求状态显示 -->
+          <div class="text-center">
+            <v-icon 
+              :icon="getStatusIcon(currentSwapMessage.swapStatus)"
+              :color="getStatusColor(currentSwapMessage.swapStatus)"
+              size="48"
+            ></v-icon>
+            <p class="mt-2">
+              {{ getStatusText(currentSwapMessage.swapStatus) }}
+            </p>
+          </div>
+        </div>
+        
+        <div v-else>
+          <!-- 接收者视角 -->
+          <p class="text-body-2" v-if="currentSwapMessage.swapStatus === 'pending'">
+            对方希望用以上商品与您的《{{ currentSwapMessage.myProductName }}》交换，是否接受？
+          </p>
+
+          <!-- 已处理状态提示 -->
+          <div v-if="currentSwapMessage.swapStatus !== 'pending'" class="text-center">
+            <v-icon 
+              :icon="currentSwapMessage.swapStatus === 'accepted' ? 'mdi-check-circle' : 'mdi-alert-circle'"
+              :color="currentSwapMessage.swapStatus === 'accepted' ? 'green' : 'red'"
+              size="48"
+            ></v-icon>
+            <p class="mt-2">
+              {{ currentSwapMessage.swapStatus === 'accepted' ? '已成功接受换物请求！' : '已拒绝换物请求' }}
+            </p>
+          </div>
         </div>
       </v-card-text>
 
       <!-- 按钮区域条件渲染 -->
-      <v-card-actions class="justify-end" v-if="currentSwapMessage.swapStatus === 'pending'">
+      <v-card-actions class="justify-end" v-if="currentSwapMessage.userRole === 'receiver' && currentSwapMessage.swapStatus === 'pending'">
         <v-btn text @click="showSwapRejectConfirm = true">拒绝换物</v-btn>
         <v-btn color="primary" text @click="showSwapAcceptConfirm = true">接受换物</v-btn>
       </v-card-actions>
@@ -273,8 +310,9 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { notificationApi, bargainApi, exchangeApi } from '@/services/api'
 
 const router = useRouter()
 const showMessageDetail = ref(false)
@@ -293,6 +331,10 @@ const showSwapDialog = ref(false)
 const currentSwapMessage = ref({})
 const showSwapAcceptConfirm = ref(false)  // 接受换物确认弹窗
 const showSwapRejectConfirm = ref(false)  // 拒绝换物确认弹窗
+
+// 数据加载状态
+const loading = ref(false)
+const messages = ref([])
 
 // 分类配置和当前选中分类
 const categories = ref([
@@ -325,31 +367,48 @@ const currentCategory = ref('system')  // 默认显示系统消息
 
 // 消息过滤逻辑
 const filteredMessages = computed(() => {
-  switch(currentCategory.value) {
-    case 'system':
-      // 系统消息：包含系统通知和校园管理员
-      return messages.value.filter(msg => ['系统通知', '校园管理员'].includes(msg.sender))
-    case 'bargain':
-      // 议价消息：非系统发送且内容含"议价"/"便宜"关键词
-      return messages.value.filter(msg => 
-        !['系统通知', '校园管理员'].includes(msg.sender) && 
-        (msg.content.includes('议价'))
-      )
-    case 'reply':
-      // 回复消息:收到的其他消息
-      return messages.value.filter(msg => 
-        !['系统通知', '校园管理员'].includes(msg.sender) && 
-        !msg.content.includes('议价') && 
-        !msg.content.includes('换物')
-      )
-    case 'swap':  // 换物请求过滤条件
-      return messages.value.filter(msg => 
-        msg.content.includes('换物')  // 匹配换物关键词
-      )
-    default:
-      return messages.value
-  }
+  return messages.value.filter(msg => {
+    switch(currentCategory.value) {
+      case 'system':
+        return msg.type === 'notification' && ['系统通知', '校园管理员'].includes(msg.sender)
+      case 'bargain':
+        return msg.type === 'bargain'
+      case 'reply':
+        return msg.type === 'reply' || (msg.type === 'notification' && !['系统通知', '校园管理员'].includes(msg.sender))
+      case 'swap':
+        return msg.type === 'swap'
+      default:
+        return true
+    }
+  })
 })
+
+// 获取当前用户ID
+const getCurrentUserId = () => {
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
+  return user.userId || 1 // 如果没有用户信息，使用默认值
+}
+
+// 加载用户消息
+const loadMessages = async (category) => {
+  loading.value = true
+  try {
+    const userId = getCurrentUserId()
+    const response = await notificationApi.getUserMessages(userId, category, 50, 0)
+    
+    if (response.success && response.data) {
+      messages.value = response.data
+    } else {
+      console.error('获取消息失败:', response.message)
+      messages.value = []
+    }
+  } catch (error) {
+    console.error('加载消息时发生错误:', error)
+    messages.value = []
+  } finally {
+    loading.value = false
+  }
+}
 
 // 返回上一页
 const goBack = () => {
@@ -357,18 +416,26 @@ const goBack = () => {
 }
 
 // 消息点击事件处理
-const handleMessageClick = (message) => {
+const handleMessageClick = async (message) => {
   // 标记消息为已读
-  const targetIndex = messages.value.findIndex(item => item.id === message.id)
-  if (targetIndex > -1) {
-    messages.value[targetIndex].read = true
+  try {
+    const userId = getCurrentUserId()
+    await notificationApi.markMessageAsRead(userId, message.id)
+    
+    // 更新本地状态
+    const targetIndex = messages.value.findIndex(item => item.id === message.id)
+    if (targetIndex > -1) {
+      messages.value[targetIndex].read = true
+    }
+  } catch (error) {
+    console.error('标记消息已读失败:', error)
   }
 
   // 根据消息类型显示不同弹窗
   if (message.type === 'bargain') {
     currentBargainMessage.value = message
     showBargainDialog.value = true
-  } else if (message.type === 'swap') {  // 新增换物类型处理
+  } else if (message.type === 'swap') {
     currentSwapMessage.value = message
     showSwapDialog.value = true
   } else {
@@ -376,122 +443,156 @@ const handleMessageClick = (message) => {
     showMessageDetail.value = true
   }
 }
+
 // 确认接受的最终操作
-const confirmAccept = () => {
-  currentBargainMessage.value.bargainStatus = 'accepted'
-  showBargainDialog.value = false  // 关闭议价弹窗
-  showConfirmDialog.value = false  // 关闭确认弹窗
+const confirmAccept = async () => {
+  try {
+    const message = currentBargainMessage.value
+    await bargainApi.handleBargainResponse({
+      negotiationId: message.id,
+      action: 'accept'
+    })
+    
+    message.bargainStatus = 'accepted'
+    showBargainDialog.value = false
+    showConfirmDialog.value = false
+  } catch (error) {
+    console.error('接受议价失败:', error)
+  }
 }
 
 // 拒绝接受报价
-const handleReject = () => {
+const handleReject = async () => {
   if (!showRejectInput.value) {
-    showRejectInput.value = true  // 第一次点击拒绝显示输入框
-    showError.value = false  // 重置错误提示
+    showRejectInput.value = true
+    showError.value = false
   } else {
-    // 校验输入价格是否有效
+    const message = currentBargainMessage.value
     const inputPrice = Number(rejectReason.value)
-    const minPrice = currentBargainMessage.value.newOffer
+    const minPrice = message.newOffer || 0
     
     if (isNaN(inputPrice) || inputPrice < minPrice) {
-      showError.value = true  // 显示错误提示
-      return  // 阻止后续操作
+      showError.value = true
+      return
     }
 
-    // 输入有效时更新状态
-    currentBargainMessage.value.bargainStatus = 'rejected'
-    currentBargainMessage.value.rejectReason = rejectReason.value
-    showBargainDialog.value = false
-    showRejectInput.value = false
-    rejectReason.value = ''
-    showError.value = false  // 重置错误提示
+    try {
+      await bargainApi.handleBargainResponse({
+        negotiationId: message.id,
+        action: 'reject',
+        rejectReason: rejectReason.value
+      })
+
+      message.bargainStatus = 'rejected'
+      message.rejectReason = rejectReason.value
+      showBargainDialog.value = false
+      showRejectInput.value = false
+      rejectReason.value = ''
+      showError.value = false
+    } catch (error) {
+      console.error('拒绝议价失败:', error)
+    }
   }
 }
 
 // 确认接受换物
-const confirmSwapAccept = () => {
-  currentSwapMessage.value.swapStatus = 'accepted' 
-  showSwapDialog.value = false        // 关闭换物主弹窗
-  showSwapAcceptConfirm.value = false // 关闭确认弹窗
+const confirmSwapAccept = async () => {
+  try {
+    const message = currentSwapMessage.value
+    await exchangeApi.handleExchangeResponse({
+      exchangeRequestId: message.id,
+      status: '接受',
+      responseMessage: '同意换物请求'
+    })
+    
+    message.swapStatus = 'accepted'
+    showSwapDialog.value = false
+    showSwapAcceptConfirm.value = false
+    
+    // 显示成功提示
+    console.log('换物请求已接受')
+  } catch (error) {
+    console.error('接受换物失败:', error)
+    // 可以添加错误提示
+    alert('接受换物失败，请稍后重试')
+  }
 }
 
 // 确认拒绝换物
-const confirmSwapReject = () => {
-  currentSwapMessage.value.swapStatus = 'rejected'
-  showSwapDialog.value = false        // 关闭换物主弹窗
-  showSwapRejectConfirm.value = false // 关闭确认弹窗
+const confirmSwapReject = async () => {
+  try {
+    const message = currentSwapMessage.value
+    await exchangeApi.handleExchangeResponse({
+      exchangeRequestId: message.id,
+      status: '拒绝',
+      responseMessage: '拒绝换物请求'
+    })
+    
+    message.swapStatus = 'rejected'
+    showSwapDialog.value = false
+    showSwapRejectConfirm.value = false
+    
+    // 显示成功提示
+    console.log('换物请求已拒绝')
+  } catch (error) {
+    console.error('拒绝换物失败:', error)
+    // 可以添加错误提示
+    alert('拒绝换物失败，请稍后重试')
+  }
 }
 
-// 模拟消息数据
-const messages = ref([
-  {
-    id: 1,
-    sender: '系统通知',
-    content: '您发布的商品"Nike运动鞋"已通过审核，现在可以在平台上显示',
-    time: '今天 09:23',
-    read: false
-  },
-  {
-    id: 2,
-    sender: '李同学',
-    content: '东西很好，我很喜欢',
-    time: '昨天 16:45',
-    read: false
-  },
-  {
-    id: 3,
-    sender: '校园管理员',
-    content: '【重要通知】本周五将进行系统维护，维护期间平台暂停服务，敬请谅解',
-    time: '昨天 10:12',
-    read: false
-  },
-  {
-    id: 4,
-    sender: '张同学',
-    content: '交易已完成，感谢你的商品！',
-    time: '06月18日',
-    read: false
-  },
-  {
-    id: 5,
-    sender: '王同学',
-    content: '议价：我给出了最新报价，请查看',
-    time: '06月15日',
-    read: false,
-    type: 'bargain',
-    productName: 'New Balance NB 530', 
-    productImage: '/images/n1.jpg', 
-    myOffer: 150,  
-    newOffer: 100,
-    bargainStatus: 'pending'      
-  },
-  {
-    id: 6,
-    sender: '陈同学',
-    content: '换物：你好，我有一个好看的帽子1，想和你的鞋子交换，方便聊聊吗？',
-    time: '今天 11:05',
-    read: false,
-    type: 'swap',
-    swapProductName: '帽子1',  // 对方商品名称
-    swapProductImage: '/images/hot1.webp',  // 对方商品图片
-    swapProductPrice: 2800,  // 对方商品价格
-    swapProductLink: '/goods/123',  // 对方商品链接
-    swapStatus: 'pending'
-  },
-  {
-    id: 7,
-    sender: '周同学',
-    content: '换物：看到你发布的鞋子，我有一个好看的帽子2想和你交换，需要的话联系我~',
-    time: '昨天 14:30',
-    read: false,
-    type: 'swap',
-    swapProductName: '帽子2',
-    swapProductImage: '/images/hot3.webp',
-    swapProductPrice: 4200,
-    swapProductLink: '/goods/456',
-    swapStatus: 'pending'
+// 监听分类变化，重新加载消息
+const handleCategoryChange = (category) => {
+  currentCategory.value = category
+  loadMessages(category)
+}
+
+// 获取状态图标
+const getStatusIcon = (status) => {
+  switch(status) {
+    case 'accepted':
+      return 'mdi-check-circle'
+    case 'rejected':
+      return 'mdi-close-circle'
+    case 'pending':
+      return 'mdi-clock-outline'
+    default:
+      return 'mdi-help-circle'
   }
-])
+}
+
+// 获取状态颜色
+const getStatusColor = (status) => {
+  switch(status) {
+    case 'accepted':
+      return 'green'
+    case 'rejected':
+      return 'red'
+    case 'pending':
+      return 'orange'
+    default:
+      return 'grey'
+  }
+}
+
+// 获取状态文本
+const getStatusText = (status) => {
+  switch(status) {
+    case 'accepted':
+      return '对方已接受您的换物请求！'
+    case 'rejected':
+      return '对方已拒绝您的换物请求'
+    case 'pending':
+      return '等待对方回应...'
+    default:
+      return '状态未知'
+  }
+}
+
+// 组件挂载时加载消息
+onMounted(() => {
+  loadMessages(currentCategory.value)
+})
 </script>
 
 <style scoped>

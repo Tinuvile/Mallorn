@@ -115,5 +115,26 @@ namespace CampusTrade.API.Models.Entities
         /// 关联的邮件通知发送记录
         /// </summary>
         public virtual ICollection<EmailNotification> EmailNotifications { get; set; } = new List<EmailNotification>();
+
+        /// <summary>
+        /// 获取渲染后的通知内容
+        /// </summary>
+        public string GetRenderedContent()
+        {
+            try
+            {
+                if (Template != null && !string.IsNullOrEmpty(Template.TemplateContent))
+                {
+                    return Infrastructure.Utils.Notificate.Notifihelper.ReplaceTemplateParams(
+                        Template.TemplateContent, 
+                        TemplateParams ?? "{}");
+                }
+                return "通知内容获取失败";
+            }
+            catch
+            {
+                return "通知内容解析失败";
+            }
+        }
     }
 }

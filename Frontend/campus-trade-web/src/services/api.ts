@@ -1441,6 +1441,34 @@ export interface NotificationResponse {
   notificationId?: number
 }
 
+export interface MessageItem {
+  id: number
+  type: 'notification' | 'bargain' | 'swap' | 'reply'
+  sender: string
+  content: string
+  time: string
+  read: boolean
+  // 议价消息特有属性
+  productName?: string
+  productImage?: string
+  myOffer?: number
+  newOffer?: number
+  bargainStatus?: 'pending' | 'accepted' | 'rejected'
+  rejectReason?: string
+  // 换物消息特有属性
+  swapProductName?: string
+  swapProductImage?: string
+  swapProductPrice?: number
+  swapProductLink?: string
+  swapStatus?: 'pending' | 'accepted' | 'rejected'
+}
+
+export interface UserMessagesResponse {
+  success: boolean
+  data: MessageItem[]
+  message?: string
+}
+
 // 通知API方法
 export const notificationApi = {
   // 创建通知
@@ -1461,6 +1489,145 @@ export const notificationApi = {
   // 获取用户通知历史
   getUserNotifications: (userId: number, pageSize: number = 10, pageIndex: number = 0): Promise<ApiResponse<any[]>> => {
     return api.get(`/api/notification/user/${userId}/history?pageSize=${pageSize}&pageIndex=${pageIndex}`)
+  },
+
+  // 获取用户消息列表（新增）
+  getUserMessages: (
+    userId: number, 
+    category?: 'system' | 'bargain' | 'reply' | 'swap',
+    pageSize: number = 10, 
+    pageIndex: number = 0
+  ): Promise<UserMessagesResponse> => {
+    const params = new URLSearchParams()
+    params.append('pageSize', pageSize.toString())
+    params.append('pageIndex', pageIndex.toString())
+    if (category) params.append('category', category)
+    
+    return api.get(`/api/notification/user/${userId}/messages?${params.toString()}`)
+  },
+
+  // 标记消息为已读（新增）
+  markMessageAsRead: (userId: number, messageId: number): Promise<ApiResponse<void>> => {
+    return api.post(`/api/notification/user/${userId}/messages/${messageId}/read`)
+  },
+}
+
+// 议价相关接口数据格式
+export interface BargainRequestDto {
+  productId: number
+  offeredPrice: number
+  message?: string
+}
+
+export interface BargainResponseDto {
+  negotiationId: number
+  action: 'accept' | 'reject' | 'counter'
+  counterPrice?: number
+  rejectReason?: string
+}
+
+export interface BargainNegotiation {
+  negotiationId: number
+  productId: number
+  productName: string
+  productImage: string
+  requesterId: number
+  requesterName: string
+  sellerId: number
+  sellerName: string
+  originalPrice: number
+  offeredPrice: number
+  currentPrice?: number
+  status: string
+  createdAt: string
+  updatedAt: string
+}
+
+// 议价API方法
+export const bargainApi = {
+  // 创建议价请求
+  createBargainRequest: (data: BargainRequestDto): Promise<ApiResponse<{ negotiationId: number }>> => {
+    return api.post('/api/bargain/request', data)
+  },
+
+  // 处理议价回应
+  handleBargainResponse: (data: BargainResponseDto): Promise<ApiResponse<void>> => {
+    return api.post('/api/bargain/response', data)
+  },
+
+  // 获取我的议价记录
+  getMyNegotiations: (pageIndex: number = 1, pageSize: number = 10): Promise<ApiResponse<{
+    negotiations: BargainNegotiation[]
+    totalCount: number
+    pageIndex: number
+    pageSize: number
+    totalPages: number
+  }>> => {
+    return api.get(`/api/bargain/my-negotiations?pageIndex=${pageIndex}&pageSize=${pageSize}`)
+  },
+
+  // 获取议价详情
+  getNegotiationDetails: (negotiationId: number): Promise<ApiResponse<BargainNegotiation>> => {
+    return api.get(`/api/bargain/${negotiationId}`)
+  },
+}
+
+// 换物相关接口数据格式
+export interface ExchangeRequestDto {
+  offerProductId: number
+  requestProductId: number
+  terms?: string
+}
+
+export interface ExchangeResponseDto {
+  exchangeRequestId: number
+  status: string
+  responseMessage?: string
+}
+
+export interface ExchangeRequestItem {
+  exchangeRequestId: number
+  offerProductId: number
+  offerProductName: string
+  offerProductImage: string
+  requestProductId: number
+  requestProductName: string
+  requestProductImage: string
+  requesterId: number
+  requesterName: string
+  ownerId: number
+  ownerName: string
+  terms?: string
+  status: string
+  createdAt: string
+}
+
+// 换物API方法
+export const exchangeApi = {
+  // 创建换物请求
+  createExchangeRequest: (data: ExchangeRequestDto): Promise<ApiResponse<{ exchangeRequestId: number }>> => {
+    return api.post('/api/exchange/request', data)
+  },
+
+  // 处理换物回应
+  handleExchangeResponse: (data: ExchangeResponseDto): Promise<ApiResponse<void>> => {
+    return api.post('/api/exchange/response', data)
+  },
+
+  // 获取我的换物请求记录
+  getMyExchangeRequests: (pageIndex: number = 1, pageSize: number = 10): Promise<ApiResponse<{
+    exchangeRequests: ExchangeRequestItem[]
+    totalCount: number
+    pageIndex: number
+    pageSize: number
+    totalPages: number
+  }>> => {
+    return api.get(`/api/exchange/my-requests?pageIndex=${pageIndex}&pageSize=${pageSize}`)
+  },
+
+  // 获取换物请求详情
+  getExchangeRequestDetails: (exchangeRequestId: number): Promise<ApiResponse<ExchangeRequestItem>> => {
+    return api.get(`/api/exchange/${exchangeRequestId}`)
   },
 }
 
