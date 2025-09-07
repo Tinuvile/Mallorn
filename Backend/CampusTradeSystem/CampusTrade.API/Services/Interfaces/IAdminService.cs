@@ -139,6 +139,7 @@ namespace CampusTrade.API.Services.Interfaces
         /// <param name="pageSize">页大小</param>
         /// <param name="targetAdminId">目标管理员ID筛选</param>
         /// <param name="actionType">操作类型筛选</param>
+        /// <param name="categoryId">分类ID（筛选超级管理员和该分类的模块管理员）</param>
         /// <param name="startDate">起始时间</param>
         /// <param name="endDate">结束时间</param>
         /// <returns>审计日志列表</returns>
@@ -148,6 +149,7 @@ namespace CampusTrade.API.Services.Interfaces
             int pageSize,
             int? targetAdminId = null,
             string? actionType = null,
+            int? categoryId = null,
             DateTime? startDate = null,
             DateTime? endDate = null);
 

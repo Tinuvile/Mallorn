@@ -23,7 +23,11 @@
         </div>
         <div class="filter-item">
           <label>搜索</label>
-          <input v-model="search" placeholder="搜索举报..." class="filter-input">
+          <input v-model="search" placeholder="搜索举报..." class="filter-input" @keyup.enter="applyFilters">
+        </div>
+        <div class="filter-actions">
+          <button class="filter-btn" @click="applyFilters">筛选</button>
+          <button class="filter-btn secondary" @click="resetFilters">重置</button>
         </div>
       </div>
     </div>
@@ -51,17 +55,17 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="item in filteredReports" :key="item.id" :class="{ loading: loading }">
-              <td class="report-id">{{ item.id }}</td>
-              <td>{{ item.reportDate }}</td>
-              <td>{{ item.reporter }}</td>
-              <td class="target-goods">{{ item.targetGoods }}</td>
+            <tr v-for="item in filteredReports" :key="item.reportId" :class="{ loading: loading }">
+              <td class="report-id">{{ item.reportId }}</td>
+              <td>{{ new Date(item.createTime).toLocaleString() }}</td>
+              <td>举报用户</td>
+              <td class="target-goods">订单 #{{ item.orderId }}</td>
               <td>
                 <span class="type-tag">{{ item.type }}</span>
               </td>
               <td>
                 <span class="priority-tag" :class="getPriorityClass(item.priority)">
-                  {{ item.priority }}
+                  {{ getPriorityText(item.priority) }}
                 </span>
               </td>
               <td>
@@ -91,6 +95,43 @@
           </tbody>
         </table>
       </div>
+      
+      <!-- 分页组件 -->
+      <div class="pagination-container" v-if="totalPages > 1">
+        <div class="pagination-info">
+          共 {{ totalCount }} 条记录，第 {{ pageIndex + 1 }} / {{ totalPages }} 页
+        </div>
+        <div class="pagination-buttons">
+          <button 
+            class="pagination-btn" 
+            :disabled="pageIndex === 0"
+            @click="changePage(0)"
+          >
+            首页
+          </button>
+          <button 
+            class="pagination-btn" 
+            :disabled="pageIndex === 0"
+            @click="changePage(pageIndex - 1)"
+          >
+            上一页
+          </button>
+          <button 
+            class="pagination-btn" 
+            :disabled="pageIndex >= totalPages - 1"
+            @click="changePage(pageIndex + 1)"
+          >
+            下一页
+          </button>
+          <button 
+            class="pagination-btn" 
+            :disabled="pageIndex >= totalPages - 1"
+            @click="changePage(totalPages - 1)"
+          >
+            末页
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- 举报详情模态框 -->
@@ -104,19 +145,19 @@
           <div class="detail-grid">
             <div class="detail-item">
               <label>举报ID</label>
-              <div class="detail-value">{{ selectedReport.id }}</div>
+              <div class="detail-value">{{ selectedReport.reportId }}</div>
             </div>
             <div class="detail-item">
               <label>举报时间</label>
-              <div class="detail-value">{{ selectedReport.reportDate }}</div>
+              <div class="detail-value">{{ new Date(selectedReport.createTime).toLocaleString() }}</div>
             </div>
             <div class="detail-item">
               <label>举报人</label>
-              <div class="detail-value">{{ selectedReport.reporter }}</div>
+              <div class="detail-value">{{ selectedReport.reporter?.username || '未知用户' }}</div>
             </div>
             <div class="detail-item">
-              <label>被举报商品</label>
-              <div class="detail-value">{{ selectedReport.targetGoods }}</div>
+              <label>被举报订单</label>
+              <div class="detail-value">订单 #{{ selectedReport.orderId }}</div>
             </div>
             <div class="detail-item">
               <label>举报类型</label>
@@ -126,19 +167,19 @@
               <label>优先级</label>
               <div class="detail-value">
                 <span class="priority-tag" :class="getPriorityClass(selectedReport.priority)">
-                  {{ selectedReport.priority }}
+                  {{ getPriorityText(selectedReport.priority) }}
                 </span>
               </div>
             </div>
             <div class="detail-item full-width">
               <label>举报内容</label>
-              <div class="detail-value content">{{ selectedReport.content }}</div>
+              <div class="detail-value content">{{ selectedReport.description }}</div>
             </div>
-            <div v-if="selectedReport.evidence && selectedReport.evidence.length > 0" class="detail-item full-width">
+            <div v-if="selectedReport.evidences && selectedReport.evidences.length > 0" class="detail-item full-width">
               <label>举报证据</label>
               <div class="evidence-grid">
-                <div v-for="(evidence, index) in selectedReport.evidence" :key="index" class="evidence-item">
-                  <img :src="evidence" :alt="`证据 ${index + 1}`">
+                <div v-for="(evidence, index) in selectedReport.evidences" :key="index" class="evidence-item">
+                  <img :src="evidence.fileUrl" :alt="`证据 ${index + 1}`">
                 </div>
               </div>
             </div>
@@ -158,10 +199,10 @@
           <div class="report-summary">
             <h4>举报信息</h4>
             <div class="summary-grid">
-              <div><strong>举报人：</strong>{{ reportToModerate.reporter }}</div>
-              <div><strong>被举报商品：</strong>{{ reportToModerate.targetGoods }}</div>
+              <div><strong>举报人：</strong>{{ reportToModerate.reporter?.username || '未知用户' }}</div>
+              <div><strong>被举报订单：</strong>订单 #{{ reportToModerate.orderId }}</div>
               <div><strong>举报类型：</strong>{{ reportToModerate.type }}</div>
-              <div class="full-width"><strong>举报内容：</strong>{{ reportToModerate.content }}</div>
+              <div class="full-width"><strong>举报内容：</strong>{{ reportToModerate.description }}</div>
             </div>
           </div>
           
@@ -169,17 +210,9 @@
             <div class="form-item">
               <label>审核决定 *</label>
               <div class="radio-group">
-                <label class="radio-item">
-                  <input type="radio" v-model="moderationForm.decision" value="approved">
-                  <span class="radio-text">举报成立，处理被举报商品</span>
-                </label>
-                <label class="radio-item">
-                  <input type="radio" v-model="moderationForm.decision" value="rejected">
-                  <span class="radio-text">举报不成立，驳回举报</span>
-                </label>
-                <label class="radio-item">
-                  <input type="radio" v-model="moderationForm.decision" value="pending">
-                  <span class="radio-text">需要进一步调查，挂起处理</span>
+                <label class="radio-item" v-for="option in handleResultOptions" :key="option">
+                  <input type="radio" v-model="moderationForm.handleResult" :value="option">
+                  <span class="radio-text">{{ option }}</span>
                 </label>
               </div>
             </div>
@@ -187,23 +220,44 @@
             <div class="form-item">
               <label>审核意见 *</label>
               <textarea 
-                v-model="moderationForm.comment" 
+                v-model="moderationForm.handleNote" 
                 class="form-textarea"
                 rows="4"
                 placeholder="请输入审核意见..."
                 maxlength="500"
               ></textarea>
-              <div class="char-count">{{ moderationForm.comment.length }}/500</div>
+              <div class="char-count">{{ moderationForm.handleNote.length }}/500</div>
             </div>
             
-            <div v-if="moderationForm.decision === 'approved'" class="form-item">
-              <label>对被举报商品的处理方式 *</label>
-              <select v-model="moderationForm.action" class="form-select">
-                <option value="">请选择处理方式</option>
-                <option v-for="action in actionOptions" :key="action" :value="action">
-                  {{ action }}
-                </option>
-              </select>
+            <div class="form-item">
+              <label class="checkbox-label">
+                <input type="checkbox" v-model="moderationForm.applyPenalty">
+                <span>对被举报方进行处罚</span>
+              </label>
+            </div>
+            
+            <div v-if="moderationForm.applyPenalty" class="penalty-section">
+              <div class="form-item">
+                <label>处罚类型 *</label>
+                <select v-model="moderationForm.penaltyType" class="form-select">
+                  <option value="">请选择处罚类型</option>
+                  <option v-for="type in penaltyTypeOptions" :key="type" :value="type">
+                    {{ type }}
+                  </option>
+                </select>
+              </div>
+              
+              <div v-if="moderationForm.penaltyType === '禁言' || moderationForm.penaltyType === '封号'" class="form-item">
+                <label>处罚时长（天数） *</label>
+                <input 
+                  v-model.number="moderationForm.penaltyDuration" 
+                  type="number" 
+                  class="form-input"
+                  min="1"
+                  max="365"
+                  placeholder="1-365天"
+                >
+              </div>
             </div>
             
             <div class="form-actions">
@@ -249,27 +303,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
-
-// 定义接口
-interface Report {
-  id: string
-  reportDate: string
-  reporter: string
-  targetGoods: string
-  type: string
-  priority: string
-  status: string
-  content: string
-  evidence?: string[]
-}
-
-interface ModerationHistory {
-  timestamp: string
-  action: string
-  moderator: string
-  comment: string
-}
+import { ref, reactive, computed, onMounted } from 'vue'
+import { adminApi, reportApi, type ReportItem, type ReportDetail, type HandleReportRequest, type AdminReportsResponse } from '@/services/api'
 
 // 响应式数据
 const loading = ref(false)
@@ -278,89 +313,137 @@ const search = ref('')
 const showDetailDialog = ref(false)
 const showModerationDialog = ref(false)
 const showHistoryDialog = ref(false)
-const selectedReport = ref<Report | null>(null)
-const reportToModerate = ref<Report | null>(null)
-const moderationHistory = ref<ModerationHistory[]>([])
+const selectedReport = ref<ReportDetail | null>(null)
+const reportToModerate = ref<ReportDetail | null>(null)
+const moderationHistory = ref<Array<{
+  timestamp: string
+  action: string
+  moderator: string
+  comment: string
+}>>([])
+
+// 分页信息
+const pageIndex = ref(0)
+const pageSize = ref(10)
+const totalCount = ref(0)
+const totalPages = ref(0)
 
 const filters = reactive({
-  status: null as string | null,
-  type: null as string | null,
-  dateRange: null as string | null
+  status: '' as string,
+  type: '' as string,
+  dateRange: '' as string
 })
 
 const moderationForm = reactive({
-  decision: '',
-  comment: '',
-  action: ''
+  handleResult: '',
+  handleNote: '',
+  applyPenalty: false,
+  penaltyType: '',
+  penaltyDuration: undefined as number | undefined
 })
 
 // 选项数据
 const statusOptions = [
-  '待审核', '已通过', '已驳回', '挂起中', '已关闭'
+  '待审核', '已通过', '已驳回', '需要更多信息'
 ]
 
 const typeOptions = [
   '价格欺诈', '商品描述不符', '虚假商品', '违规内容', '恶意交易', '其他'
 ]
 
-const actionOptions = [
-  '下架商品', '警告卖家', '限制交易', '封禁账户'
+const handleResultOptions = [
+  '通过', '驳回', '需要更多信息'
 ]
 
-// 模拟举报数据
-const reportsList = ref<Report[]>([
-  {
-    id: 'R001',
-    reportDate: '2025-01-20 14:30:00',
-    reporter: '用户A',
-    targetGoods: 'iPhone 13 Pro',
-    type: '价格欺诈',
-    priority: '高',
-    status: '待审核',
-    content: '该商品标价明显低于市场价，怀疑是诈骗商品',
-    evidence: ['https://via.placeholder.com/200', 'https://via.placeholder.com/200']
-  },
-  {
-    id: 'R002',
-    reportDate: '2025-01-19 16:45:00',
-    reporter: '用户B',
-    targetGoods: '高等数学教材',
-    type: '商品描述不符',
-    priority: '中',
-    status: '已通过',
-    content: '收到的教材版本与描述不符，且有明显破损',
-    evidence: ['https://via.placeholder.com/200']
-  }
-])
+const penaltyTypeOptions = [
+  '警告', '禁言', '封号'
+]
+
+// 举报数据
+const reportsList = ref<ReportItem[]>([])
 
 // 计算属性
 const filteredReports = computed(() => {
-  return reportsList.value.filter(report => {
-    if (search.value && !report.reporter.includes(search.value) && !report.targetGoods.includes(search.value)) {
-      return false
-    }
-    if (filters.status && report.status !== filters.status) return false
-    if (filters.type && report.type !== filters.type) return false
-    return true
-  })
+  let filtered = reportsList.value
+  
+  if (search.value) {
+    filtered = filtered.filter(report => 
+      report.description?.toLowerCase().includes(search.value.toLowerCase()) ||
+      report.type.includes(search.value)
+    )
+  }
+  
+  if (filters.status) {
+    filtered = filtered.filter(report => report.status === filters.status)
+  }
+  
+  if (filters.type) {
+    filtered = filtered.filter(report => report.type === filters.type)
+  }
+  
+  return filtered
 })
 
 const isModerationFormValid = computed(() => {
-  const hasDecision = !!moderationForm.decision
-  const hasComment = !!moderationForm.comment && moderationForm.comment.length <= 500
-  const hasAction = moderationForm.decision !== 'approved' || !!moderationForm.action
+  const hasResult = !!moderationForm.handleResult
+  const hasNote = !!moderationForm.handleNote && moderationForm.handleNote.length <= 500
+  const hasPenaltyInfo = !moderationForm.applyPenalty || 
+    (!!moderationForm.penaltyType && 
+     (!moderationForm.penaltyDuration || (moderationForm.penaltyDuration >= 1 && moderationForm.penaltyDuration <= 365)))
   
-  return hasDecision && hasComment && hasAction
+  return hasResult && hasNote && hasPenaltyInfo
 })
 
-// 方法
-const getPriorityClass = (priority: string) => {
-  const classes: Record<string, string> = {
-    '高': 'priority-high',
-    '中': 'priority-medium',
-    '低': 'priority-low'
+// API 调用方法
+const fetchReports = async () => {
+  try {
+    loading.value = true
+    
+    const response = await adminApi.getAdminReports(pageIndex.value, pageSize.value, filters.status || undefined)
+    
+    if (response.success && response.data) {
+      reportsList.value = response.data.reports
+      totalCount.value = response.data.totalCount
+      totalPages.value = response.data.totalPages
+    }
+  } catch (error) {
+    console.error('获取举报列表失败:', error)
+  } finally {
+    loading.value = false
   }
-  return classes[priority] || 'priority-default'
+}
+
+const fetchReportDetail = async (reportId: number): Promise<ReportDetail | null> => {
+  try {
+    const response = await reportApi.getReportDetail(reportId)
+    
+    if (response.success && response.data) {
+      return response.data
+    }
+  } catch (error) {
+    console.error('获取举报详情失败:', error)
+  }
+  
+  return null
+}
+
+// 方法
+const getPriorityClass = (priority?: number) => {
+  const classes: Record<number, string> = {
+    3: 'priority-high',
+    2: 'priority-medium', 
+    1: 'priority-low'
+  }
+  return classes[priority || 1] || 'priority-default'
+}
+
+const getPriorityText = (priority?: number) => {
+  const priorityMap: Record<number, string> = {
+    3: '高',
+    2: '中',
+    1: '低'
+  }
+  return priorityMap[priority || 1] || '低'
 }
 
 const getStatusClass = (status: string) => {
@@ -368,7 +451,7 @@ const getStatusClass = (status: string) => {
     '待审核': 'status-pending',
     '已通过': 'status-approved',
     '已驳回': 'status-rejected',
-    '挂起中': 'status-suspended',
+    '需要更多信息': 'status-suspended',
     '已关闭': 'status-closed'
   }
   return classes[status] || 'status-default'
@@ -385,33 +468,42 @@ const getHistoryClass = (action: string) => {
   return classes[action] || 'history-default'
 }
 
-const viewReportDetails = (item: Report) => {
-  selectedReport.value = item
-  showDetailDialog.value = true
+const viewReportDetails = async (item: ReportItem) => {
+  const detail = await fetchReportDetail(item.reportId)
+  if (detail) {
+    selectedReport.value = detail
+    showDetailDialog.value = true
+  }
 }
 
-const moderateReport = (item: Report) => {
-  reportToModerate.value = item
-  Object.assign(moderationForm, {
-    decision: '',
-    comment: '',
-    action: ''
-  })
-  showModerationDialog.value = true
+const moderateReport = async (item: ReportItem) => {
+  const detail = await fetchReportDetail(item.reportId)
+  if (detail) {
+    reportToModerate.value = detail
+    Object.assign(moderationForm, {
+      handleResult: '',
+      handleNote: '',
+      applyPenalty: false,
+      penaltyType: '',
+      penaltyDuration: undefined
+    })
+    showModerationDialog.value = true
+  }
 }
 
-const viewHistory = (item: Report) => {
+const viewHistory = (item: ReportItem) => {
+  // 模拟审核历史数据
   moderationHistory.value = [
     {
-      timestamp: '2025-01-20 14:30:00',
+      timestamp: new Date(item.createTime).toLocaleString(),
       action: '提交举报',
-      moderator: '用户A',
-      comment: '举报商品价格异常'
+      moderator: '举报用户',
+      comment: '举报提交'
     },
     {
-      timestamp: '2025-01-20 15:00:00',
+      timestamp: new Date().toLocaleString(),
       action: '开始审核',
-      moderator: '管理员张三',
+      moderator: '管理员',
       comment: '开始处理该举报，正在调查中'
     }
   ]
@@ -419,28 +511,25 @@ const viewHistory = (item: Report) => {
 }
 
 const submitModeration = async () => {
+  if (!reportToModerate.value || !isModerationFormValid.value) return
+  
   moderating.value = true
   try {
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    
-    if (reportToModerate.value) {
-      const report = reportsList.value.find(r => r.id === reportToModerate.value!.id)
-      if (report) {
-        switch (moderationForm.decision) {
-          case 'approved':
-            report.status = '已通过'
-            break
-          case 'rejected':
-            report.status = '已驳回'
-            break
-          case 'pending':
-            report.status = '挂起中'
-            break
-        }
-      }
+    const request: HandleReportRequest = {
+      handleResult: moderationForm.handleResult,
+      handleNote: moderationForm.handleNote,
+      applyPenalty: moderationForm.applyPenalty,
+      penaltyType: moderationForm.applyPenalty ? moderationForm.penaltyType : undefined,
+      penaltyDuration: moderationForm.applyPenalty ? moderationForm.penaltyDuration : undefined
     }
     
-    closeModerationDialog()
+    const response = await adminApi.handleReport(reportToModerate.value.reportId, request)
+    
+    if (response.success) {
+      // 处理成功后刷新列表
+      await fetchReports()
+      closeModerationDialog()
+    }
   } catch (error) {
     console.error('审核提交失败:', error)
   } finally {
@@ -452,11 +541,42 @@ const closeModerationDialog = () => {
   showModerationDialog.value = false
   reportToModerate.value = null
   Object.assign(moderationForm, {
-    decision: '',
-    comment: '',
-    action: ''
+    handleResult: '',
+    handleNote: '',
+    applyPenalty: false,
+    penaltyType: '',
+    penaltyDuration: undefined
   })
 }
+
+// 分页方法
+const changePage = (newPageIndex: number) => {
+  pageIndex.value = newPageIndex
+  fetchReports()
+}
+
+// 筛选方法
+const applyFilters = () => {
+  pageIndex.value = 0
+  fetchReports()
+}
+
+// 重置筛选
+const resetFilters = () => {
+  Object.assign(filters, {
+    status: '',
+    type: '',
+    dateRange: ''
+  })
+  search.value = ''
+  pageIndex.value = 0
+  fetchReports()
+}
+
+// 组件挂载时获取数据
+onMounted(() => {
+  fetchReports()
+})
 </script>
 
 <style scoped>
@@ -477,6 +597,39 @@ const closeModerationDialog = () => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
+  align-items: end;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+}
+
+.filter-btn:not(.secondary) {
+  background-color: #FF85A2;
+  color: white;
+}
+
+.filter-btn:not(.secondary):hover {
+  background-color: #ff6b90;
+}
+
+.filter-btn.secondary {
+  background-color: #f5f5f5;
+  color: #666;
+}
+
+.filter-btn.secondary:hover {
+  background-color: #e0e0e0;
 }
 
 .filter-item {
@@ -842,6 +995,68 @@ const closeModerationDialog = () => {
   text-align: right;
 }
 
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.checkbox-label input[type="checkbox"] {
+  margin: 0;
+}
+
+.penalty-section {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border-left: 4px solid #FF85A2;
+}
+
+/* 分页样式 */
+.pagination-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-top: 1px solid #eee;
+  background-color: #fafafa;
+}
+
+.pagination-info {
+  font-size: 14px;
+  color: #666;
+}
+
+.pagination-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.pagination-btn {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  background-color: white;
+  color: #666;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background-color: #FF85A2;
+  color: white;
+  border-color: #FF85A2;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .form-actions {
   display: flex;
   gap: 12px;
@@ -963,6 +1178,19 @@ const closeModerationDialog = () => {
   
   .evidence-grid {
     grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  }
+  
+  .filter-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .pagination-container {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .pagination-buttons {
+    justify-content: center;
   }
 }
 </style>

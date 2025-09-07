@@ -1464,4 +1464,298 @@ export const notificationApi = {
   },
 }
 
+// 管理员相关接口数据格式
+export interface AdminInfo {
+  adminId: number
+  userId: number
+  username: string
+  email: string
+  role: string
+  roleDisplayName: string
+  assignedCategory?: number
+  assignedCategoryName?: string
+  createdAt: string
+  isActive: boolean
+}
+
+export interface AdminProduct {
+  product_id: number
+  title: string
+  description?: string
+  base_price: number
+  status: string
+  publish_time: string
+  view_count: number
+  main_image_url?: string
+  thumbnail_url?: string
+  user: {
+    user_id: number
+    username?: string
+    name?: string
+    avatar_url?: string
+    credit_score?: number
+    is_online?: boolean
+  }
+  category: {
+    category_id: number
+    name: string
+    parent_id?: number
+    full_path?: string
+  }
+  days_until_auto_remove?: number
+  is_popular?: boolean
+  tags?: string[]
+}
+
+export interface AdminProductQuery {
+  pageIndex?: number
+  pageSize?: number
+  status?: string
+  categoryId?: number
+  searchKeyword?: string
+  userId?: number
+  startDate?: string
+  endDate?: string
+}
+
+export interface AdminProductsResponse {
+  products: AdminProduct[]
+  totalCount: number
+  pageIndex: number
+  pageSize: number
+}
+
+export interface AdminUpdateProductRequest {
+  title?: string
+  description?: string
+  basePrice?: number
+  status?: string
+  categoryId?: number
+  adminNote?: string
+}
+
+export interface BatchProductOperationRequest {
+  productIds: number[]
+  operationType: string
+  reason?: string
+}
+
+export interface ReportItem {
+  reportId: number
+  orderId: number
+  type: string
+  priority?: number
+  status: string
+  description?: string
+  createTime: string
+  evidenceCount: number
+}
+
+export interface ReportDetail {
+  reportId: number
+  orderId: number
+  type: string
+  priority?: number
+  status: string
+  description?: string
+  createTime: string
+  reporter?: {
+    userId: number
+    username: string
+  }
+  evidences: Array<{
+    evidenceId: number
+    fileType: string
+    fileUrl: string
+    uploadedAt: string
+  }>
+}
+
+export interface HandleReportRequest {
+  handleResult: string
+  handleNote?: string
+  applyPenalty?: boolean
+  penaltyType?: string
+  penaltyDuration?: number
+}
+
+export interface AdminReportsResponse {
+  reports: ReportItem[]
+  totalCount: number
+  pageIndex: number
+  pageSize: number
+  totalPages: number
+}
+
+export interface AdminStatistics {
+  totalUsers: number
+  totalProducts: number
+  totalReports: number
+  pendingReports: number
+  activeModerators: number
+  todayOperations: number
+  monthlyStats: Array<{
+    month: string
+    userCount: number
+    productCount: number
+    reportCount: number
+  }>
+}
+
+// 管理员相关接口
+export const adminApi = {
+  // 获取当前管理员信息
+  getCurrentAdminInfo: (): Promise<ApiResponse<AdminInfo>> => {
+    return api.get('/api/admin/current')
+  },
+
+  // 获取管理员可管理的商品列表
+  getManagedProducts: (query: AdminProductQuery): Promise<ApiResponse<AdminProductsResponse>> => {
+    const params = new URLSearchParams()
+    
+    if (query.pageIndex !== undefined) params.append('pageIndex', query.pageIndex.toString())
+    if (query.pageSize !== undefined) params.append('pageSize', query.pageSize.toString())
+    if (query.status) params.append('status', query.status)
+    if (query.categoryId !== undefined) params.append('categoryId', query.categoryId.toString())
+    if (query.searchKeyword) params.append('searchKeyword', query.searchKeyword)
+    if (query.userId !== undefined) params.append('userId', query.userId.toString())
+    if (query.startDate) params.append('startDate', query.startDate)
+    if (query.endDate) params.append('endDate', query.endDate)
+
+    return api.get(`/api/admin/products?${params.toString()}`)
+  },
+
+  // 获取商品详情（管理员视角）
+  getProductDetailForAdmin: (productId: number): Promise<ApiResponse<AdminProduct>> => {
+    return api.get(`/api/admin/products/${productId}`)
+  },
+
+  // 更新商品信息（管理员操作）
+  updateProductAsAdmin: (productId: number, data: AdminUpdateProductRequest): Promise<ApiResponse> => {
+    return api.put(`/api/admin/products/${productId}`, data)
+  },
+
+  // 删除商品（管理员操作）
+  deleteProductAsAdmin: (productId: number, reason?: string): Promise<ApiResponse> => {
+    return api.delete(`/api/admin/products/${productId}`, {
+      data: reason || '管理员删除',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+  },
+
+  // 批量操作商品
+  batchOperateProducts: (data: BatchProductOperationRequest): Promise<ApiResponse<{
+    message: string
+    failedProducts?: Array<{ productId: number; reason: string }>
+  }>> => {
+    return api.post('/api/admin/products/batch', data)
+  },
+
+  // 验证商品管理权限
+  validateProductPermission: (productId: number): Promise<ApiResponse<{
+    hasPermission: boolean
+    adminRole: string
+  }>> => {
+    return api.get(`/api/admin/products/${productId}/permission`)
+  },
+
+  // 获取管理员可管理的分类列表
+  getManagedCategories: (): Promise<ApiResponse<{
+    categoryIds: number[]
+    adminRole: string
+  }>> => {
+    return api.get('/api/admin/categories')
+  },
+
+  // 获取管理员负责的举报列表
+  getAdminReports: (
+    pageIndex: number = 0,
+    pageSize: number = 10,
+    status?: string
+  ): Promise<ApiResponse<AdminReportsResponse>> => {
+    const params = new URLSearchParams()
+    params.append('pageIndex', pageIndex.toString())
+    params.append('pageSize', pageSize.toString())
+    if (status) params.append('status', status)
+
+    return api.get(`/api/admin/reports?${params.toString()}`)
+  },
+
+  // 处理举报
+  handleReport: (reportId: number, data: HandleReportRequest): Promise<ApiResponse> => {
+    return api.post(`/api/admin/reports/${reportId}/handle`, data)
+  },
+
+  // 验证举报处理权限
+  validateReportPermission: (reportId: number): Promise<ApiResponse<{
+    hasPermission: boolean
+    adminRole: string
+  }>> => {
+    return api.get(`/api/admin/permissions/report/${reportId}`)
+  },
+
+  // 获取管理员统计信息
+  getAdminStatistics: (): Promise<ApiResponse<AdminStatistics>> => {
+    return api.get('/api/admin/statistics')
+  },
+
+  // 获取所有审计日志（仅系统管理员）
+  getAllAuditLogs: (
+    pageIndex: number = 0,
+    pageSize: number = 10,
+    targetAdminId?: number,
+    actionType?: string,
+    categoryId?: number,
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<ApiResponse<{
+    logs: Array<{
+      logId: number
+      adminId: number
+      adminUsername: string
+      adminRole: string
+      actionType: string
+      targetId?: number
+      logDetail?: string
+      logTime: string
+    }>
+    pagination: {
+      pageIndex: number
+      pageSize: number
+      totalCount: number
+      totalPages: number
+    }
+  }>> => {
+    const params = new URLSearchParams()
+    params.append('pageIndex', pageIndex.toString())
+    params.append('pageSize', pageSize.toString())
+    if (targetAdminId !== undefined) params.append('targetAdminId', targetAdminId.toString())
+    if (actionType) params.append('actionType', actionType)
+    if (categoryId !== undefined) params.append('categoryId', categoryId.toString())
+    if (startDate) params.append('startDate', startDate.toISOString())
+    if (endDate) params.append('endDate', endDate.toISOString())
+
+    return api.get(`/api/admin/audit-logs?${params.toString()}`)
+  },
+}
+
+// 举报相关接口
+export const reportApi = {
+  // 获取举报详情
+  getReportDetail: (reportId: number): Promise<ApiResponse<ReportDetail>> => {
+    return api.get(`/api/report/${reportId}`)
+  },
+
+  // 获取举报类型列表
+  getReportTypes: (): Promise<ApiResponse<Array<{
+    value: string
+    label: string
+    priority: number
+  }>>> => {
+    return api.get('/api/report/types')
+  },
+}
+
 export default api

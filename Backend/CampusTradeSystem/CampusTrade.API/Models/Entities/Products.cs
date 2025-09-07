@@ -49,10 +49,11 @@ namespace CampusTrade.API.Models.Entities
 
         /// <summary>
         /// 基础价格 - 对应Oracle中的base_price字段，精度为10位数字2位小数
+        /// NUMBER(10,2)限制：总共10位数字，2位小数，最大值99999999.99
         /// </summary>
         [Required]
         [Column("BASE_PRICE", TypeName = "NUMBER(10,2)")]
-        [Range(0.01, 999999.99, ErrorMessage = "商品价格必须在合理范围内")]
+        [Range(0.01, 99999999.99, ErrorMessage = "商品价格必须在0.01到99999999.99元之间")]
         public decimal BasePrice { get; set; }
 
         /// <summary>

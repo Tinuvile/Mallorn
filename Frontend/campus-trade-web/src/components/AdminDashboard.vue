@@ -120,7 +120,7 @@
                     <v-card-text class="text-center">
                       <v-icon size="40" color="green">mdi-account-supervisor</v-icon>
                       <div class="text-h4 mt-2">{{ stats.activeModerators }}</div>
-                      <div class="text-subtitle-1">活跃管理员</div>
+                      <div class="text-subtitle-1">总管理员数</div>
                     </v-card-text>
                   </v-card>
                 </v-col>
@@ -143,18 +143,39 @@
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { adminApi } from '@/services/api'
 
 const router = useRouter()
 
-// 模拟统计数据
+// 动态统计数据
 const stats = reactive({
-  totalGoods: 1247,
-  pendingReports: 23,
-  activeModerators: 8,
-  todayOperations: 156
+  totalGoods: 0,
+  pendingReports: 0,
+  activeModerators: 0,
+  todayOperations: 0
 })
+
+// 获取统计数据
+const fetchStatistics = async () => {
+  try {
+    const response = await adminApi.getAdminStatistics()
+    if (response.success && response.data) {
+      stats.totalGoods = response.data.totalProducts
+      stats.pendingReports = response.data.pendingReports
+      stats.activeModerators = response.data.activeModerators
+      stats.todayOperations = response.data.todayOperations
+    }
+  } catch (error) {
+    console.error('获取统计数据失败:', error)
+    // 设置默认值
+    stats.totalGoods = 0
+    stats.pendingReports = 0
+    stats.activeModerators = 0
+    stats.todayOperations = 0
+  }
+}
 
 // 导航方法
 const goToModeratorPanel = () => {
@@ -164,6 +185,11 @@ const goToModeratorPanel = () => {
 const goToSystemAudit = () => {
   router.push('/admin/system-audit')
 }
+
+// 组件挂载时获取数据
+onMounted(() => {
+  fetchStatistics()
+})
 </script>
 
 <style scoped>

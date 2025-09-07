@@ -667,6 +667,12 @@
 
   // 加载数据
   const loadData = async () => {
+    // 防止重复调用
+    if (userStore.isLoadingProfile) {
+      console.log('User profile loading in progress, skipping...')
+      return
+    }
+
     try {
       // 使用新的getUserProfile方法获取完整用户信息
       const result = await userStore.getUserProfile()

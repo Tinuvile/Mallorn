@@ -16,6 +16,9 @@ namespace CampusTrade.API.Models.Entities
             public const string BanUser = "封禁用户";
             public const string ModifyPermission = "修改权限";
             public const string HandleReport = "处理举报";
+            public const string UpdateProduct = "更新商品";
+            public const string DeleteProduct = "删除商品";
+            public const string BatchOperation = "批量操作";
         }
 
         /// <summary>

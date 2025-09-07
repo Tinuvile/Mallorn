@@ -600,7 +600,7 @@ namespace CampusTrade.API.Services.Admin
             try
             {
                 var (logs, totalCount) = await _auditLogRepository.GetPagedLogsAsync(
-                    pageIndex, pageSize, adminId, null, startDate, endDate);
+                    pageIndex, pageSize, adminId, null, null, startDate, endDate);
 
                 var logDtos = logs.Select(MapToAuditLogResponseDto).ToList();
 
@@ -622,6 +622,7 @@ namespace CampusTrade.API.Services.Admin
             int pageSize,
             int? targetAdminId = null,
             string? actionType = null,
+            int? categoryId = null,
             DateTime? startDate = null,
             DateTime? endDate = null)
         {
@@ -635,7 +636,7 @@ namespace CampusTrade.API.Services.Admin
                 }
 
                 var (logs, totalCount) = await _auditLogRepository.GetPagedLogsAsync(
-                    pageIndex, pageSize, targetAdminId, actionType, startDate, endDate);
+                    pageIndex, pageSize, targetAdminId, actionType, categoryId, startDate, endDate);
 
                 var logDtos = logs.Select(MapToAuditLogResponseDto).ToList();
 
@@ -922,6 +923,23 @@ namespace CampusTrade.API.Services.Admin
         {
             try
             {
+                _logger.LogInformation("管理员更新商品请求 - AdminId: {AdminId}, ProductId: {ProductId}, UpdateDto: {@UpdateDto}",
+                    adminId, productId, updateDto);
+
+                // 验证数据
+                if (updateDto.BasePrice.HasValue && updateDto.BasePrice.Value <= 0)
+                {
+                    _logger.LogWarning("价格验证失败 - ProductId: {ProductId}, BasePrice: {BasePrice}", productId, updateDto.BasePrice);
+                    return (false, "商品价格必须大于0");
+                }
+
+                // Oracle NUMBER(10,2) 限制：总共10位数字，2位小数，所以整数部分最多8位，最大值99999999.99
+                if (updateDto.BasePrice.HasValue && updateDto.BasePrice.Value > 99999999.99m)
+                {
+                    _logger.LogWarning("价格验证失败 - ProductId: {ProductId}, BasePrice: {BasePrice}", productId, updateDto.BasePrice);
+                    return (false, "商品价格不能超过99999999.99元");
+                }
+
                 // 验证权限
                 if (!await ValidateProductPermissionAsync(adminId, productId))
                 {
@@ -936,32 +954,60 @@ namespace CampusTrade.API.Services.Admin
 
                 var changes = new List<string>();
 
-                // 更新字段
-                if (!string.IsNullOrEmpty(updateDto.Title) && updateDto.Title != product.Title)
+                await _unitOfWork.BeginTransactionAsync();
+
+                // 获取要更新的商品（重新获取避免并发问题）
+                var productToUpdate = await _productRepository.GetByPrimaryKeyAsync(productId);
+                if (productToUpdate == null)
                 {
-                    changes.Add($"标题: {product.Title} -> {updateDto.Title}");
-                    product.Title = updateDto.Title;
+                    return (false, "商品不存在");
                 }
 
-                if (!string.IsNullOrEmpty(updateDto.Description) && updateDto.Description != product.Description)
+                // 直接更新字段，避免多次Repository调用
+                bool hasChanges = false;
+
+                if (!string.IsNullOrEmpty(updateDto.Title) && updateDto.Title != productToUpdate.Title)
+                {
+                    changes.Add($"标题: {productToUpdate.Title} -> {updateDto.Title}");
+                    productToUpdate.Title = updateDto.Title;
+                    hasChanges = true;
+                }
+
+                if (!string.IsNullOrEmpty(updateDto.Description) && updateDto.Description != productToUpdate.Description)
                 {
                     changes.Add($"描述: 已更新");
-                    product.Description = updateDto.Description;
+                    productToUpdate.Description = updateDto.Description;
+                    hasChanges = true;
                 }
 
-                if (updateDto.BasePrice.HasValue && updateDto.BasePrice.Value != product.BasePrice)
+                if (updateDto.BasePrice.HasValue && updateDto.BasePrice.Value != productToUpdate.BasePrice)
                 {
-                    changes.Add($"价格: {product.BasePrice} -> {updateDto.BasePrice.Value}");
-                    product.BasePrice = updateDto.BasePrice.Value;
+                    _logger.LogInformation("更新价格: 原值={OldPrice}, 新值={NewPrice}, 类型={PriceType}",
+                        productToUpdate.BasePrice, updateDto.BasePrice.Value, updateDto.BasePrice.Value.GetType());
+
+                    // 验证价格范围 - Oracle NUMBER(10,2) 限制
+                    if (updateDto.BasePrice.Value <= 0)
+                    {
+                        return (false, "商品价格必须大于0");
+                    }
+                    if (updateDto.BasePrice.Value > 99999999.99m)
+                    {
+                        return (false, "商品价格超出允许范围（最大99999999.99元）");
+                    }
+
+                    changes.Add($"价格: {productToUpdate.BasePrice} -> {updateDto.BasePrice.Value}");
+                    productToUpdate.BasePrice = updateDto.BasePrice.Value;
+                    hasChanges = true;
                 }
 
-                if (!string.IsNullOrEmpty(updateDto.Status) && updateDto.Status != product.Status)
+                if (!string.IsNullOrEmpty(updateDto.Status) && updateDto.Status != productToUpdate.Status)
                 {
-                    changes.Add($"状态: {product.Status} -> {updateDto.Status}");
-                    product.Status = updateDto.Status;
+                    changes.Add($"状态: {productToUpdate.Status} -> {updateDto.Status}");
+                    productToUpdate.Status = updateDto.Status;
+                    hasChanges = true;
                 }
 
-                if (updateDto.CategoryId.HasValue && updateDto.CategoryId.Value != product.CategoryId)
+                if (updateDto.CategoryId.HasValue && updateDto.CategoryId.Value != productToUpdate.CategoryId)
                 {
                     // 验证新分类是否在管理员权限范围内
                     var admin = await _adminRepository.GetAdminWithDetailsAsync(adminId);
@@ -974,35 +1020,15 @@ namespace CampusTrade.API.Services.Admin
                         }
                     }
 
-                    changes.Add($"分类ID: {product.CategoryId} -> {updateDto.CategoryId.Value}");
-                    product.CategoryId = updateDto.CategoryId.Value;
+                    changes.Add($"分类ID: {productToUpdate.CategoryId} -> {updateDto.CategoryId.Value}");
+                    productToUpdate.CategoryId = updateDto.CategoryId.Value;
+                    hasChanges = true;
                 }
 
-                await _unitOfWork.BeginTransactionAsync();
-
-                // 使用UpdateProductDetailsAsync方法
-                await _productRepository.UpdateProductDetailsAsync(
-                    productId,
-                    updateDto.Title,
-                    updateDto.Description,
-                    updateDto.BasePrice
-                );
-
-                // 单独更新状态
-                if (!string.IsNullOrEmpty(updateDto.Status))
+                // 只有当确实有变更时才更新
+                if (hasChanges)
                 {
-                    await _productRepository.SetProductStatusAsync(productId, updateDto.Status);
-                }
-
-                // 分类更新需要手动处理
-                if (updateDto.CategoryId.HasValue)
-                {
-                    var productToUpdate = await _productRepository.GetByPrimaryKeyAsync(productId);
-                    if (productToUpdate != null)
-                    {
-                        productToUpdate.CategoryId = updateDto.CategoryId.Value;
-                        _productRepository.Update(productToUpdate);
-                    }
+                    _productRepository.Update(productToUpdate);
                 }
 
                 // 记录操作日志
@@ -1012,7 +1038,7 @@ namespace CampusTrade.API.Services.Admin
                     logDetail += $". 备注: {updateDto.AdminNote}";
                 }
 
-                await LogAdminActionAsync(adminId, "UpdateProduct", productId, logDetail);
+                await LogAdminActionAsync(adminId, AuditLog.ActionTypes.UpdateProduct, productId, logDetail);
 
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
@@ -1058,7 +1084,7 @@ namespace CampusTrade.API.Services.Admin
                     logDetail += $". 原因: {reason}";
                 }
 
-                await LogAdminActionAsync(adminId, "DeleteProduct", productId, logDetail);
+                await LogAdminActionAsync(adminId, AuditLog.ActionTypes.DeleteProduct, productId, logDetail);
 
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
@@ -1125,7 +1151,7 @@ namespace CampusTrade.API.Services.Admin
                             logDetail += $", 原因: {batchDto.Reason}";
                         }
 
-                        await LogAdminActionAsync(adminId, "BatchOperation", productId, logDetail);
+                        await LogAdminActionAsync(adminId, AuditLog.ActionTypes.BatchOperation, productId, logDetail);
                     }
                     catch (Exception ex)
                     {
@@ -1295,29 +1321,100 @@ namespace CampusTrade.API.Services.Admin
         {
             try
             {
-                var adminStats = await _adminRepository.GetAdminStatisticsAsync();
-                var auditStats = await _auditLogRepository.GetAuditStatisticsAsync(DateTime.Now.AddDays(-30));
-
                 var result = new Dictionary<string, object>();
 
-                // 管理员统计
+                // 获取基本统计数据
+                var totalProducts = await _productRepository.GetTotalProductsNumberAsync();
+                result["totalProducts"] = totalProducts;
+                result["totalGoods"] = totalProducts; // 兼容前端字段名
+
+                var pendingReports = await _reportsRepository.GetPendingReportsCountAsync();
+                result["pendingReports"] = pendingReports;
+
+                var activeModerators = await _adminRepository.GetActiveAdminCountAsync();
+                result["activeModerators"] = activeModerators;
+
+                var todayStart = DateTime.Today;
+                var todayEnd = todayStart.AddDays(1);
+                var todayOperations = await _auditLogRepository.GetOperationCountByDateRangeAsync(todayStart, todayEnd);
+                result["todayOperations"] = todayOperations;
+
+                var totalUsers = await _userRepository.GetActiveUserCountAsync();
+                result["totalUsers"] = totalUsers;
+
+                // 获取管理员统计
+                var adminStats = await _adminRepository.GetAdminStatisticsAsync();
                 foreach (var stat in adminStats)
                 {
-                    result[stat.Key] = stat.Value;
+                    result[$"admin_{stat.Key}"] = stat.Value;
                 }
 
-                // 最近30天的操作统计
+                // 获取最近30天的操作统计
+                var auditStats = await _auditLogRepository.GetAuditStatisticsAsync(DateTime.Now.AddDays(-30));
                 foreach (var stat in auditStats)
                 {
-                    result[$"最近30天_{stat.Key}"] = stat.Value;
+                    result[$"recent_{stat.Key}"] = stat.Value;
                 }
+
+                // 获取月度统计数据
+                var monthlyStats = await GetMonthlyStatsAsync();
+                result["monthlyStats"] = monthlyStats;
 
                 return result;
             }
             catch (Exception ex)
             {
                 _serilogLogger.Error(ex, "获取管理员统计信息异常");
-                return new Dictionary<string, object>();
+
+                // 返回默认统计数据，避免前端显示错误
+                return new Dictionary<string, object>
+                {
+                    ["totalProducts"] = 0,
+                    ["totalGoods"] = 0,
+                    ["pendingReports"] = 0,
+                    ["activeModerators"] = 0,
+                    ["todayOperations"] = 0,
+                    ["totalUsers"] = 0,
+                    ["monthlyStats"] = new List<object>()
+                };
+            }
+        }
+
+        /// <summary>
+        /// 获取月度统计数据
+        /// </summary>
+        private async Task<List<object>> GetMonthlyStatsAsync()
+        {
+            try
+            {
+                var threeMonthsAgo = DateTime.Now.AddMonths(-3);
+                var monthlyData = new List<object>();
+
+                for (int i = 2; i >= 0; i--)
+                {
+                    var monthStart = DateTime.Now.AddMonths(-i).Date;
+                    var monthEnd = monthStart.AddMonths(1);
+                    var monthName = monthStart.ToString("yyyy-MM");
+
+                    var userCount = await _userRepository.GetUserCountByDateRangeAsync(monthStart, monthEnd);
+                    var productCount = await _productRepository.GetProductCountByDateRangeAsync(monthStart, monthEnd);
+                    var operationCount = await _auditLogRepository.GetOperationCountByDateRangeAsync(monthStart, monthEnd);
+
+                    monthlyData.Add(new
+                    {
+                        month = monthName,
+                        userCount = userCount,
+                        productCount = productCount,
+                        operationCount = operationCount
+                    });
+                }
+
+                return monthlyData;
+            }
+            catch (Exception ex)
+            {
+                _serilogLogger.Error(ex, "获取月度统计数据异常");
+                return new List<object>();
             }
         }
         #endregion
