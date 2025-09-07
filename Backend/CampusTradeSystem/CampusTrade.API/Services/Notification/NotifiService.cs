@@ -249,14 +249,40 @@ namespace CampusTrade.API.Services.Notification
                 var productImage = negotiation.Order.Product.ProductImages
                     .FirstOrDefault()?.ImageUrl ?? "/images/default-product.png";
 
-                var contentText = negotiation.Status switch
+                string contentText;
+                decimal displayPrice = negotiation.ProposedPrice;
+
+                // 如果是反报价状态，需要获取卖家的反报价价格
+                if (negotiation.Status == "反报价")
                 {
-                    "等待回应" => $"您向卖家提出议价请求，心理价位：￥{negotiation.ProposedPrice}，等待卖家回应",
-                    "接受" => $"卖家已接受您的议价！成交价格：￥{negotiation.ProposedPrice}",
-                    "拒绝" => $"卖家拒绝了您的议价请求",
-                    "反报价" => $"卖家给出反报价，等待您的回应",
-                    _ => $"您对商品《{negotiation.Order.Product.Title}》提出了议价 ￥{negotiation.ProposedPrice}，当前状态：{negotiation.Status}"
-                };
+                    var latestNegotiation = await _context.Negotiations
+                        .Where(n => n.OrderId == negotiation.OrderId && n.Status == "等待回应")
+                        .OrderByDescending(n => n.CreatedAt)
+                        .FirstOrDefaultAsync();
+
+                    if (latestNegotiation != null)
+                    {
+                        displayPrice = latestNegotiation.ProposedPrice;
+                        contentText = $"卖家给出反报价：￥{displayPrice}，等待您的回应";
+                    }
+                    else
+                    {
+                        contentText = $"卖家给出反报价，等待您的回应";
+                    }
+                }
+                else
+                {
+                    contentText = negotiation.Status switch
+                    {
+                        "等待回应" => $"您向卖家提出议价请求，心理价位：￥{negotiation.ProposedPrice}，等待卖家回应",
+                        "接受" => $"卖家已接受您的议价！成交价格：￥{negotiation.ProposedPrice}",
+                        "拒绝" => $"卖家拒绝了您的议价请求",
+                        _ => $"您对商品《{negotiation.Order.Product.Title}》提出了议价 ￥{negotiation.ProposedPrice}，当前状态：{negotiation.Status}"
+                    };
+                }
+
+                // 判断买家是否可以操作：只有当状态为"反报价"时，买家才可以回应卖家的反报价
+                bool canRespond = negotiation.Status == "反报价";
 
                 bargainMessages.Add(new
                 {
@@ -268,10 +294,12 @@ namespace CampusTrade.API.Services.Notification
                     read = negotiation.Status != "等待回应",
                     productName = negotiation.Order.Product.Title,
                     productImage = productImage,
-                    myOffer = negotiation.ProposedPrice,
+                    myOffer = negotiation.ProposedPrice, // 买家自己的报价
+                    newOffer = negotiation.Status == "反报价" ? displayPrice : (decimal?)null, // 卖家的反报价
                     originalPrice = negotiation.Order.Product.BasePrice,
                     bargainStatus = GetBargainStatusInEnglish(negotiation.Status),
                     role = "buyer",
+                    canRespond = canRespond, // 买家是否可以操作
                     orderId = negotiation.OrderId,
                     negotiationId = negotiation.NegotiationId
                 });
@@ -292,6 +320,9 @@ namespace CampusTrade.API.Services.Notification
                     _ => $"买家对您的商品《{negotiation.Order.Product.Title}》提出了议价 ￥{negotiation.ProposedPrice}，当前状态：{negotiation.Status}"
                 };
 
+                // 判断卖家是否可以操作：只有当状态为"等待回应"时，卖家才可以回应买家的议价
+                bool canRespond = negotiation.Status == "等待回应";
+
                 bargainMessages.Add(new
                 {
                     id = negotiation.NegotiationId,
@@ -306,6 +337,7 @@ namespace CampusTrade.API.Services.Notification
                     originalPrice = negotiation.Order.Product.BasePrice,
                     bargainStatus = GetBargainStatusInEnglish(negotiation.Status),
                     role = "seller",
+                    canRespond = canRespond, // 卖家是否可以操作
                     orderId = negotiation.OrderId,
                     negotiationId = negotiation.NegotiationId
                 });
@@ -528,50 +560,84 @@ namespace CampusTrade.API.Services.Notification
                 .OrderBy(n => n.CreatedAt) // 按时间正序排序，展示对话流程
                 .ToListAsync();
 
-            foreach (var negotiation in negotiations)
+            // 重新构建对话逻辑：分析议价流程
+            var currentUserIsBuyer = userId == order.BuyerId;
+
+            for (int i = 0; i < negotiations.Count; i++)
             {
-                var isFromBuyer = userId == order.BuyerId;
+                var negotiation = negotiations[i];
                 var messageContent = "";
                 var sender = "";
+                var isFromCurrentUser = false;
 
-                // 根据议价状态和用户角色生成对话内容
-                if (negotiation.Status == "等待回应")
+                // 判断这条记录是谁发起的
+                // 第一条记录总是买家发起的
+                // 后续记录：如果前一条记录状态是"反报价"，则当前记录是卖家发起的反报价
+                var isInitiatedByBuyer = true;
+                if (i > 0)
                 {
-                    if (isFromBuyer)
+                    var previousNegotiation = negotiations[i - 1];
+                    isInitiatedByBuyer = previousNegotiation.Status != "反报价";
+                }
+
+                // 根据发起者和当前用户角色确定消息内容
+                if (isInitiatedByBuyer)
+                {
+                    // 买家发起的议价
+                    if (currentUserIsBuyer)
                     {
                         messageContent = $"我提出议价：￥{negotiation.ProposedPrice}";
                         sender = "我";
+                        isFromCurrentUser = true;
                     }
                     else
                     {
                         messageContent = $"买家提出议价：￥{negotiation.ProposedPrice}";
                         sender = order.Buyer?.FullName ?? "买家";
+                        isFromCurrentUser = false;
                     }
                 }
-                else if (negotiation.Status == "反报价")
+                else
                 {
-                    if (isFromBuyer)
+                    // 卖家发起的反报价
+                    if (currentUserIsBuyer)
                     {
                         messageContent = $"卖家反报价：￥{negotiation.ProposedPrice}";
                         sender = order.Seller?.FullName ?? "卖家";
+                        isFromCurrentUser = false;
                     }
                     else
                     {
                         messageContent = $"我反报价：￥{negotiation.ProposedPrice}";
                         sender = "我";
+                        isFromCurrentUser = true;
                     }
                 }
-                else if (negotiation.Status == "接受")
+
+                // 跳过状态为"反报价"的记录，因为它们只是标记，不代表实际的对话内容
+                if (negotiation.Status == "反报价")
                 {
-                    var accepter = isFromBuyer ? "卖家" : "买家";
+                    continue;
+                }
+
+                // 处理最终状态（接受/拒绝）
+                if (negotiation.Status == "接受")
+                {
+                    var accepter = isInitiatedByBuyer ?
+                        (currentUserIsBuyer ? "卖家" : "我") :
+                        (currentUserIsBuyer ? "我" : "买家");
                     messageContent = $"{accepter}接受了议价：￥{negotiation.ProposedPrice}";
                     sender = "系统";
+                    isFromCurrentUser = false;
                 }
                 else if (negotiation.Status == "拒绝")
                 {
-                    var rejecter = isFromBuyer ? "卖家" : "买家";
+                    var rejecter = isInitiatedByBuyer ?
+                        (currentUserIsBuyer ? "卖家" : "我") :
+                        (currentUserIsBuyer ? "我" : "买家");
                     messageContent = $"{rejecter}拒绝了议价";
                     sender = "系统";
+                    isFromCurrentUser = false;
                 }
 
                 conversations.Add(new
@@ -582,8 +648,7 @@ namespace CampusTrade.API.Services.Notification
                     time = FormatTime(negotiation.CreatedAt),
                     status = negotiation.Status,
                     price = negotiation.ProposedPrice,
-                    isFromCurrentUser = (isFromBuyer && negotiation.Status == "等待回应") ||
-                                       (!isFromBuyer && negotiation.Status == "反报价")
+                    isFromCurrentUser = isFromCurrentUser
                 });
             }
 
@@ -617,3 +682,4 @@ namespace CampusTrade.API.Services.Notification
         }
     }
 }
+

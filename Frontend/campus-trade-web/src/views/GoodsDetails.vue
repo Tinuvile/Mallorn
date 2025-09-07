@@ -577,12 +577,22 @@
 
       const orderResponse = await orderApi.createOrder(orderData)
 
+      console.log('订单创建响应:', orderResponse) // 调试日志
+      console.log('订单数据:', orderResponse.data) // 调试日志
+
       if (orderResponse.success && orderResponse.data) {
+        // 检查订单ID - 使用实际的字段名"id"
+        const orderId =
+          orderResponse.data.id || orderResponse.data.orderId || orderResponse.data.OrderId
+        console.log('提取的订单ID:', orderId) // 调试日志
+
         // 创建议价请求
         const bargainData = {
-          orderId: orderResponse.data.orderId,
+          orderId: orderId,
           proposedPrice: parseFloat(userOffer.value),
         }
+
+        console.log('议价数据:', bargainData) // 调试日志
 
         const bargainResponse = await bargainApi.createBargainRequest(bargainData)
 
