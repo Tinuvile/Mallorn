@@ -1066,6 +1066,19 @@ export const fileApi = {
     })
   },
 
+  // 上传举报证据文件
+  uploadReportEvidence: (
+    file: File
+  ): Promise<
+    ApiResponse<{ fileName: string; fileUrl: string; thumbnailUrl?: string; fileSize: number }>
+  > => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post('/api/File/upload/report-evidence', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+
   // 批量上传文件
   batchUploadFiles: (
     files: File[],
@@ -1074,6 +1087,18 @@ export const fileApi = {
     const formData = new FormData()
     files.forEach(file => formData.append('files', file))
     formData.append('fileType', fileType)
+    return api.post('/api/File/upload/batch', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+
+  // 批量上传举报证据文件
+  batchUploadReportEvidence: (
+    files: File[]
+  ): Promise<ApiResponse<Array<{ fileName: string; fileUrl: string; fileSize: number }>>> => {
+    const formData = new FormData()
+    files.forEach(file => formData.append('files', file))
+    formData.append('fileType', 'ReportEvidence')
     return api.post('/api/File/upload/batch', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
@@ -1326,6 +1351,7 @@ export const reportApi = {
         file_url: file.fileUrl,
       })),
     }
+    console.log('发送到后端的举报数据:', JSON.stringify(payload, null, 2))
     return api.post('/api/report', payload)
   },
 

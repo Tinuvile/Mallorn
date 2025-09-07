@@ -706,7 +706,7 @@
   import { useRouter } from 'vue-router'
   import { useOrderStore } from '@/stores/order'
   import { useUserStore } from '@/stores/user'
-  import { reviewApi, reportApi } from '@/services/api'
+  import { reviewApi, reportApi, fileApi } from '@/services/api'
   import {
     getStatusDisplayText,
     getStatusColor,
@@ -1244,15 +1244,20 @@
 
     isSubmittingDispute.value = true
     try {
+      // 先上传证据文件
+      let evidenceFiles = []
+      if (disputeForm.value.evidenceFiles && disputeForm.value.evidenceFiles.length > 0) {
+        console.log('开始上传争议证据文件...')
+        evidenceFiles = await uploadEvidenceFiles(disputeForm.value.evidenceFiles)
+        console.log('争议证据文件上传完成:', evidenceFiles)
+      }
+
       // 调用真实API
       const response = await reportApi.createDispute({
         orderId: selectedOrder.value.id,
         reason: disputeForm.value.reason,
         description: disputeForm.value.description,
-        evidenceFiles: disputeForm.value.evidenceFiles?.map(file => ({
-          fileType: file.type || 'image',
-          fileUrl: URL.createObjectURL(file), // 临时URL，实际应该上传到服务器
-        })),
+        evidenceFiles: evidenceFiles,
       })
 
       if (response.success) {
@@ -1274,7 +1279,11 @@
       }
     } catch (error) {
       console.error('提交争议申请失败:', error)
-      alert('争议申请提交失败，请稍后重试')
+      if (error.message && error.message.includes('上传失败')) {
+        alert(`争议证据文件上传失败: ${error.message}`)
+      } else {
+        alert('争议申请提交失败，请稍后重试')
+      }
     } finally {
       isSubmittingDispute.value = false
     }
@@ -1320,6 +1329,36 @@
     }
   }
 
+  // 上传证据文件
+  const uploadEvidenceFiles = async files => {
+    if (!files || files.length === 0) {
+      return []
+    }
+
+    try {
+      const uploadedFiles = []
+
+      // 逐个上传文件
+      for (const file of files) {
+        const response = await fileApi.uploadReportEvidence(file)
+        if (response.success && response.data?.fileUrl) {
+          uploadedFiles.push({
+            fileType: file.type.startsWith('image/') ? 'image' : 'document',
+            fileUrl: response.data.fileUrl,
+          })
+        } else {
+          console.error('文件上传失败:', response.message)
+          throw new Error(`文件 ${file.name} 上传失败: ${response.message}`)
+        }
+      }
+
+      return uploadedFiles
+    } catch (error) {
+      console.error('上传证据文件失败:', error)
+      throw error
+    }
+  }
+
   // 提交举报
   const submitReport = async () => {
     // 验证表单
@@ -1339,6 +1378,7 @@
         relatedOrder: reportFormData.value.relatedOrder,
         type: reportFormData.value.type,
         description: reportFormData.value.reason,
+        evidenceFilesCount: reportFormData.value.evidenceFiles?.length || 0,
       })
 
       if (!orderId || orderId === 0) {
@@ -1347,14 +1387,19 @@
         return
       }
 
+      // 先上传证据文件
+      let evidenceFiles = []
+      if (reportFormData.value.evidenceFiles && reportFormData.value.evidenceFiles.length > 0) {
+        console.log('开始上传证据文件...')
+        evidenceFiles = await uploadEvidenceFiles(reportFormData.value.evidenceFiles)
+        console.log('证据文件上传完成:', evidenceFiles)
+      }
+
       const response = await reportApi.createReport({
         orderId: orderId,
         type: reportFormData.value.type,
         description: reportFormData.value.reason,
-        evidenceFiles: reportFormData.value.evidenceFiles?.map(file => ({
-          fileType: file.type || 'image',
-          fileUrl: URL.createObjectURL(file), // 临时URL，实际应该上传到服务器
-        })),
+        evidenceFiles: evidenceFiles,
       })
 
       if (response.success) {
@@ -1367,7 +1412,11 @@
       }
     } catch (error) {
       console.error('提交举报失败:', error)
-      alert('提交失败，请稍后重试')
+      if (error.message && error.message.includes('上传失败')) {
+        alert(`证据文件上传失败: ${error.message}`)
+      } else {
+        alert('提交失败，请稍后重试')
+      }
     } finally {
       isSubmittingReport.value = false
     }
