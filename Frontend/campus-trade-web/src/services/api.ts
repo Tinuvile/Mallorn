@@ -1364,6 +1364,24 @@ export const reportApi = {
   createDispute: (data: CreateDisputeRequest): Promise<ApiResponse<DisputeResponse>> => {
     return api.post('/api/report/dispute', data)
   },
+
+  // 获取举报详情
+  getReportDetail: (reportId: number): Promise<ApiResponse<ReportDetail>> => {
+    return api.get(`/api/report/${reportId}`)
+  },
+
+  // 获取举报类型列表
+  getReportTypes: (): Promise<
+    ApiResponse<
+      Array<{
+        value: string
+        label: string
+        priority: number
+      }>
+    >
+  > => {
+    return api.get('/api/report/types')
+  },
 }
 
 export interface DashboardStatsDto {
@@ -1472,37 +1490,47 @@ export interface UserMessagesResponse {
 // 通知API方法
 export const notificationApi = {
   // 创建通知
-  createNotification: (data: CreateNotificationRequest): Promise<ApiResponse<NotificationResponse>> => {
+  createNotification: (
+    data: CreateNotificationRequest
+  ): Promise<ApiResponse<NotificationResponse>> => {
     return api.post('/api/notification/create', data)
   },
 
   // 获取通知队列状态
-  getQueueStats: (): Promise<ApiResponse<{
-    pending: number
-    success: number
-    failed: number
-    total: number
-  }>> => {
+  getQueueStats: (): Promise<
+    ApiResponse<{
+      pending: number
+      success: number
+      failed: number
+      total: number
+    }>
+  > => {
     return api.get('/api/notification/queue-stats')
   },
 
   // 获取用户通知历史
-  getUserNotifications: (userId: number, pageSize: number = 10, pageIndex: number = 0): Promise<ApiResponse<any[]>> => {
-    return api.get(`/api/notification/user/${userId}/history?pageSize=${pageSize}&pageIndex=${pageIndex}`)
+  getUserNotifications: (
+    userId: number,
+    pageSize: number = 10,
+    pageIndex: number = 0
+  ): Promise<ApiResponse<any[]>> => {
+    return api.get(
+      `/api/notification/user/${userId}/history?pageSize=${pageSize}&pageIndex=${pageIndex}`
+    )
   },
 
   // 获取用户消息列表（新增）
   getUserMessages: (
-    userId: number, 
+    userId: number,
     category?: 'system' | 'bargain' | 'reply' | 'swap',
-    pageSize: number = 10, 
+    pageSize: number = 10,
     pageIndex: number = 0
   ): Promise<UserMessagesResponse> => {
     const params = new URLSearchParams()
     params.append('pageSize', pageSize.toString())
     params.append('pageIndex', pageIndex.toString())
     if (category) params.append('category', category)
-    
+
     return api.get(`/api/notification/user/${userId}/messages?${params.toString()}`)
   },
 
@@ -1546,7 +1574,9 @@ export interface BargainNegotiation {
 // 议价API方法
 export const bargainApi = {
   // 创建议价请求
-  createBargainRequest: (data: BargainRequestDto): Promise<ApiResponse<{ negotiationId: number }>> => {
+  createBargainRequest: (
+    data: BargainRequestDto
+  ): Promise<ApiResponse<{ negotiationId: number }>> => {
     return api.post('/api/bargain/request', data)
   },
 
@@ -1556,13 +1586,18 @@ export const bargainApi = {
   },
 
   // 获取我的议价记录
-  getMyNegotiations: (pageIndex: number = 1, pageSize: number = 10): Promise<ApiResponse<{
-    negotiations: BargainNegotiation[]
-    totalCount: number
-    pageIndex: number
-    pageSize: number
-    totalPages: number
-  }>> => {
+  getMyNegotiations: (
+    pageIndex: number = 1,
+    pageSize: number = 10
+  ): Promise<
+    ApiResponse<{
+      negotiations: BargainNegotiation[]
+      totalCount: number
+      pageIndex: number
+      pageSize: number
+      totalPages: number
+    }>
+  > => {
     return api.get(`/api/bargain/my-negotiations?pageIndex=${pageIndex}&pageSize=${pageSize}`)
   },
 
@@ -1605,7 +1640,9 @@ export interface ExchangeRequestItem {
 // 换物API方法
 export const exchangeApi = {
   // 创建换物请求
-  createExchangeRequest: (data: ExchangeRequestDto): Promise<ApiResponse<{ exchangeRequestId: number }>> => {
+  createExchangeRequest: (
+    data: ExchangeRequestDto
+  ): Promise<ApiResponse<{ exchangeRequestId: number }>> => {
     return api.post('/api/exchange/request', data)
   },
 
@@ -1615,18 +1652,25 @@ export const exchangeApi = {
   },
 
   // 获取我的换物请求记录
-  getMyExchangeRequests: (pageIndex: number = 1, pageSize: number = 10): Promise<ApiResponse<{
-    exchangeRequests: ExchangeRequestItem[]
-    totalCount: number
-    pageIndex: number
-    pageSize: number
-    totalPages: number
-  }>> => {
+  getMyExchangeRequests: (
+    pageIndex: number = 1,
+    pageSize: number = 10
+  ): Promise<
+    ApiResponse<{
+      exchangeRequests: ExchangeRequestItem[]
+      totalCount: number
+      pageIndex: number
+      pageSize: number
+      totalPages: number
+    }>
+  > => {
     return api.get(`/api/exchange/my-requests?pageIndex=${pageIndex}&pageSize=${pageSize}`)
   },
 
   // 获取换物请求详情
-  getExchangeRequestDetails: (exchangeRequestId: number): Promise<ApiResponse<ExchangeRequestItem>> => {
+  getExchangeRequestDetails: (
+    exchangeRequestId: number
+  ): Promise<ApiResponse<ExchangeRequestItem>> => {
     return api.get(`/api/exchange/${exchangeRequestId}`)
   },
 }
@@ -1779,7 +1823,7 @@ export const adminApi = {
   // 获取管理员可管理的商品列表
   getManagedProducts: (query: AdminProductQuery): Promise<ApiResponse<AdminProductsResponse>> => {
     const params = new URLSearchParams()
-    
+
     if (query.pageIndex !== undefined) params.append('pageIndex', query.pageIndex.toString())
     if (query.pageSize !== undefined) params.append('pageSize', query.pageSize.toString())
     if (query.status) params.append('status', query.status)
@@ -1798,7 +1842,10 @@ export const adminApi = {
   },
 
   // 更新商品信息（管理员操作）
-  updateProductAsAdmin: (productId: number, data: AdminUpdateProductRequest): Promise<ApiResponse> => {
+  updateProductAsAdmin: (
+    productId: number,
+    data: AdminUpdateProductRequest
+  ): Promise<ApiResponse> => {
     return api.put(`/api/admin/products/${productId}`, data)
   },
 
@@ -1807,32 +1854,42 @@ export const adminApi = {
     return api.delete(`/api/admin/products/${productId}`, {
       data: reason || '管理员删除',
       headers: {
-        'Content-Type': 'application/json'
-      }
+        'Content-Type': 'application/json',
+      },
     })
   },
 
   // 批量操作商品
-  batchOperateProducts: (data: BatchProductOperationRequest): Promise<ApiResponse<{
-    message: string
-    failedProducts?: Array<{ productId: number; reason: string }>
-  }>> => {
+  batchOperateProducts: (
+    data: BatchProductOperationRequest
+  ): Promise<
+    ApiResponse<{
+      message: string
+      failedProducts?: Array<{ productId: number; reason: string }>
+    }>
+  > => {
     return api.post('/api/admin/products/batch', data)
   },
 
   // 验证商品管理权限
-  validateProductPermission: (productId: number): Promise<ApiResponse<{
-    hasPermission: boolean
-    adminRole: string
-  }>> => {
+  validateProductPermission: (
+    productId: number
+  ): Promise<
+    ApiResponse<{
+      hasPermission: boolean
+      adminRole: string
+    }>
+  > => {
     return api.get(`/api/admin/products/${productId}/permission`)
   },
 
   // 获取管理员可管理的分类列表
-  getManagedCategories: (): Promise<ApiResponse<{
-    categoryIds: number[]
-    adminRole: string
-  }>> => {
+  getManagedCategories: (): Promise<
+    ApiResponse<{
+      categoryIds: number[]
+      adminRole: string
+    }>
+  > => {
     return api.get('/api/admin/categories')
   },
 
@@ -1856,10 +1913,14 @@ export const adminApi = {
   },
 
   // 验证举报处理权限
-  validateReportPermission: (reportId: number): Promise<ApiResponse<{
-    hasPermission: boolean
-    adminRole: string
-  }>> => {
+  validateReportPermission: (
+    reportId: number
+  ): Promise<
+    ApiResponse<{
+      hasPermission: boolean
+      adminRole: string
+    }>
+  > => {
     return api.get(`/api/admin/permissions/report/${reportId}`)
   },
 
@@ -1877,24 +1938,26 @@ export const adminApi = {
     categoryId?: number,
     startDate?: Date,
     endDate?: Date
-  ): Promise<ApiResponse<{
-    logs: Array<{
-      logId: number
-      adminId: number
-      adminUsername: string
-      adminRole: string
-      actionType: string
-      targetId?: number
-      logDetail?: string
-      logTime: string
+  ): Promise<
+    ApiResponse<{
+      logs: Array<{
+        logId: number
+        adminId: number
+        adminUsername: string
+        adminRole: string
+        actionType: string
+        targetId?: number
+        logDetail?: string
+        logTime: string
+      }>
+      pagination: {
+        pageIndex: number
+        pageSize: number
+        totalCount: number
+        totalPages: number
+      }
     }>
-    pagination: {
-      pageIndex: number
-      pageSize: number
-      totalCount: number
-      totalPages: number
-    }
-  }>> => {
+  > => {
     const params = new URLSearchParams()
     params.append('pageIndex', pageIndex.toString())
     params.append('pageSize', pageSize.toString())
@@ -1905,23 +1968,6 @@ export const adminApi = {
     if (endDate) params.append('endDate', endDate.toISOString())
 
     return api.get(`/api/admin/audit-logs?${params.toString()}`)
-  },
-}
-
-// 举报相关接口
-export const reportApi = {
-  // 获取举报详情
-  getReportDetail: (reportId: number): Promise<ApiResponse<ReportDetail>> => {
-    return api.get(`/api/report/${reportId}`)
-  },
-
-  // 获取举报类型列表
-  getReportTypes: (): Promise<ApiResponse<Array<{
-    value: string
-    label: string
-    priority: number
-  }>>> => {
-    return api.get('/api/report/types')
   },
 }
 
