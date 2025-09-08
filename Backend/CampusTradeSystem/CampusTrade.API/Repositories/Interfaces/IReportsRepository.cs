@@ -70,13 +70,13 @@ namespace CampusTrade.API.Repositories.Interfaces
         /// <param name="endDate">结束日期</param>
         /// <returns>举报列表和总数</returns>
         Task<(IEnumerable<Reports> Reports, int TotalCount)> GetPagedReportsByCategoryAsync(
-            int categoryId, 
-            int pageIndex, 
-            int pageSize, 
-            string? status = null, 
-            string? type = null, 
-            int? priority = null, 
-            DateTime? startDate = null, 
+            int categoryId,
+            int pageIndex,
+            int pageSize,
+            string? status = null,
+            string? type = null,
+            int? priority = null,
+            DateTime? startDate = null,
             DateTime? endDate = null);
         #endregion
 

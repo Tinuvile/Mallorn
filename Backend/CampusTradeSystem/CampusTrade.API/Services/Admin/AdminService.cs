@@ -184,7 +184,7 @@ namespace CampusTrade.API.Services.Admin
                 // 验证邮箱是否匹配
                 if (user.Email != createDto.Email)
                 {
-                    _serilogLogger.Warning("创建管理员失败 - 邮箱不匹配: {Username}, 提供邮箱: {ProvidedEmail}, 实际邮箱: {ActualEmail}", 
+                    _serilogLogger.Warning("创建管理员失败 - 邮箱不匹配: {Username}, 提供邮箱: {ProvidedEmail}, 实际邮箱: {ActualEmail}",
                         createDto.Username, createDto.Email, user.Email);
                     return (false, "用户邮箱不匹配", null);
                 }
@@ -556,7 +556,7 @@ namespace CampusTrade.API.Services.Admin
                     return (Enumerable.Empty<Reports>(), 0);
                 }
 
-                _serilogLogger.Information("获取管理员举报列表 - AdminId: {AdminId}, Role: {Role}, Category: {Category}", 
+                _serilogLogger.Information("获取管理员举报列表 - AdminId: {AdminId}, Role: {Role}, Category: {Category}",
                     adminId, admin.Role, admin.AssignedCategory);
 
                 // 系统管理员可以看所有举报
@@ -571,15 +571,15 @@ namespace CampusTrade.API.Services.Admin
                 {
                     _serilogLogger.Information("分类管理员查看分类 {CategoryId} 的举报", admin.AssignedCategory.Value);
                     var result = await _reportsRepository.GetPagedReportsByCategoryAsync(
-                        admin.AssignedCategory.Value, 
-                        pageIndex, 
-                        pageSize, 
+                        admin.AssignedCategory.Value,
+                        pageIndex,
+                        pageSize,
                         status: status);
                     _serilogLogger.Information("分类管理员获得 {Count} 条举报", result.TotalCount);
                     return result;
                 }
 
-                _serilogLogger.Warning("管理员角色或分类配置异常 - AdminId: {AdminId}, Role: {Role}, Category: {Category}", 
+                _serilogLogger.Warning("管理员角色或分类配置异常 - AdminId: {AdminId}, Role: {Role}, Category: {Category}",
                     adminId, admin.Role, admin.AssignedCategory);
                 return (Enumerable.Empty<Reports>(), 0);
             }
@@ -784,7 +784,7 @@ namespace CampusTrade.API.Services.Admin
         private async Task<IEnumerable<object>> GetAuditHistoryForReport(int reportId)
         {
             var auditLogs = await _auditLogRepository.GetReportAuditHistoryAsync(reportId);
-            
+
             var historyItems = new List<object>();
 
             // 添加举报创建记录（虽然不在audit log中，但作为历史的起点）
@@ -805,7 +805,7 @@ namespace CampusTrade.API.Services.Admin
             {
                 var actionText = GetActionDisplayText(log.ActionType);
                 var moderatorName = log.Admin?.User?.Username ?? "系统管理员";
-                
+
                 historyItems.Add(new
                 {
                     timestamp = log.LogTime.ToString("yyyy-MM-dd HH:mm:ss"),

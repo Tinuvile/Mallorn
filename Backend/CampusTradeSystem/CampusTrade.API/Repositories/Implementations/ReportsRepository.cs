@@ -126,13 +126,13 @@ namespace CampusTrade.API.Repositories.Implementations
         /// 分页获取指定分类的举报
         /// </summary>
         public async Task<(IEnumerable<Reports> Reports, int TotalCount)> GetPagedReportsByCategoryAsync(
-            int categoryId, 
-            int pageIndex, 
-            int pageSize, 
-            string? status = null, 
-            string? type = null, 
-            int? priority = null, 
-            DateTime? startDate = null, 
+            int categoryId,
+            int pageIndex,
+            int pageSize,
+            string? status = null,
+            string? type = null,
+            int? priority = null,
+            DateTime? startDate = null,
             DateTime? endDate = null)
         {
             // 首先获取指定分类及其所有子分类的ID列表
@@ -147,9 +147,9 @@ namespace CampusTrade.API.Repositories.Implementations
                             .ThenInclude(p => p.Category)
                 .Include(r => r.Reporter)
                 .Include(r => r.Evidences)
-                .Where(r => r.AbstractOrder != null 
-                    && r.AbstractOrder.Order != null 
-                    && r.AbstractOrder.Order.Product != null 
+                .Where(r => r.AbstractOrder != null
+                    && r.AbstractOrder.Order != null
+                    && r.AbstractOrder.Order.Product != null
                     && r.AbstractOrder.Order.Product.Category != null)
                 .AsQueryable();
 
@@ -157,24 +157,24 @@ namespace CampusTrade.API.Repositories.Implementations
             query = query.Where(r => categoryIds.Contains(r.AbstractOrder.Order.Product.CategoryId));
 
             // 应用其他筛选条件
-            if (!string.IsNullOrEmpty(status)) 
+            if (!string.IsNullOrEmpty(status))
                 query = query.Where(r => r.Status == status);
-            
-            if (!string.IsNullOrEmpty(type)) 
+
+            if (!string.IsNullOrEmpty(type))
                 query = query.Where(r => r.Type == type);
-            
-            if (priority.HasValue) 
+
+            if (priority.HasValue)
                 query = query.Where(r => r.Priority == priority.Value);
-            
-            if (startDate.HasValue) 
+
+            if (startDate.HasValue)
                 query = query.Where(r => r.CreateTime >= startDate.Value);
-            
-            if (endDate.HasValue) 
+
+            if (endDate.HasValue)
                 query = query.Where(r => r.CreateTime <= endDate.Value);
 
             var totalCount = await query.CountAsync();
             Console.WriteLine($"[DEBUG] 分类 {categoryId} 相关举报总数: {totalCount}");
-            
+
             var reports = await query
                 .OrderByDescending(r => r.Priority)
                 .ThenByDescending(r => r.CreateTime)
@@ -193,10 +193,10 @@ namespace CampusTrade.API.Repositories.Implementations
         {
             var categoryIds = new List<int> { categoryId };
             var categories = await _context.Categories.ToListAsync();
-            
+
             // 递归查找所有子分类
             AddDescendantCategories(categoryIds, categories, categoryId);
-            
+
             return categoryIds;
         }
 
