@@ -42,21 +42,40 @@ export const useUserStore = defineStore('user', () => {
   const token = ref<string>('')
   const refreshToken = ref<string>('')
   const isLoggedIn = ref<boolean>(false)
+  const isAdmin = ref<boolean>(false)
+  const adminInfo = ref<any>(null)
   
   // 添加防重复请求的标志
   const isLoadingProfile = ref<boolean>(false)
 
   // 初始化用户状态
-  const initializeAuth = () => {
+  const initializeAuth = async () => {
     const savedToken = localStorage.getItem('token')
     const savedRefreshToken = localStorage.getItem('refreshToken')
     const savedUser = localStorage.getItem('user')
+    const savedIsAdmin = localStorage.getItem('isAdmin')
+    const savedAdminInfo = localStorage.getItem('adminInfo')
 
     if (savedToken && savedUser) {
       token.value = savedToken
       refreshToken.value = savedRefreshToken || ''
       user.value = JSON.parse(savedUser)
       isLoggedIn.value = true
+      isAdmin.value = savedIsAdmin === 'true'
+      
+      if (savedAdminInfo) {
+        try {
+          adminInfo.value = JSON.parse(savedAdminInfo)
+        } catch (e) {
+          console.warn('解析管理员信息失败:', e)
+          adminInfo.value = null
+        }
+      }
+
+      // 如果用户已登录，重新验证管理员身份
+      if (isLoggedIn.value) {
+        checkAdminStatus().catch(console.warn)
+      }
     }
   }
 
@@ -92,6 +111,9 @@ export const useUserStore = defineStore('user', () => {
         localStorage.setItem('token', token.value)
         localStorage.setItem('refreshToken', refreshToken.value)
         localStorage.setItem('user', JSON.stringify(user.value))
+
+        // 检查管理员身份
+        await checkAdminStatus()
 
         return { success: true, message: response.message || '登录成功' }
       }
@@ -198,11 +220,15 @@ export const useUserStore = defineStore('user', () => {
       token.value = ''
       refreshToken.value = ''
       isLoggedIn.value = false
+      isAdmin.value = false
+      adminInfo.value = null
 
       // 清除本地存储
       localStorage.removeItem('token')
       localStorage.removeItem('refreshToken')
       localStorage.removeItem('user')
+      localStorage.removeItem('isAdmin')
+      localStorage.removeItem('adminInfo')
     }
   }
 
@@ -498,11 +524,43 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  // 检查管理员身份
+  const checkAdminStatus = async () => {
+    try {
+      // 导入adminApi
+      const { adminApi } = await import('@/services/api')
+      const response = await adminApi.getCurrentAdminInfo()
+
+      if (response.success && response.data) {
+        isAdmin.value = true
+        adminInfo.value = response.data
+        localStorage.setItem('isAdmin', 'true')
+        localStorage.setItem('adminInfo', JSON.stringify(response.data))
+        return { success: true, isAdmin: true, adminInfo: response.data }
+      } else {
+        isAdmin.value = false
+        adminInfo.value = null
+        localStorage.setItem('isAdmin', 'false')
+        localStorage.removeItem('adminInfo')
+        return { success: true, isAdmin: false }
+      }
+    } catch (error: unknown) {
+      console.log('用户不是管理员或检查失败:', error)
+      isAdmin.value = false
+      adminInfo.value = null
+      localStorage.setItem('isAdmin', 'false')
+      localStorage.removeItem('adminInfo')
+      return { success: true, isAdmin: false }
+    }
+  }
+
   return {
     user,
     token,
     refreshToken,
     isLoggedIn,
+    isAdmin,
+    adminInfo,
     isLoadingProfile,
     initializeAuth,
     login,
@@ -517,5 +575,6 @@ export const useUserStore = defineStore('user', () => {
     getUserProfile,
     updateUserProfile,
     changePassword,
+    checkAdminStatus,
   }
 })
