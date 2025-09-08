@@ -21,12 +21,12 @@
           </div>
           <v-btn 
             fab
-            @click="logout"
-            class="logout-btn"
+            @click="goBack"
+            class="back-btn"
             color="white"
             size="46"
           >
-            <v-icon size="32" color="red-darken-1">mdi-logout-variant</v-icon>
+            <v-icon size="32" color="blue-darken-1">mdi-arrow-left</v-icon>
           </v-btn>
         </div>
       </div>
@@ -124,11 +124,9 @@ const fetchAdminInfo = async () => {
   }
 }
 
-// 登出功能
-const logout = () => {
-  localStorage.removeItem('token')
-  localStorage.removeItem('user')
-  router.push('/')
+// 返回管理员控制台
+const goBack = () => {
+  router.push('/admin')
 }
 
 // 组件挂载时获取管理员信息
@@ -205,7 +203,7 @@ onMounted(() => {
   font-weight: 500;
 }
 
-.logout-btn {
+.back-btn {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
 }
 

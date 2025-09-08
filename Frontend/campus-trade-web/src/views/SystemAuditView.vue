@@ -22,12 +22,12 @@
           </div>
           <v-btn 
             fab
-            to="/"
-            class="logout-btn"
+            @click="goBack"
+            class="back-btn"
             color="white"
             size="46"
           >
-            <v-icon size="32" color="red-darken-1">mdi-logout-variant</v-icon>
+            <v-icon size="32" color="blue-darken-1">mdi-arrow-left</v-icon>
           </v-btn>
         </div>
       </div>
@@ -370,6 +370,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { adminApi, categoryApi } from '@/services/api'
 
 // 定义类型
@@ -408,6 +409,7 @@ interface OperationType {
 }
 
 // 响应式数据
+const router = useRouter()
 const loading = ref(false)
 const search = ref('')
 const detailDialog = ref(false)
@@ -660,6 +662,10 @@ const loadMockData = () => {
 }
 
 // 方法
+const goBack = () => {
+  router.push('/admin')
+}
+
 const getModuleFromCategory = (adminRole: string, adminId: number): string => {
   if (adminRole === 'super') {
     return '系统管理'
@@ -998,7 +1004,7 @@ onMounted(() => {
   font-weight: 500;
 }
 
-.logout-btn {
+.back-btn {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
 }
 
