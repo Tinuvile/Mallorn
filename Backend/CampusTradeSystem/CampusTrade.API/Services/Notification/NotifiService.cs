@@ -137,23 +137,24 @@ namespace CampusTrade.API.Services.Notification
             // 获取系统通知
             if (category == null || category == "system")
             {
-                var systemNotifications = await _context.Notifications
+                var systemNotificationsRaw = await _context.Notifications
                     .Include(n => n.Template)
                     .Where(n => n.RecipientId == userId &&
                                (n.Template!.TemplateName.Contains("系统") || n.Template.TemplateName.Contains("管理员")))
                     .OrderByDescending(n => n.CreatedAt)
                     .Skip(pageIndex * pageSize)
                     .Take(pageSize)
-                    .Select(n => new
-                    {
-                        id = n.NotificationId,
-                        type = "notification",
-                        sender = n.Template!.TemplateName.Contains("系统") ? "系统通知" : "校园管理员",
-                        content = GetRenderedContent(n),
-                        time = FormatTime(n.CreatedAt),
-                        read = n.SendStatus == Models.Entities.Notification.SendStatuses.Success
-                    })
                     .ToListAsync();
+
+                var systemNotifications = systemNotificationsRaw.Select(n => new
+                {
+                    id = n.NotificationId,
+                    type = "notification",
+                    sender = n.Template!.TemplateName.Contains("系统") ? "系统通知" : "校园管理员",
+                    content = GetRenderedContent(n),
+                    time = FormatTime(n.CreatedAt),
+                    read = n.SendStatus == Models.Entities.Notification.SendStatuses.Success
+                });
 
                 messages.AddRange(systemNotifications.Cast<object>());
             }
@@ -175,7 +176,7 @@ namespace CampusTrade.API.Services.Notification
             // 获取其他回复消息
             if (category == null || category == "reply")
             {
-                var replyMessages = await _context.Notifications
+                var replyMessagesRaw = await _context.Notifications
                     .Include(n => n.Template)
                     .Include(n => n.Recipient)
                     .Where(n => n.RecipientId == userId &&
@@ -186,16 +187,17 @@ namespace CampusTrade.API.Services.Notification
                     .OrderByDescending(n => n.CreatedAt)
                     .Skip(pageIndex * pageSize)
                     .Take(pageSize)
-                    .Select(n => new
-                    {
-                        id = n.NotificationId,
-                        type = "reply",
-                        sender = "用户回复", // 这里可以根据具体需求调整
-                        content = GetRenderedContent(n),
-                        time = FormatTime(n.CreatedAt),
-                        read = n.SendStatus == Models.Entities.Notification.SendStatuses.Success
-                    })
                     .ToListAsync();
+
+                var replyMessages = replyMessagesRaw.Select(n => new
+                {
+                    id = n.NotificationId,
+                    type = "reply",
+                    sender = "用户回复", // 这里可以根据具体需求调整
+                    content = GetRenderedContent(n),
+                    time = FormatTime(n.CreatedAt),
+                    read = n.SendStatus == Models.Entities.Notification.SendStatuses.Success
+                });
 
                 messages.AddRange(replyMessages.Cast<object>());
             }
