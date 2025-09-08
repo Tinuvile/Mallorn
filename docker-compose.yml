@@ -31,7 +31,8 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - oracle-db
+      oracle-db:
+        condition: service_healthy
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__DefaultConnection=Data Source=oracle-db:1521/XEPDB1;User Id=CAMPUS_TRADE_USER;Password=CampusTrade123!;
