@@ -1,3 +1,7 @@
+-- 确保在正确的容器与 Schema 下执行
+ALTER SESSION SET CONTAINER = XEPDB1;
+ALTER SESSION SET CURRENT_SCHEMA = CAMPUS_TRADE_USER;
+
 -- 添加更多学生信息供注册测试
 INSERT INTO students (student_id, name, department) VALUES ('2352495', '张竹和', '计算机科学与技术学院');
 INSERT INTO students (student_id, name, department) VALUES ('2353018', '钱宝强', '计算机科学与技术学院');

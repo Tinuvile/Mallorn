@@ -723,7 +723,7 @@ INSERT INTO categories (parent_id, name) VALUES (4, '支持换物');
 -- 插入用户数据
 -- 密码都是 "password" 的 BCrypt 哈希值: $2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi
 INSERT INTO users (username, email, password_hash, full_name, student_id, credit_score, login_count, is_locked, failed_login_attempts, two_factor_enabled, email_verified, security_stamp) 
-VALUES ('admin', 'admin@campus.edu', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '系统管理员', 'ADMIN001', 100.0, 0, 0, 0, 0, 1, SYS_GUID());
+VALUES ('admin', 'admin@campus.edu', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '系统管理员', 'ADMIN001', 99.9, 0, 0, 0, 0, 1, SYS_GUID());
 
 INSERT INTO users (username, email, password_hash, full_name, student_id, credit_score, login_count, is_locked, failed_login_attempts, two_factor_enabled, email_verified, security_stamp) 
 VALUES ('zhangsan', 'zhangsan@campus.edu', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '张三', 'STU001', 85.0, 0, 0, 0, 0, 1, SYS_GUID());
