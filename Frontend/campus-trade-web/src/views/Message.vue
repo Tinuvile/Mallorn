@@ -195,12 +195,12 @@
             </p>
           </div>
 
-          <!-- 拒绝报价输入框（条件显示） -->
+          <!-- 拒绝报价输入框（条件显示，只有卖家才显示） -->
           <v-text-field
             v-model="rejectReason"
             label="请输入您的最低预期价格"
             type="number"
-            v-show="showRejectInput"
+            v-show="showRejectInput && currentBargainMessage.role === 'seller'"
             class="mt-3"
           ></v-text-field>
 
@@ -215,8 +215,12 @@
             persistent-hint
           ></v-text-field>
 
-          <!-- 错误提示 -->
-          <p v-show="showError" class="text-red-500 text-center mt-2" style="color: red">
+          <!-- 错误提示（只有卖家才显示） -->
+          <p
+            v-show="showError && currentBargainMessage.role === 'seller'"
+            class="text-red-500 text-center mt-2"
+            style="color: red"
+          >
             最低预期价格不能低于对方报价（￥{{ currentBargainMessage.newOffer }}）
           </p>
           <p v-show="showCounterError" class="text-red-500 text-center mt-2" style="color: red">
@@ -568,31 +572,20 @@
 
   // 拒绝接受报价
   const handleReject = async () => {
-    if (!showRejectInput.value) {
-      showRejectInput.value = true
-      showError.value = false
-      // 隐藏反报价输入框
-      showCounterOfferInput.value = false
-      showCounterError.value = false
-    } else {
-      const message = currentBargainMessage.value
-      const inputPrice = Number(rejectReason.value)
-      const minPrice = message.newOffer || 0
+    const message = currentBargainMessage.value
 
-      if (isNaN(inputPrice) || inputPrice < minPrice) {
-        showError.value = true
-        return
-      }
-
+    // 买家可以直接拒绝，卖家需要输入最低预期价格
+    if (message.role === 'buyer') {
+      // 买家直接拒绝卖家的反报价
       try {
         await bargainApi.handleBargainResponse({
           negotiationId: message.negotiationId || message.id,
           status: '拒绝',
-          rejectReason: rejectReason.value,
+          rejectReason: '买家拒绝反报价',
         })
 
         message.bargainStatus = 'rejected'
-        message.rejectReason = rejectReason.value
+        message.rejectReason = '买家拒绝反报价'
         showBargainDialog.value = false
         showRejectInput.value = false
         rejectReason.value = ''
@@ -603,6 +596,44 @@
       } catch (error) {
         console.error('拒绝议价失败:', error)
         alert('拒绝议价失败，请稍后重试')
+      }
+    } else {
+      // 卖家拒绝需要输入最低预期价格
+      if (!showRejectInput.value) {
+        showRejectInput.value = true
+        showError.value = false
+        // 隐藏反报价输入框
+        showCounterOfferInput.value = false
+        showCounterError.value = false
+      } else {
+        const inputPrice = Number(rejectReason.value)
+        const minPrice = message.newOffer || 0
+
+        if (isNaN(inputPrice) || inputPrice < minPrice) {
+          showError.value = true
+          return
+        }
+
+        try {
+          await bargainApi.handleBargainResponse({
+            negotiationId: message.negotiationId || message.id,
+            status: '拒绝',
+            rejectReason: rejectReason.value,
+          })
+
+          message.bargainStatus = 'rejected'
+          message.rejectReason = rejectReason.value
+          showBargainDialog.value = false
+          showRejectInput.value = false
+          rejectReason.value = ''
+          showError.value = false
+
+          // 重新加载消息列表
+          loadMessages(currentCategory.value)
+        } catch (error) {
+          console.error('拒绝议价失败:', error)
+          alert('拒绝议价失败，请稍后重试')
+        }
       }
     }
   }

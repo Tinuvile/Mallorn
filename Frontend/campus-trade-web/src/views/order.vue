@@ -1194,11 +1194,25 @@
         if (step === 1 && status === 'pending') {
           // 买家付款
           await payOrder(selectedOrder.value.id)
-          updateOrderStatus(selectedOrder.value.id, 'processing')
+          // payOrder已经会自动刷新订单数据，无需再次调用updateOrderStatus
+          // 只需要更新当前选中订单的引用
+          if (selectedOrder.value) {
+            const updatedOrder = orders.value.find(order => order.id === selectedOrder.value?.id)
+            if (updatedOrder) {
+              selectedOrder.value = updatedOrder
+            }
+          }
         } else if (step === 3 && (status === 'shipped' || status === 'delivered')) {
           // 买家确认收货
           await confirmReceived(selectedOrder.value.id)
-          updateOrderStatus(selectedOrder.value.id, 'completed')
+          // confirmReceived已经会自动刷新订单数据，无需再次调用updateOrderStatus
+          // 只需要更新当前选中订单的引用
+          if (selectedOrder.value) {
+            const updatedOrder = orders.value.find(order => order.id === selectedOrder.value?.id)
+            if (updatedOrder) {
+              selectedOrder.value = updatedOrder
+            }
+          }
         } else if (step === 4 && status === 'completed') {
           // 买家评价或查看评价
           if (selectedOrder.value.review) {
@@ -1211,7 +1225,14 @@
         if (step === 1 && status === 'processing') {
           // 卖家发货
           await shipOrder(selectedOrder.value.id)
-          updateOrderStatus(selectedOrder.value.id, 'shipped')
+          // shipOrder已经会自动刷新订单数据，无需再次调用updateOrderStatus
+          // 只需要更新当前选中订单的引用
+          if (selectedOrder.value) {
+            const updatedOrder = orders.value.find(order => order.id === selectedOrder.value?.id)
+            if (updatedOrder) {
+              selectedOrder.value = updatedOrder
+            }
+          }
         } else if (step === 3 && status === 'completed') {
           // 卖家查看评价
           await showReviewDetails()
@@ -1686,7 +1707,14 @@
           case 'processing':
             // 卖家发货操作
             await shipOrder(selectedOrder.value.id)
-            updateOrderStatus(selectedOrder.value.id, 'shipped')
+            // shipOrder已经会自动刷新订单数据，无需再次调用updateOrderStatus
+            // 只需要更新当前选中订单的引用
+            if (selectedOrder.value) {
+              const updatedOrder = orders.value.find(order => order.id === selectedOrder.value?.id)
+              if (updatedOrder) {
+                selectedOrder.value = updatedOrder
+              }
+            }
             break
           case 'completed':
             // 卖家查看评价
@@ -1698,7 +1726,14 @@
           case 'pending':
             // 买家付款操作
             await payOrder(selectedOrder.value.id)
-            updateOrderStatus(selectedOrder.value.id, 'processing')
+            // payOrder已经会自动刷新订单数据，无需再次调用updateOrderStatus
+            // 只需要更新当前选中订单的引用
+            if (selectedOrder.value) {
+              const updatedOrder = orders.value.find(order => order.id === selectedOrder.value?.id)
+              if (updatedOrder) {
+                selectedOrder.value = updatedOrder
+              }
+            }
             break
           case 'shipped':
           case 'delivered':
@@ -1839,13 +1874,13 @@
         if (canExecuteAction(status, 'ship', 'seller')) {
           // 卖家发货操作
           await shipOrder(order.id)
-          await updateOrderStatus(order.id, 'shipped')
+          // shipOrder已经会自动刷新订单数据，无需再次调用updateOrderStatus
         }
       } else {
         if (canExecuteAction(status, 'pay', 'buyer')) {
           // 买家付款操作
           await payOrder(order.id)
-          await updateOrderStatus(order.id, 'processing')
+          // payOrder已经会自动刷新订单数据，无需再次调用updateOrderStatus
         } else if (canExecuteAction(status, 'confirm_delivery', 'buyer')) {
           // 买家确认收货操作（同时完成订单）
           await confirmReceived(order.id)
