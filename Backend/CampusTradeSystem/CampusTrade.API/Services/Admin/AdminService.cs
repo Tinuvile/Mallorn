@@ -150,6 +150,104 @@ namespace CampusTrade.API.Services.Admin
         }
 
         /// <summary>
+        /// 通过用户名创建管理员
+        /// </summary>
+        public async Task<(bool Success, string Message, int? AdminId)> CreateAdminByUsernameAsync(CreateAdminByUsernameDto createDto, int operatorAdminId)
+        {
+            using var performanceTracker = new PerformanceTracker(_serilogLogger, "CreateAdminByUsername", "AdminService")
+                .AddContext("Username", createDto.Username)
+                .AddContext("Role", createDto.Role)
+                .AddContext("OperatorAdminId", operatorAdminId);
+
+            try
+            {
+                _serilogLogger.Information("开始通过用户名创建管理员 - 用户名: {Username}, 角色: {Role}, 操作员: {OperatorAdminId}",
+                    createDto.Username, createDto.Role, operatorAdminId);
+
+                // 验证操作员权限（只有系统管理员可以创建管理员）
+                var operatorAdmin = await _adminRepository.GetByPrimaryKeyAsync(operatorAdminId);
+                if (operatorAdmin?.Role != Models.Entities.Admin.Roles.Super)
+                {
+                    _serilogLogger.Warning("创建管理员权限验证失败 - 操作员ID: {OperatorAdminId}, 角色: {Role}",
+                        operatorAdminId, operatorAdmin?.Role);
+                    return (false, "只有系统管理员可以创建管理员", null);
+                }
+
+                // 通过用户名查找用户
+                var user = await _userRepository.GetByUsernameAsync(createDto.Username);
+                if (user == null)
+                {
+                    _serilogLogger.Warning("创建管理员失败 - 用户不存在: {Username}", createDto.Username);
+                    return (false, "用户不存在", null);
+                }
+
+                // 验证邮箱是否匹配
+                if (user.Email != createDto.Email)
+                {
+                    _serilogLogger.Warning("创建管理员失败 - 邮箱不匹配: {Username}, 提供邮箱: {ProvidedEmail}, 实际邮箱: {ActualEmail}", 
+                        createDto.Username, createDto.Email, user.Email);
+                    return (false, "用户邮箱不匹配", null);
+                }
+
+                // 验证用户是否已经是管理员
+                if (await _adminRepository.IsUserAdminAsync(user.UserId))
+                {
+                    _serilogLogger.Warning("创建管理员失败 - 用户已是管理员: {Username}", createDto.Username);
+                    return (false, "该用户已经是管理员", null);
+                }
+
+                // 如果是分类管理员，验证分类是否存在且未分配
+                if (createDto.Role == Models.Entities.Admin.Roles.CategoryAdmin)
+                {
+                    if (!createDto.AssignedCategory.HasValue)
+                    {
+                        return (false, "模块管理员必须指定负责的分类", null);
+                    }
+
+                    var category = await _unitOfWork.Categories.GetByPrimaryKeyAsync(createDto.AssignedCategory.Value);
+                    if (category == null)
+                    {
+                        return (false, "指定的分类不存在", null);
+                    }
+
+                    // 检查分类是否已经有管理员
+                    var existingCategoryAdmin = await _adminRepository.GetCategoryAdminByCategoryIdAsync(createDto.AssignedCategory.Value);
+                    if (existingCategoryAdmin != null)
+                    {
+                        return (false, "该分类已经有管理员负责", null);
+                    }
+                }
+
+                // 创建管理员记录
+                var admin = new Models.Entities.Admin
+                {
+                    UserId = user.UserId,
+                    Role = createDto.Role,
+                    AssignedCategory = createDto.AssignedCategory,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await _adminRepository.AddAsync(admin);
+                await _unitOfWork.SaveChangesAsync();
+
+                // 记录审计日志（简化版本）
+                // await _auditLogRepository.LogAsync(operatorAdminId, "创建管理员",
+                //     admin.AdminId, $"为用户 {createDto.Username} 创建了管理员权限，角色：{createDto.Role}");
+
+                _serilogLogger.Information("管理员创建成功 - 管理员ID: {AdminId}, 用户名: {Username}, 角色: {Role}",
+                    admin.AdminId, createDto.Username, createDto.Role);
+
+                return (true, "管理员创建成功", admin.AdminId);
+            }
+            catch (Exception ex)
+            {
+                _serilogLogger.Error(ex, "通过用户名创建管理员异常 - 用户名: {Username}, 错误: {ErrorMessage}",
+                    createDto.Username, ex.Message);
+                return (false, "系统异常，请稍后重试", null);
+            }
+        }
+
+        /// <summary>
         /// 更新管理员信息
         /// </summary>
         public async Task<(bool Success, string Message)> UpdateAdminAsync(int adminId, UpdateAdminDto updateDto, int operatorAdminId)
@@ -454,23 +552,35 @@ namespace CampusTrade.API.Services.Admin
                 var admin = await _adminRepository.GetAdminWithDetailsAsync(adminId);
                 if (admin == null)
                 {
+                    _serilogLogger.Warning("管理员不存在 - AdminId: {AdminId}", adminId);
                     return (Enumerable.Empty<Reports>(), 0);
                 }
+
+                _serilogLogger.Information("获取管理员举报列表 - AdminId: {AdminId}, Role: {Role}, Category: {Category}", 
+                    adminId, admin.Role, admin.AssignedCategory);
 
                 // 系统管理员可以看所有举报
                 if (admin.Role == Models.Entities.Admin.Roles.Super)
                 {
+                    _serilogLogger.Information("系统管理员查看所有举报");
                     return await _reportsRepository.GetPagedReportsAsync(pageIndex, pageSize, status: status);
                 }
 
                 // 模块管理员只能看自己负责分类的举报
                 if (admin.Role == Models.Entities.Admin.Roles.CategoryAdmin && admin.AssignedCategory.HasValue)
                 {
-                    // 这里需要实现根据分类筛选举报的逻辑
-                    // 暂时返回空，需要在ReportsRepository中添加相应方法
-                    return (Enumerable.Empty<Reports>(), 0);
+                    _serilogLogger.Information("分类管理员查看分类 {CategoryId} 的举报", admin.AssignedCategory.Value);
+                    var result = await _reportsRepository.GetPagedReportsByCategoryAsync(
+                        admin.AssignedCategory.Value, 
+                        pageIndex, 
+                        pageSize, 
+                        status: status);
+                    _serilogLogger.Information("分类管理员获得 {Count} 条举报", result.TotalCount);
+                    return result;
                 }
 
+                _serilogLogger.Warning("管理员角色或分类配置异常 - AdminId: {AdminId}, Role: {Role}, Category: {Category}", 
+                    adminId, admin.Role, admin.AssignedCategory);
                 return (Enumerable.Empty<Reports>(), 0);
             }
             catch (Exception ex)
@@ -478,6 +588,246 @@ namespace CampusTrade.API.Services.Admin
                 _serilogLogger.Error(ex, "获取管理员举报列表异常 - 管理员ID: {AdminId}", adminId);
                 return (Enumerable.Empty<Reports>(), 0);
             }
+        }
+
+        /// <summary>
+        /// 获取举报详情（管理员专用）
+        /// </summary>
+        public async Task<object?> GetReportDetailAsync(int reportId, int adminId)
+        {
+            try
+            {
+                var admin = await _adminRepository.GetAdminWithDetailsAsync(adminId);
+                if (admin == null)
+                {
+                    return null;
+                }
+
+                // 获取举报详情
+                var report = await _reportsRepository.GetReportWithDetailsAsync(reportId);
+                if (report == null)
+                {
+                    return null;
+                }
+
+                // 权限检查：系统管理员可以查看所有举报
+                if (admin.Role == Models.Entities.Admin.Roles.Super)
+                {
+                    return ConvertToReportDetailDto(report);
+                }
+
+                // 分类管理员只能查看自己负责分类的举报
+                if (admin.Role == Models.Entities.Admin.Roles.CategoryAdmin && admin.AssignedCategory.HasValue)
+                {
+                    // 检查举报是否属于管理员负责的分类
+                    if (IsReportInCategory(report, admin.AssignedCategory.Value))
+                    {
+                        return ConvertToReportDetailDto(report);
+                    }
+                }
+
+                return null; // 无权限访问
+            }
+            catch (Exception ex)
+            {
+                _serilogLogger.Error(ex, "获取举报详情异常 - 举报ID: {ReportId}, 管理员ID: {AdminId}", reportId, adminId);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 检查举报是否属于指定分类
+        /// </summary>
+        private bool IsReportInCategory(Reports report, int categoryId)
+        {
+            try
+            {
+                // 通过订单获取商品分类
+                var product = report.Order?.Product;
+                if (product?.Category == null)
+                {
+                    return false;
+                }
+
+                // 检查是否在分类树中
+                return IsInCategoryTree(product.Category, categoryId);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 递归检查分类是否在分类树中
+        /// </summary>
+        private bool IsInCategoryTree(Models.Entities.Category category, int targetCategoryId)
+        {
+            if (category.CategoryId == targetCategoryId)
+            {
+                return true;
+            }
+
+            if (category.ParentId.HasValue)
+            {
+                var parent = category.Parent;
+                if (parent != null)
+                {
+                    return IsInCategoryTree(parent, targetCategoryId);
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// 将举报实体转换为详情DTO
+        /// </summary>
+        private object ConvertToReportDetailDto(Reports report)
+        {
+            var evidences = new List<object>();
+            if (report.Evidences != null)
+            {
+                foreach (var evidence in report.Evidences)
+                {
+                    evidences.Add(new
+                    {
+                        evidence_id = evidence.EvidenceId,
+                        file_type = evidence.FileType,
+                        file_url = evidence.FileUrl,
+                        uploaded_at = evidence.UploadedAt.ToString("yyyy-MM-dd HH:mm:ss")
+                    });
+                }
+            }
+
+            // 通过 AbstractOrder 获取 Order 信息
+            var order = report.AbstractOrder?.Order;
+
+            return new
+            {
+                report_id = report.ReportId,
+                order_id = report.OrderId,
+                type = report.Type,
+                description = report.Description,
+                status = report.Status,
+                priority = report.Priority,
+                create_time = report.CreateTime.ToString("yyyy-MM-dd HH:mm:ss"),
+                reporter = report.Reporter != null ? new
+                {
+                    user_id = report.Reporter.UserId,
+                    username = report.Reporter.Username
+                } : null,
+                evidences = evidences,
+                order = order != null ? new
+                {
+                    order_id = order.OrderId,
+                    total_amount = order.TotalAmount,
+                    status = order.Status,
+                    product = order.Product != null ? new
+                    {
+                        product_id = order.Product.ProductId,
+                        title = order.Product.Title,
+                        description = order.Product.Description
+                    } : null
+                } : null
+            };
+        }
+
+        /// <summary>
+        /// 获取举报审核历史
+        /// </summary>
+        public async Task<IEnumerable<object>?> GetReportAuditHistoryAsync(int reportId, int adminId)
+        {
+            try
+            {
+                var admin = await _adminRepository.GetAdminWithDetailsAsync(adminId);
+                if (admin == null)
+                {
+                    return null;
+                }
+
+                // 首先检查管理员是否有权限查看该举报
+                var report = await _reportsRepository.GetReportWithDetailsAsync(reportId);
+                if (report == null)
+                {
+                    return null;
+                }
+
+                // 权限检查：系统管理员可以查看所有举报历史
+                if (admin.Role == Models.Entities.Admin.Roles.Super)
+                {
+                    return await GetAuditHistoryForReport(reportId);
+                }
+
+                // 分类管理员只能查看自己负责分类的举报历史
+                if (admin.Role == Models.Entities.Admin.Roles.CategoryAdmin && admin.AssignedCategory.HasValue)
+                {
+                    // 检查举报是否属于管理员负责的分类
+                    if (IsReportInCategory(report, admin.AssignedCategory.Value))
+                    {
+                        return await GetAuditHistoryForReport(reportId);
+                    }
+                }
+
+                return null; // 无权限访问
+            }
+            catch (Exception ex)
+            {
+                _serilogLogger.Error(ex, "获取举报审核历史异常 - 举报ID: {ReportId}, 管理员ID: {AdminId}", reportId, adminId);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 获取指定举报的审核历史
+        /// </summary>
+        private async Task<IEnumerable<object>> GetAuditHistoryForReport(int reportId)
+        {
+            var auditLogs = await _auditLogRepository.GetReportAuditHistoryAsync(reportId);
+            
+            var historyItems = new List<object>();
+
+            // 添加举报创建记录（虽然不在audit log中，但作为历史的起点）
+            var report = await _reportsRepository.GetReportWithDetailsAsync(reportId);
+            if (report != null)
+            {
+                historyItems.Add(new
+                {
+                    timestamp = report.CreateTime.ToString("yyyy-MM-dd HH:mm:ss"),
+                    action = "提交举报",
+                    moderator = report.Reporter?.Username ?? "系统用户",
+                    comment = $"举报类型：{report.Type}，举报内容：{report.Description ?? "无具体说明"}"
+                });
+            }
+
+            // 添加审核历史记录
+            foreach (var log in auditLogs)
+            {
+                var actionText = GetActionDisplayText(log.ActionType);
+                var moderatorName = log.Admin?.User?.Username ?? "系统管理员";
+                
+                historyItems.Add(new
+                {
+                    timestamp = log.LogTime.ToString("yyyy-MM-dd HH:mm:ss"),
+                    action = actionText,
+                    moderator = moderatorName,
+                    comment = log.LogDetail ?? "无详细说明"
+                });
+            }
+
+            return historyItems.OrderBy(h => ((dynamic)h).timestamp);
+        }
+
+        /// <summary>
+        /// 获取操作类型的显示文本
+        /// </summary>
+        private string GetActionDisplayText(string actionType)
+        {
+            return actionType switch
+            {
+                AuditLog.ActionTypes.HandleReport => "审核处理",
+                _ => actionType
+            };
         }
         #endregion
 

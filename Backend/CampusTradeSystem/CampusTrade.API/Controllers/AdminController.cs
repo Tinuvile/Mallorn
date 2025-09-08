@@ -66,6 +66,44 @@ namespace CampusTrade.API.Controllers
         }
 
         /// <summary>
+        /// 通过用户名创建管理员（仅系统管理员）
+        /// </summary>
+        /// <param name="createDto">创建管理员请求</param>
+        /// <returns>创建结果</returns>
+        [HttpPost("assign")]
+        public async Task<IActionResult> CreateAdminByUsername([FromBody] CreateAdminByUsernameDto createDto)
+        {
+            try
+            {
+                // 获取当前用户ID
+                var userId = User.GetUserId();
+                if (userId == 0)
+                    return Unauthorized("用户身份验证失败");
+
+                // 获取操作员的管理员信息
+                var operatorAdmin = await _adminService.GetAdminByUserIdAsync(userId);
+                if (operatorAdmin == null)
+                {
+                    return Forbid(ApiResponse.CreateError("只有管理员可以执行此操作").ToString());
+                }
+
+                var result = await _adminService.CreateAdminByUsernameAsync(createDto, operatorAdmin.AdminId);
+
+                if (result.Success)
+                {
+                    return Ok(ApiResponse.CreateSuccess(new { adminId = result.AdminId }, result.Message));
+                }
+
+                return BadRequest(ApiResponse.CreateError(result.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "通过用户名创建管理员时发生异常");
+                return StatusCode(500, ApiResponse.CreateError("系统异常，请稍后重试"));
+            }
+        }
+
+        /// <summary>
         /// 更新管理员信息（仅系统管理员）
         /// </summary>
         /// <param name="adminId">管理员ID</param>
@@ -311,21 +349,103 @@ namespace CampusTrade.API.Controllers
 
                 var (reports, totalCount) = await _adminService.GetAdminReportsAsync(admin.AdminId, pageIndex, pageSize, status);
 
+                // 转换为DTO格式
+                var reportDtos = reports.Select(r => new Models.DTOs.Report.ReportListItemDto
+                {
+                    ReportId = r.ReportId,
+                    OrderId = r.OrderId,
+                    Type = r.Type,
+                    Priority = r.Priority,
+                    Status = r.Status,
+                    Description = r.Description,
+                    CreateTime = r.CreateTime,
+                    EvidenceCount = r.Evidences?.Count ?? 0
+                }).ToList();
+
                 return Ok(ApiResponse.CreateSuccess(new
                 {
-                    reports,
-                    pagination = new
-                    {
-                        pageIndex,
-                        pageSize,
-                        totalCount,
-                        totalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
-                    }
+                    reports = reportDtos,
+                    totalCount,
+                    pageIndex,
+                    pageSize,
+                    totalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
                 }));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "获取管理员举报列表时发生异常");
+                return StatusCode(500, ApiResponse.CreateError("系统异常，请稍后重试"));
+            }
+        }
+
+        /// <summary>
+        /// 获取举报详情（管理员专用）
+        /// </summary>
+        /// <param name="reportId">举报ID</param>
+        /// <returns>举报详情</returns>
+        [HttpGet("reports/{reportId}")]
+        public async Task<IActionResult> GetReportDetail(int reportId)
+        {
+            try
+            {
+                // 获取当前管理员信息
+                var userId = User.GetUserId();
+                if (userId == 0)
+                    return Unauthorized("用户身份验证失败");
+
+                var admin = await _adminService.GetAdminByUserIdAsync(userId);
+                if (admin == null)
+                {
+                    return Forbid(ApiResponse.CreateError("只有管理员可以查看举报详情").ToString());
+                }
+
+                var reportDetail = await _adminService.GetReportDetailAsync(reportId, admin.AdminId);
+                if (reportDetail == null)
+                {
+                    return NotFound(ApiResponse.CreateError("举报不存在或无权限访问"));
+                }
+
+                return Ok(ApiResponse.CreateSuccess(reportDetail));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取举报详情时发生异常");
+                return StatusCode(500, ApiResponse.CreateError("系统异常，请稍后重试"));
+            }
+        }
+
+        /// <summary>
+        /// 获取举报审核历史
+        /// </summary>
+        /// <param name="reportId">举报ID</param>
+        /// <returns>审核历史列表</returns>
+        [HttpGet("reports/{reportId}/history")]
+        public async Task<IActionResult> GetReportAuditHistory(int reportId)
+        {
+            try
+            {
+                // 获取当前管理员信息
+                var userId = User.GetUserId();
+                if (userId == 0)
+                    return Unauthorized("用户身份验证失败");
+
+                var admin = await _adminService.GetAdminByUserIdAsync(userId);
+                if (admin == null)
+                {
+                    return Forbid(ApiResponse.CreateError("只有管理员可以查看审核历史").ToString());
+                }
+
+                var auditHistory = await _adminService.GetReportAuditHistoryAsync(reportId, admin.AdminId);
+                if (auditHistory == null)
+                {
+                    return NotFound(ApiResponse.CreateError("举报不存在或无权限访问"));
+                }
+
+                return Ok(ApiResponse.CreateSuccess(auditHistory));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取举报审核历史时发生异常");
                 return StatusCode(500, ApiResponse.CreateError("系统异常，请稍后重试"));
             }
         }
@@ -796,6 +916,37 @@ namespace CampusTrade.API.Controllers
                 return StatusCode(500, ApiResponse.CreateError("系统异常，请稍后重试"));
             }
         }
+
+        /// <summary>
+        /// 创建测试举报数据（仅用于开发测试）
+        /// </summary>
+        /// <returns>测试结果</returns>
+        [HttpPost("test/create-sample-report")]
+        public async Task<IActionResult> CreateSampleReport()
+        {
+            try
+            {
+                // 获取当前用户ID
+                var userId = User.GetUserId();
+                if (userId == 0)
+                    return Unauthorized("用户身份验证失败");
+
+                var admin = await _adminService.GetAdminByUserIdAsync(userId);
+                if (admin == null)
+                {
+                    return Forbid(ApiResponse.CreateError("只有管理员可以创建测试数据").ToString());
+                }
+
+                // 这里可以添加创建测试举报的逻辑
+                return Ok(ApiResponse.CreateSuccess("测试举报创建功能需要实现"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "创建测试举报时发生异常");
+                return StatusCode(500, ApiResponse.CreateError("系统异常，请稍后重试"));
+            }
+        }
+
         #endregion
     }
 }

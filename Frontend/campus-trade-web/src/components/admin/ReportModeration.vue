@@ -55,11 +55,11 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="item in filteredReports" :key="item.reportId" :class="{ loading: loading }">
-              <td class="report-id">{{ item.reportId }}</td>
-              <td>{{ new Date(item.createTime).toLocaleString() }}</td>
+            <tr v-for="item in filteredReports" :key="item.report_id" :class="{ loading: loading }">
+              <td class="report-id">{{ item.report_id }}</td>
+              <td>{{ new Date(item.create_time).toLocaleString() }}</td>
               <td>举报用户</td>
-              <td class="target-goods">订单 #{{ item.orderId }}</td>
+              <td class="target-goods">订单 #{{ item.order_id }}</td>
               <td>
                 <span class="type-tag">{{ item.type }}</span>
               </td>
@@ -81,8 +81,8 @@
                   <button 
                     class="table-action-btn moderate" 
                     @click="moderateReport(item)"
-                    :disabled="item.status !== '待审核'"
-                    title="审核举报"
+                    :disabled="!canModerateReport(item)"
+                    :title="getModerateButtonTitle(item)"
                   >
                     审核
                   </button>
@@ -145,11 +145,11 @@
           <div class="detail-grid">
             <div class="detail-item">
               <label>举报ID</label>
-              <div class="detail-value">{{ selectedReport.reportId }}</div>
+              <div class="detail-value">{{ selectedReport.report_id }}</div>
             </div>
             <div class="detail-item">
               <label>举报时间</label>
-              <div class="detail-value">{{ new Date(selectedReport.createTime).toLocaleString() }}</div>
+              <div class="detail-value">{{ new Date(selectedReport.create_time).toLocaleString() }}</div>
             </div>
             <div class="detail-item">
               <label>举报人</label>
@@ -157,7 +157,7 @@
             </div>
             <div class="detail-item">
               <label>被举报订单</label>
-              <div class="detail-value">订单 #{{ selectedReport.orderId }}</div>
+              <div class="detail-value">订单 #{{ selectedReport.order_id }}</div>
             </div>
             <div class="detail-item">
               <label>举报类型</label>
@@ -179,7 +179,7 @@
               <label>举报证据</label>
               <div class="evidence-grid">
                 <div v-for="(evidence, index) in selectedReport.evidences" :key="index" class="evidence-item">
-                  <img :src="evidence.fileUrl" :alt="`证据 ${index + 1}`">
+                  <img :src="evidence.file_url" :alt="`证据 ${index + 1}`">
                 </div>
               </div>
             </div>
@@ -200,7 +200,7 @@
             <h4>举报信息</h4>
             <div class="summary-grid">
               <div><strong>举报人：</strong>{{ reportToModerate.reporter?.username || '未知用户' }}</div>
-              <div><strong>被举报订单：</strong>订单 #{{ reportToModerate.orderId }}</div>
+              <div><strong>被举报订单：</strong>订单 #{{ reportToModerate.order_id }}</div>
               <div><strong>举报类型：</strong>{{ reportToModerate.type }}</div>
               <div class="full-width"><strong>举报内容：</strong>{{ reportToModerate.description }}</div>
             </div>
@@ -267,6 +267,17 @@
               <button type="submit" class="action-btn primary" :disabled="!isModerationFormValid || moderating">
                 {{ moderating ? '提交中...' : '提交审核' }}
               </button>
+            </div>
+            
+            <!-- 调试信息 -->
+            <div class="debug-section" style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 4px; font-size: 12px;">
+              <div><strong>调试信息:</strong></div>
+              <div>表单验证: {{ isModerationFormValid ? '✓ 通过' : '✗ 失败' }}</div>
+              <div>审核决定: {{ moderationForm.handleResult || '未选择' }}</div>
+              <div>审核意见: {{ moderationForm.handleNote ? `已填写(${moderationForm.handleNote.length}字)` : '未填写' }}</div>
+              <div>是否处罚: {{ moderationForm.applyPenalty ? '是' : '否' }}</div>
+              <div v-if="moderationForm.applyPenalty">处罚类型: {{ moderationForm.penaltyType || '未选择' }}</div>
+              <div v-if="moderationForm.applyPenalty && moderationForm.penaltyType !== '警告'">处罚时长: {{ moderationForm.penaltyDuration || '未设置' }}天</div>
             </div>
           </form>
         </div>
@@ -386,12 +397,17 @@ const filteredReports = computed(() => {
 
 const isModerationFormValid = computed(() => {
   const hasResult = !!moderationForm.handleResult
-  const hasNote = !!moderationForm.handleNote && moderationForm.handleNote.length <= 500
-  const hasPenaltyInfo = !moderationForm.applyPenalty || 
-    (!!moderationForm.penaltyType && 
-     (!moderationForm.penaltyDuration || (moderationForm.penaltyDuration >= 1 && moderationForm.penaltyDuration <= 365)))
+  const hasNote = !!moderationForm.handleNote && moderationForm.handleNote.trim().length > 0 && moderationForm.handleNote.length <= 500
   
-  return hasResult && hasNote && hasPenaltyInfo
+  // 如果要进行处罚，验证处罚相关字段
+  if (moderationForm.applyPenalty) {
+    const hasPenaltyType = !!moderationForm.penaltyType
+    const hasPenaltyDuration = moderationForm.penaltyType === '警告' || 
+      (moderationForm.penaltyDuration && moderationForm.penaltyDuration >= 1 && moderationForm.penaltyDuration <= 365)
+    return hasResult && hasNote && hasPenaltyType && hasPenaltyDuration
+  }
+  
+  return hasResult && hasNote
 })
 
 // API 调用方法
@@ -415,13 +431,27 @@ const fetchReports = async () => {
 
 const fetchReportDetail = async (reportId: number): Promise<ReportDetail | null> => {
   try {
-    const response = await reportApi.getReportDetail(reportId)
+    console.log('发起举报详情请求:', { reportId })
+    
+    // 使用管理员专用的举报详情API
+    const response = await adminApi.getReportDetail(reportId)
+    
+    console.log('API响应:', response)
     
     if (response.success && response.data) {
+      console.log('举报详情获取成功:', response.data)
       return response.data
+    } else {
+      console.error('API返回失败:', response.message || '未知错误')
     }
   } catch (error) {
-    console.error('获取举报详情失败:', error)
+    console.error('API请求异常:', error)
+    if (error instanceof Error) {
+      console.error('错误详情:', {
+        message: error.message,
+        stack: error.stack
+      })
+    }
   }
   
   return null
@@ -469,15 +499,38 @@ const getHistoryClass = (action: string) => {
 }
 
 const viewReportDetails = async (item: ReportItem) => {
-  const detail = await fetchReportDetail(item.reportId)
-  if (detail) {
-    selectedReport.value = detail
-    showDetailDialog.value = true
+  console.log('点击查看详情按钮:', {
+    reportId: item.report_id,
+    status: item.status,
+    type: item.type
+  })
+  
+  try {
+    const detail = await fetchReportDetail(item.report_id)
+    console.log('获取到的举报详情:', detail)
+    
+    if (detail) {
+      selectedReport.value = detail
+      showDetailDialog.value = true
+      console.log('详情模态框已打开')
+    } else {
+      console.error('举报详情为空')
+      alert('无法获取举报详情，请稍后重试')
+    }
+  } catch (error) {
+    console.error('获取举报详情异常:', error)
+    alert('获取举报详情失败: ' + (error instanceof Error ? error.message : '网络错误'))
   }
 }
 
 const moderateReport = async (item: ReportItem) => {
-  const detail = await fetchReportDetail(item.reportId)
+  console.log('点击审核按钮:', {
+    reportId: item.report_id,
+    status: item.status,
+    canModerate: item.status === '待审核'
+  })
+  
+  const detail = await fetchReportDetail(item.report_id)
   if (detail) {
     reportToModerate.value = detail
     Object.assign(moderationForm, {
@@ -488,50 +541,110 @@ const moderateReport = async (item: ReportItem) => {
       penaltyDuration: undefined
     })
     showModerationDialog.value = true
+    console.log('审核模态框已打开')
+  } else {
+    console.error('无法获取举报详情')
+    alert('无法获取举报详情，请稍后重试')
   }
 }
 
-const viewHistory = (item: ReportItem) => {
-  // 模拟审核历史数据
-  moderationHistory.value = [
-    {
-      timestamp: new Date(item.createTime).toLocaleString(),
-      action: '提交举报',
-      moderator: '举报用户',
-      comment: '举报提交'
-    },
-    {
-      timestamp: new Date().toLocaleString(),
-      action: '开始审核',
-      moderator: '管理员',
-      comment: '开始处理该举报，正在调查中'
+const viewHistory = async (item: ReportItem) => {
+  console.log('点击查看审核历史:', {
+    reportId: item.report_id,
+    status: item.status,
+    type: item.type
+  })
+  
+  try {
+    const response = await adminApi.getReportAuditHistory(item.report_id)
+    
+    console.log('审核历史API响应:', response)
+    
+    if (response.success && response.data) {
+      moderationHistory.value = response.data
+      showHistoryDialog.value = true
+      console.log('审核历史模态框已打开，历史记录数量:', response.data.length)
+    } else {
+      console.error('获取审核历史失败:', response.message || '未知错误')
+      // 如果API调用失败，显示基础信息
+      moderationHistory.value = [
+        {
+          timestamp: new Date(item.create_time).toLocaleString(),
+          action: '提交举报',
+          moderator: '举报用户',
+          comment: '举报提交'
+        }
+      ]
+      showHistoryDialog.value = true
     }
-  ]
-  showHistoryDialog.value = true
+  } catch (error) {
+    console.error('获取审核历史异常:', error)
+    // 如果出现错误，显示基础信息
+    moderationHistory.value = [
+      {
+        timestamp: new Date(item.create_time).toLocaleString(),
+        action: '提交举报',
+        moderator: '举报用户',
+        comment: '举报提交'
+      }
+    ]
+    showHistoryDialog.value = true
+  }
 }
 
 const submitModeration = async () => {
-  if (!reportToModerate.value || !isModerationFormValid.value) return
+  if (!reportToModerate.value || !isModerationFormValid.value) {
+    console.log('表单验证失败:', {
+      hasReport: !!reportToModerate.value,
+      formValid: isModerationFormValid.value,
+      form: moderationForm
+    })
+    return
+  }
   
   moderating.value = true
   try {
     const request: HandleReportRequest = {
-      handleResult: moderationForm.handleResult,
-      handleNote: moderationForm.handleNote,
-      applyPenalty: moderationForm.applyPenalty,
-      penaltyType: moderationForm.applyPenalty ? moderationForm.penaltyType : undefined,
-      penaltyDuration: moderationForm.applyPenalty ? moderationForm.penaltyDuration : undefined
+      HandleResult: moderationForm.handleResult,
+      HandleNote: moderationForm.handleNote,
+      ApplyPenalty: moderationForm.applyPenalty,
+      PenaltyType: moderationForm.applyPenalty ? moderationForm.penaltyType : undefined,
+      PenaltyDuration: moderationForm.applyPenalty ? moderationForm.penaltyDuration : undefined
     }
     
-    const response = await adminApi.handleReport(reportToModerate.value.reportId, request)
+    console.log('提交审核请求:', {
+      reportId: reportToModerate.value.report_id,
+      request
+    })
+    
+    const response = await adminApi.handleReport(reportToModerate.value.report_id, request)
+    
+    console.log('审核响应:', response)
     
     if (response.success) {
       // 处理成功后刷新列表
       await fetchReports()
       closeModerationDialog()
+      console.log('审核提交成功')
+      
+      // 如果审核历史窗口是打开的，也需要刷新历史
+      if (showHistoryDialog.value && reportToModerate.value) {
+        try {
+          const historyResponse = await adminApi.getReportAuditHistory(reportToModerate.value.report_id)
+          if (historyResponse.success && historyResponse.data) {
+            moderationHistory.value = historyResponse.data
+          }
+        } catch (error) {
+          console.error('刷新审核历史失败:', error)
+        }
+      }
+    } else {
+      console.error('审核失败:', response)
+      alert('审核失败: ' + (response.message || '未知错误'))
     }
   } catch (error) {
     console.error('审核提交失败:', error)
+    alert('审核提交失败: ' + (error instanceof Error ? error.message : '网络错误'))
   } finally {
     moderating.value = false
   }
@@ -547,6 +660,20 @@ const closeModerationDialog = () => {
     penaltyType: '',
     penaltyDuration: undefined
   })
+}
+
+// 审核按钮相关方法
+const canModerateReport = (item: ReportItem) => {
+  // 允许审核的状态：待审核、处理中（可以再次审核）
+  const allowedStatuses = ['待审核', '待处理', '处理中']
+  return allowedStatuses.includes(item.status)
+}
+
+const getModerateButtonTitle = (item: ReportItem) => {
+  if (canModerateReport(item)) {
+    return '审核举报'
+  }
+  return `无法审核：当前状态为${item.status}`
 }
 
 // 分页方法

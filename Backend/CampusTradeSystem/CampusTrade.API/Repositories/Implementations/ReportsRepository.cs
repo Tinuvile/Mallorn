@@ -77,7 +77,14 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<Reports?> GetReportWithDetailsAsync(int reportId)
         {
-            return await _dbSet.Include(r => r.AbstractOrder).Include(r => r.Reporter).Include(r => r.Evidences).FirstOrDefaultAsync(r => r.ReportId == reportId);
+            return await _dbSet
+                .Include(r => r.AbstractOrder)
+                    .ThenInclude(ao => ao.Order)
+                        .ThenInclude(o => o.Product)
+                            .ThenInclude(p => p.Category)
+                .Include(r => r.Reporter)
+                .Include(r => r.Evidences)
+                .FirstOrDefaultAsync(r => r.ReportId == reportId);
         }
         /// <summary>
         /// 获取举报证据集合
@@ -113,6 +120,115 @@ namespace CampusTrade.API.Repositories.Implementations
             }
 
             return category;
+        }
+
+        /// <summary>
+        /// 分页获取指定分类的举报
+        /// </summary>
+        public async Task<(IEnumerable<Reports> Reports, int TotalCount)> GetPagedReportsByCategoryAsync(
+            int categoryId, 
+            int pageIndex, 
+            int pageSize, 
+            string? status = null, 
+            string? type = null, 
+            int? priority = null, 
+            DateTime? startDate = null, 
+            DateTime? endDate = null)
+        {
+            // 首先获取指定分类及其所有子分类的ID列表
+            var categoryIds = await GetCategoryAndDescendantsAsync(categoryId);
+            Console.WriteLine($"[DEBUG] 分类 {categoryId} 及其子分类: [{string.Join(", ", categoryIds)}]");
+
+            // 构建查询，通过举报关联的订单商品分类进行筛选
+            var query = _dbSet
+                .Include(r => r.AbstractOrder)
+                    .ThenInclude(ao => ao.Order)
+                        .ThenInclude(o => o.Product)
+                            .ThenInclude(p => p.Category)
+                .Include(r => r.Reporter)
+                .Include(r => r.Evidences)
+                .Where(r => r.AbstractOrder != null 
+                    && r.AbstractOrder.Order != null 
+                    && r.AbstractOrder.Order.Product != null 
+                    && r.AbstractOrder.Order.Product.Category != null)
+                .AsQueryable();
+
+            // 筛选属于指定分类或其子分类的举报
+            query = query.Where(r => categoryIds.Contains(r.AbstractOrder.Order.Product.CategoryId));
+
+            // 应用其他筛选条件
+            if (!string.IsNullOrEmpty(status)) 
+                query = query.Where(r => r.Status == status);
+            
+            if (!string.IsNullOrEmpty(type)) 
+                query = query.Where(r => r.Type == type);
+            
+            if (priority.HasValue) 
+                query = query.Where(r => r.Priority == priority.Value);
+            
+            if (startDate.HasValue) 
+                query = query.Where(r => r.CreateTime >= startDate.Value);
+            
+            if (endDate.HasValue) 
+                query = query.Where(r => r.CreateTime <= endDate.Value);
+
+            var totalCount = await query.CountAsync();
+            Console.WriteLine($"[DEBUG] 分类 {categoryId} 相关举报总数: {totalCount}");
+            
+            var reports = await query
+                .OrderByDescending(r => r.Priority)
+                .ThenByDescending(r => r.CreateTime)
+                .Skip(pageIndex * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            Console.WriteLine($"[DEBUG] 返回举报数量: {reports.Count}");
+            return (reports, totalCount);
+        }
+
+        /// <summary>
+        /// 获取指定分类及其所有子分类的ID列表
+        /// </summary>
+        private async Task<List<int>> GetCategoryAndDescendantsAsync(int categoryId)
+        {
+            var categoryIds = new List<int> { categoryId };
+            var categories = await _context.Categories.ToListAsync();
+            
+            // 递归查找所有子分类
+            AddDescendantCategories(categoryIds, categories, categoryId);
+            
+            return categoryIds;
+        }
+
+        /// <summary>
+        /// 递归添加子分类ID
+        /// </summary>
+        private void AddDescendantCategories(List<int> categoryIds, List<Category> allCategories, int parentId)
+        {
+            var childCategories = allCategories.Where(c => c.ParentId == parentId).ToList();
+            foreach (var child in childCategories)
+            {
+                if (!categoryIds.Contains(child.CategoryId))
+                {
+                    categoryIds.Add(child.CategoryId);
+                    AddDescendantCategories(categoryIds, allCategories, child.CategoryId);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 判断分类是否属于指定分类树（递归检查父分类）
+        /// </summary>
+        private bool IsInCategoryTree(Category category, int targetCategoryId)
+        {
+            var current = category;
+            while (current != null)
+            {
+                if (current.CategoryId == targetCategoryId)
+                    return true;
+                current = current.Parent;
+            }
+            return false;
         }
         #endregion
 

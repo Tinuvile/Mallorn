@@ -521,7 +521,7 @@ CREATE TABLE reports (
     type VARCHAR2(50) CHECK (type IN ('商品问题','服务问题','欺诈','虚假描述','其他')),
     priority NUMBER(2,0) CHECK (priority BETWEEN 1 AND 10),
     description CLOB,
-    status VARCHAR2(20) DEFAULT '待处理' CHECK (status IN ('待处理','处理中','已处理','已关闭')),
+    status VARCHAR2(20) DEFAULT '待处理' CHECK (status IN ('待处理','处理中','已处理','已关闭','已驳回','需要补充信息','待审核')),
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_report_order FOREIGN KEY (order_id) REFERENCES abstract_orders(abstract_order_id),
     CONSTRAINT fk_report_user FOREIGN KEY (reporter_id) REFERENCES users(user_id)
