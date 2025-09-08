@@ -1,6 +1,6 @@
 services:
   oracle-db:
-    image: gvenzl/oracle-xe:latest
+    image: ghcr.io/gvenzl/oracle-xe:21-slim
     container_name: campus-trade-oracle
     environment:
       ORACLE_PASSWORD: CampusTrade123!
