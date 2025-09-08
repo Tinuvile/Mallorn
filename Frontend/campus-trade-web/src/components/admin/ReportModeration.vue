@@ -242,21 +242,20 @@
                 <select v-model="moderationForm.penaltyType" class="form-select">
                   <option value="">请选择处罚类型</option>
                   <option v-for="type in penaltyTypeOptions" :key="type" :value="type">
-                    {{ type }}
+                    {{ type }} ({{ getPenaltyScoreText(type) }})
                   </option>
                 </select>
-              </div>
-              
-              <div v-if="moderationForm.penaltyType === '禁言' || moderationForm.penaltyType === '封号'" class="form-item">
-                <label>处罚时长（天数） *</label>
-                <input 
-                  v-model.number="moderationForm.penaltyDuration" 
-                  type="number" 
-                  class="form-input"
-                  min="1"
-                  max="365"
-                  placeholder="1-365天"
-                >
+                <div class="penalty-info">
+                  <div v-if="moderationForm.penaltyType === '轻度处罚'" class="penalty-desc">
+                    ⚠️ 轻度处罚：扣除5信用分，适用于轻微违规行为
+                  </div>
+                  <div v-if="moderationForm.penaltyType === '中度处罚'" class="penalty-desc">
+                    ⚠️ 中度处罚：扣除10信用分，适用于一般违规行为
+                  </div>
+                  <div v-if="moderationForm.penaltyType === '重度处罚'" class="penalty-desc">
+                    ⚠️ 重度处罚：扣除15信用分，适用于严重违规行为
+                  </div>
+                </div>
               </div>
             </div>
             
@@ -277,7 +276,9 @@
               <div>审核意见: {{ moderationForm.handleNote ? `已填写(${moderationForm.handleNote.length}字)` : '未填写' }}</div>
               <div>是否处罚: {{ moderationForm.applyPenalty ? '是' : '否' }}</div>
               <div v-if="moderationForm.applyPenalty">处罚类型: {{ moderationForm.penaltyType || '未选择' }}</div>
-              <div v-if="moderationForm.applyPenalty && moderationForm.penaltyType !== '警告'">处罚时长: {{ moderationForm.penaltyDuration || '未设置' }}天</div>
+              <div v-if="moderationForm.applyPenalty && moderationForm.penaltyType">
+                处罚程度: {{ getPenaltyScoreText(moderationForm.penaltyType) }}
+              </div>
             </div>
           </form>
         </div>
@@ -367,7 +368,7 @@ const handleResultOptions = [
 ]
 
 const penaltyTypeOptions = [
-  '警告', '禁言', '封号'
+  '轻度处罚', '中度处罚', '重度处罚'
 ]
 
 // 举报数据
@@ -402,9 +403,8 @@ const isModerationFormValid = computed(() => {
   // 如果要进行处罚，验证处罚相关字段
   if (moderationForm.applyPenalty) {
     const hasPenaltyType = !!moderationForm.penaltyType
-    const hasPenaltyDuration = moderationForm.penaltyType === '警告' || 
-      (moderationForm.penaltyDuration && moderationForm.penaltyDuration >= 1 && moderationForm.penaltyDuration <= 365)
-    return hasResult && hasNote && hasPenaltyType && hasPenaltyDuration
+    // 信用分处罚不需要处罚时长
+    return hasResult && hasNote && hasPenaltyType
   }
   
   return hasResult && hasNote
@@ -660,6 +660,15 @@ const closeModerationDialog = () => {
     penaltyType: '',
     penaltyDuration: undefined
   })
+}
+
+const getPenaltyScoreText = (penaltyType: string) => {
+  const scoreMap: Record<string, string> = {
+    '轻度处罚': '-5分',
+    '中度处罚': '-10分',
+    '重度处罚': '-15分'
+  }
+  return scoreMap[penaltyType] || ''
 }
 
 // 审核按钮相关方法
@@ -1140,6 +1149,20 @@ onMounted(() => {
   background-color: #f9f9f9;
   border-radius: 8px;
   border-left: 4px solid #FF85A2;
+}
+
+.penalty-info {
+  margin-top: 8px;
+}
+
+.penalty-desc {
+  padding: 8px 12px;
+  background-color: #fff3e0;
+  border: 1px solid #ffcc02;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #e65100;
+  line-height: 1.4;
 }
 
 /* 分页样式 */

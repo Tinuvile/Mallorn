@@ -47,6 +47,7 @@ namespace CampusTrade.API.Services.Admin
             _categoryRepository = categoryRepository;
             _unitOfWork = unitOfWork;
             _logger = logger;
+            _creditService = creditService;
             _serilogLogger = Log.ForContext<AdminService>();
         }
 
@@ -493,29 +494,48 @@ namespace CampusTrade.API.Services.Admin
 
                 await _reportsRepository.UpdateReportStatusAsync(reportId, newStatus);
 
-                // 如果需要处罚，这里可以添加处罚逻辑
+                // 如果审核通过且需要处罚，执行处罚逻辑
                 var penaltyInfo = "";
-                if (handleDto.ApplyPenalty && !string.IsNullOrEmpty(handleDto.PenaltyType))
+                if (handleDto.HandleResult == "通过" && handleDto.ApplyPenalty && !string.IsNullOrEmpty(handleDto.PenaltyType))
                 {
-                    penaltyInfo = $", 处罚类型: {handleDto.PenaltyType}";
-                    if (handleDto.PenaltyDuration.HasValue)
+                    // 确定被举报用户
+                    var reportedUserId = GetReportedUserId(report);
+                    if (reportedUserId.HasValue)
                     {
-                        penaltyInfo += $", 处罚时长: {handleDto.PenaltyDuration}天";
-                    }
-                    // TODO: 实现具体的处罚逻辑（警告、禁言、封号）
-                    // 信用分扣分（只有审核通过时才执行，事务内不自动保存）
-                    if (handleDto.HandleResult == "通过")
-                    {
-                        var reportedUserId = report.Order?.SellerId;
-                        if (reportedUserId != null)
+                        // 根据处罚类型确定信用分扣减
+                        var creditEventType = handleDto.PenaltyType switch
                         {
-                            await _creditService.ApplyCreditChangeAsync(new CreditEvent
-                            {
-                                UserId = reportedUserId.Value,
-                                EventType = CreditEventType.ReportPenalty,
-                                Description = $"举报处理通过，管理员处罚类型: {handleDto.PenaltyType}"
-                            }, autoSave: false);
-                        }
+                            "轻度处罚" => CreditEventType.LightReportPenalty,
+                            "中度处罚" => CreditEventType.ModerateReportPenalty, 
+                            "重度处罚" => CreditEventType.SevereReportPenalty,
+                            _ => CreditEventType.ModerateReportPenalty
+                        };
+
+                        var penaltyScore = creditEventType switch
+                        {
+                            CreditEventType.LightReportPenalty => -5,
+                            CreditEventType.ModerateReportPenalty => -10,
+                            CreditEventType.SevereReportPenalty => -15,
+                            _ => -10
+                        };
+
+                        // 执行信用分扣减
+                        await _creditService.ApplyCreditChangeAsync(new CreditEvent
+                        {
+                            UserId = reportedUserId.Value,
+                            EventType = creditEventType,
+                            Description = $"举报处理通过，{handleDto.PenaltyType}({penaltyScore}分) - 举报ID: {reportId}"
+                        }, autoSave: false);
+
+                        penaltyInfo = $", 处罚类型: {handleDto.PenaltyType}({penaltyScore}分)";
+                        
+                        _serilogLogger.Information("执行举报处罚 - 被举报用户ID: {UserId}, 处罚类型: {PenaltyType}, 扣减分数: {Score}",
+                            reportedUserId.Value, handleDto.PenaltyType, penaltyScore);
+                    }
+                    else
+                    {
+                        _serilogLogger.Warning("无法确定被举报用户，跳过处罚 - 举报ID: {ReportId}", reportId);
+                        penaltyInfo = $", 处罚失败: 无法确定被举报用户";
                     }
                 }
 
@@ -633,6 +653,16 @@ namespace CampusTrade.API.Services.Admin
                 _serilogLogger.Error(ex, "获取举报详情异常 - 举报ID: {ReportId}, 管理员ID: {AdminId}", reportId, adminId);
                 return null;
             }
+        }
+
+        /// <summary>
+        /// 获取被举报用户ID
+        /// </summary>
+        private int? GetReportedUserId(Reports report)
+        {
+            // 根据举报类型确定被举报的用户
+            // 由于举报主要针对订单，被举报用户通常是卖家
+            return report.Order?.SellerId;
         }
 
         /// <summary>
