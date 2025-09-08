@@ -29,15 +29,15 @@ services:
       dockerfile: CampusTrade.API/Dockerfile
     container_name: campus-trade-api
     ports:
-      - "5085:8080"
+      - "8080:8080"
     depends_on:
       - oracle-db
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__DefaultConnection=Data Source=oracle-db:1521/XEPDB1;User Id=CAMPUS_TRADE_USER;Password=CampusTrade123!;
     volumes:
       - ./Storage:/Storage
-      - ./Logs:/app/logs
+      - ./logs:/app/logs
     restart: unless-stopped
 
   campus-trade-web:
@@ -45,10 +45,10 @@ services:
       context: ./Frontend/campus-trade-web
       dockerfile: Dockerfile
       args:
-        - VITE_API_BASE_URL=http://localhost:5085
+        - VITE_API_BASE_URL=http://106.15.79.4:8080
     container_name: campus-trade-web
     ports:
-      - "3000:80"
+      - "80:80"
     depends_on:
       - campus-trade-api
     restart: unless-stopped
