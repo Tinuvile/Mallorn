@@ -4,6 +4,7 @@ using CampusTrade.API.Models.DTOs.Admin;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Interfaces;
+using CampusTrade.API.Services.Notification;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Serilog;
@@ -26,6 +27,7 @@ namespace CampusTrade.API.Services.Admin
         private readonly Serilog.ILogger _serilogLogger;
 
         private readonly ICreditService _creditService;
+        private readonly NotifiService _notificationService;
 
 
         public AdminService(
@@ -37,7 +39,8 @@ namespace CampusTrade.API.Services.Admin
             IRepository<Category> categoryRepository,
             IUnitOfWork unitOfWork,
             ILogger<AdminService> logger,
-            ICreditService creditService)
+            ICreditService creditService,
+            NotifiService notificationService)
         {
             _adminRepository = adminRepository;
             _auditLogRepository = auditLogRepository;
@@ -48,6 +51,7 @@ namespace CampusTrade.API.Services.Admin
             _unitOfWork = unitOfWork;
             _logger = logger;
             _creditService = creditService;
+            _notificationService = notificationService;
             _serilogLogger = Log.ForContext<AdminService>();
         }
 
@@ -545,6 +549,66 @@ namespace CampusTrade.API.Services.Admin
                 var logDetail = $"处理举报 - 举报ID: {reportId}, 处理结果: {handleDto.HandleResult}, 备注: {handleDto.HandleNote}{penaltyInfo}";
                 await _auditLogRepository.LogAdminActionAsync(adminId, AuditLog.ActionTypes.HandleReport, reportId, logDetail);
 
+                // 发送举报处理结果通知给举报人
+                try
+                {
+                    var reportResultParams = new Dictionary<string, object>
+                    {
+                        ["reportId"] = reportId.ToString(),
+                        ["result"] = GetResultDescription(handleDto.HandleResult)
+                    };
+
+                    await _notificationService.CreateNotificationAsync(
+                        report.ReporterId,
+                        32, // 举报处理结果模板ID
+                        reportResultParams,
+                        reportId
+                    );
+
+                    _serilogLogger.Information("举报处理结果通知已发送，举报人ID: {ReporterId}，举报ID: {ReportId}，处理结果: {Result}",
+                        report.ReporterId, reportId, handleDto.HandleResult);
+                }
+                catch (Exception ex)
+                {
+                    _serilogLogger.Error(ex, "发送举报处理结果通知失败，举报ID: {ReportId}，举报人ID: {ReporterId}", reportId, report.ReporterId);
+                    // 注意：通知发送失败不应该影响举报处理结果，所以这里只记录日志
+                }
+
+                // 如果有处罚，发送违规处罚通知给被举报人
+                if (handleDto.HandleResult == "通过" && handleDto.ApplyPenalty && !string.IsNullOrEmpty(handleDto.PenaltyType))
+                {
+                    var reportedUserId = GetReportedUserId(report);
+                    if (reportedUserId.HasValue)
+                    {
+                        try
+                        {
+                            var punishment = GetPunishmentDescription(handleDto.PenaltyType);
+                            var duration = handleDto.PenaltyDuration?.ToString() ?? "永久";
+
+                            var punishmentParams = new Dictionary<string, object>
+                            {
+                                ["punishment"] = punishment,
+                                ["duration"] = duration == "永久" ? "永久" : $"{duration}天"
+                            };
+
+                            await _notificationService.CreateNotificationAsync(
+                                reportedUserId.Value,
+                                33, // 违规处罚通知模板ID
+                                punishmentParams,
+                                reportId
+                            );
+
+                            _serilogLogger.Information("违规处罚通知已发送，被举报人ID: {ReportedUserId}，举报ID: {ReportId}，处罚类型: {PenaltyType}",
+                                reportedUserId.Value, reportId, handleDto.PenaltyType);
+                        }
+                        catch (Exception ex)
+                        {
+                            _serilogLogger.Error(ex, "发送违规处罚通知失败，举报ID: {ReportId}，被举报人ID: {ReportedUserId}", reportId, reportedUserId.Value);
+                            // 注意：通知发送失败不应该影响处罚执行结果，所以这里只记录日志
+                        }
+                    }
+                }
+
                 _serilogLogger.Information("举报处理成功 - 举报ID: {ReportId}, 管理员ID: {AdminId}, 处理结果: {Result}",
                     reportId, adminId, handleDto.HandleResult);
 
@@ -653,6 +717,34 @@ namespace CampusTrade.API.Services.Admin
                 _serilogLogger.Error(ex, "获取举报详情异常 - 举报ID: {ReportId}, 管理员ID: {AdminId}", reportId, adminId);
                 return null;
             }
+        }
+
+        /// <summary>
+        /// 获取举报处理结果的友好描述
+        /// </summary>
+        private string GetResultDescription(string handleResult)
+        {
+            return handleResult switch
+            {
+                "通过" => "举报属实，已对被举报方进行相应处理",
+                "驳回" => "举报不属实，已驳回此举报",
+                "需要更多信息" => "需要您提供更多证据信息",
+                _ => "举报已处理"
+            };
+        }
+
+        /// <summary>
+        /// 获取处罚类型的友好描述
+        /// </summary>
+        private string GetPunishmentDescription(string penaltyType)
+        {
+            return penaltyType switch
+            {
+                "轻度处罚" => "警告并扣除信用分",
+                "中度处罚" => "限制部分功能并扣除信用分",
+                "重度处罚" => "暂时封禁账户并扣除信用分",
+                _ => "相关处罚措施"
+            };
         }
 
         /// <summary>
