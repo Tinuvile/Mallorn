@@ -506,7 +506,7 @@ namespace CampusTrade.API.Services.Admin
                         var creditEventType = handleDto.PenaltyType switch
                         {
                             "轻度处罚" => CreditEventType.LightReportPenalty,
-                            "中度处罚" => CreditEventType.ModerateReportPenalty, 
+                            "中度处罚" => CreditEventType.ModerateReportPenalty,
                             "重度处罚" => CreditEventType.SevereReportPenalty,
                             _ => CreditEventType.ModerateReportPenalty
                         };
@@ -528,7 +528,7 @@ namespace CampusTrade.API.Services.Admin
                         }, autoSave: false);
 
                         penaltyInfo = $", 处罚类型: {handleDto.PenaltyType}({penaltyScore}分)";
-                        
+
                         _serilogLogger.Information("执行举报处罚 - 被举报用户ID: {UserId}, 处罚类型: {PenaltyType}, 扣减分数: {Score}",
                             reportedUserId.Value, handleDto.PenaltyType, penaltyScore);
                     }
