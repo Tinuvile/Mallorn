@@ -252,8 +252,23 @@ namespace CampusTrade.API.Services.Notification
                 string contentText;
                 decimal displayPrice = negotiation.ProposedPrice;
 
-                // 如果是反报价状态，需要获取卖家的反报价价格
-                if (negotiation.Status == "反报价")
+                // 判断买家是否可以操作：当状态为"等待回应"且轮到买家回应时
+                // 根据议价轮次判断：偶数轮卖家回应，奇数轮买家回应
+                var allNegotiationsForOrder = await _context.Negotiations
+                    .Where(n => n.OrderId == negotiation.OrderId)
+                    .ToListAsync();
+                var orderedNegotiations = allNegotiationsForOrder.OrderBy(n => n.CreatedAt).ToList();
+                var currentIndex = orderedNegotiations.FindIndex(n => n.NegotiationId == negotiation.NegotiationId);
+                bool shouldBuyerRespond = (currentIndex % 2 == 1); // 奇数轮买家回应
+
+                // 如果买家需要响应，说明是卖家反报价，需要显示卖家的反报价金额
+                if (shouldBuyerRespond && negotiation.Status == "等待回应")
+                {
+                    // 当前议价记录就是卖家的反报价，直接使用当前记录的价格
+                    displayPrice = negotiation.ProposedPrice;
+                    contentText = $"卖家给出反报价：￥{displayPrice}，等待您的回应";
+                }
+                else if (negotiation.Status == "反报价")
                 {
                     var latestNegotiation = await _context.Negotiations
                         .Where(n => n.OrderId == negotiation.OrderId && n.Status == "等待回应")
@@ -281,8 +296,7 @@ namespace CampusTrade.API.Services.Notification
                     };
                 }
 
-                // 判断买家是否可以操作：只有当状态为"反报价"时，买家才可以回应卖家的反报价
-                bool canRespond = negotiation.Status == "反报价";
+                bool canRespond = negotiation.Status == "等待回应" && shouldBuyerRespond;
 
                 bargainMessages.Add(new
                 {
@@ -295,7 +309,7 @@ namespace CampusTrade.API.Services.Notification
                     productName = negotiation.Order.Product.Title,
                     productImage = productImage,
                     myOffer = negotiation.ProposedPrice, // 买家自己的报价
-                    newOffer = negotiation.Status == "反报价" ? displayPrice : (decimal?)null, // 卖家的反报价
+                    newOffer = shouldBuyerRespond ? displayPrice : (decimal?)null, // 当买家需要回应时显示卖家的反报价
                     originalPrice = negotiation.Order.Product.BasePrice,
                     bargainStatus = GetBargainStatusInEnglish(negotiation.Status),
                     role = "buyer",
@@ -320,8 +334,15 @@ namespace CampusTrade.API.Services.Notification
                     _ => $"买家对您的商品《{negotiation.Order.Product.Title}》提出了议价 ￥{negotiation.ProposedPrice}，当前状态：{negotiation.Status}"
                 };
 
-                // 判断卖家是否可以操作：只有当状态为"等待回应"时，卖家才可以回应买家的议价
-                bool canRespond = negotiation.Status == "等待回应";
+                // 判断卖家是否可以操作：当状态为"等待回应"且轮到卖家回应时
+                // 根据议价轮次判断：偶数轮卖家回应，奇数轮买家回应
+                var allNegotiationsForOrder = await _context.Negotiations
+                    .Where(n => n.OrderId == negotiation.OrderId)
+                    .ToListAsync();
+                var orderedNegotiations = allNegotiationsForOrder.OrderBy(n => n.CreatedAt).ToList();
+                var currentIndex = orderedNegotiations.FindIndex(n => n.NegotiationId == negotiation.NegotiationId);
+                bool shouldSellerRespond = (currentIndex % 2 == 0); // 偶数轮卖家回应
+                bool canRespond = negotiation.Status == "等待回应" && shouldSellerRespond;
 
                 bargainMessages.Add(new
                 {
