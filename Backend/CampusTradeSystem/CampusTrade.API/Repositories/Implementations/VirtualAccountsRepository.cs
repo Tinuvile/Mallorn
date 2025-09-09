@@ -1,9 +1,9 @@
+using System.Collections.Generic;
 using CampusTrade.API.Data;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
 
 namespace CampusTrade.API.Repositories.Implementations
 {
@@ -17,14 +17,14 @@ namespace CampusTrade.API.Repositories.Implementations
         private readonly CampusTrade.API.Services.Notification.NotifiService? _notificationService;
 
         // 向后兼容的构造函数（用于UnitOfWork）
-        public VirtualAccountsRepository(CampusTradeDbContext context) : base(context) 
+        public VirtualAccountsRepository(CampusTradeDbContext context) : base(context)
         {
             _logger = null;
             _notificationService = null;
         }
 
         // 完整功能的构造函数（用于依赖注入）
-        public VirtualAccountsRepository(CampusTradeDbContext context, ILogger<VirtualAccountsRepository> logger, CampusTrade.API.Services.Notification.NotifiService notificationService) : base(context) 
+        public VirtualAccountsRepository(CampusTradeDbContext context, ILogger<VirtualAccountsRepository> logger, CampusTrade.API.Services.Notification.NotifiService notificationService) : base(context)
         {
             _logger = logger;
             _notificationService = notificationService;

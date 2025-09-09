@@ -97,7 +97,7 @@ namespace CampusTrade.API.Services
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "发送信用分变更通知失败，用户ID: {UserId}，变更类型: {EventType}", 
+                        _logger.LogError(ex, "发送信用分变更通知失败，用户ID: {UserId}，变更类型: {EventType}",
                             user.UserId, creditEvent.EventType);
                         // 注意：通知发送失败不应该影响信用分变更操作，所以这里只记录日志
                     }
