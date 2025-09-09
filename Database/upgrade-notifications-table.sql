@@ -3,11 +3,12 @@
 -- 执行前请备份数据库
 -- ================================================================
 
--- 设置容器到 XEPDB1 (已通过外部连接完成)
--- ALTER SESSION SET CONTAINER=XEPDB1;
+-- 设置容器到 XEPDB1
+ALTER SESSION SET CONTAINER=XEPDB1;
 
--- 连接到用户 (已通过外部连接完成)
--- CONNECT CAMPUS_TRADE_USER/"CampusTrade123!"@XEPDB1;
+-- 连接到用户
+-- 可选：直接切换当前Schema，确保在业务Schema下执行
+ALTER SESSION SET CURRENT_SCHEMA=CAMPUS_TRADE_USER;
 
 -- 启用DBMS_OUTPUT
 SET SERVEROUTPUT ON;
