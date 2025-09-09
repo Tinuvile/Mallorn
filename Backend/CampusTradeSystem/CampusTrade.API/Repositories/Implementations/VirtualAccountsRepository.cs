@@ -2,6 +2,8 @@ using CampusTrade.API.Data;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
 
 namespace CampusTrade.API.Repositories.Implementations
 {
@@ -11,7 +13,22 @@ namespace CampusTrade.API.Repositories.Implementations
     /// </summary>
     public class VirtualAccountsRepository : Repository<VirtualAccount>, IVirtualAccountsRepository
     {
-        public VirtualAccountsRepository(CampusTradeDbContext context) : base(context) { }
+        private readonly ILogger<VirtualAccountsRepository>? _logger;
+        private readonly CampusTrade.API.Services.Notification.NotifiService? _notificationService;
+
+        // 向后兼容的构造函数（用于UnitOfWork）
+        public VirtualAccountsRepository(CampusTradeDbContext context) : base(context) 
+        {
+            _logger = null;
+            _notificationService = null;
+        }
+
+        // 完整功能的构造函数（用于依赖注入）
+        public VirtualAccountsRepository(CampusTradeDbContext context, ILogger<VirtualAccountsRepository> logger, CampusTrade.API.Services.Notification.NotifiService notificationService) : base(context) 
+        {
+            _logger = logger;
+            _notificationService = notificationService;
+        }
 
         #region 读取操作
         /// <summary>
@@ -127,6 +144,36 @@ namespace CampusTrade.API.Repositories.Implementations
 
             // 添加日志以便调试
             Console.WriteLine($"DebitInternalAsync: 用户{userId}, 原余额{originalBalance}, 扣减{amount}, 新余额{account.Balance}");
+
+            // 发送余额变动通知
+            if (_notificationService != null)
+            {
+                try
+                {
+                    var notificationParams = new Dictionary<string, object>
+                    {
+                        ["changeType"] = "扣减",
+                        ["amount"] = amount.ToString("F2"),
+                        ["currentBalance"] = account.Balance.ToString("F2"),
+                        ["transactionTime"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                    };
+
+                    await _notificationService.CreateNotificationAsync(
+                        userId,
+                        30, // 账户余额变动模板ID
+                        notificationParams
+                    );
+
+                    _logger?.LogInformation("账户余额扣减通知已发送，用户ID: {UserId}，扣减金额: {Amount}，当前余额: {Balance}，原因: {Reason}",
+                        userId, amount, account.Balance, reason);
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, "发送账户余额扣减通知失败，用户ID: {UserId}，扣减金额: {Amount}", userId, amount);
+                    // 注意：通知发送失败不应该影响余额扣减操作，所以这里只记录日志
+                }
+            }
+
             return true;
         }
         /// <summary>
@@ -173,16 +220,20 @@ namespace CampusTrade.API.Repositories.Implementations
         private async Task<bool> CreditInternalAsync(int userId, decimal amount, string reason)
         {
             var account = await GetByUserIdAsync(userId);
+            bool isNewAccount = false;
+            decimal originalBalance = 0;
+
             if (account == null)
             {
                 // 创建新账户
                 account = new VirtualAccount { UserId = userId, Balance = amount, CreatedAt = DateTime.UtcNow };
                 await AddAsync(account);
+                isNewAccount = true;
             }
             else
             {
                 // 更新现有账户余额 - 强化实体追踪
-                var originalBalance = account.Balance;
+                originalBalance = account.Balance;
                 account.Balance += amount;
 
                 // 确保EF正确追踪此修改
@@ -192,6 +243,63 @@ namespace CampusTrade.API.Repositories.Implementations
                 // 添加日志以便调试
                 Console.WriteLine($"CreditInternalAsync: 用户{userId}, 原余额{originalBalance}, 增加{amount}, 新余额{account.Balance}");
             }
+
+            // 发送余额变动通知
+            if (_notificationService != null)
+            {
+                try
+                {
+                    // 判断是否为充值操作（通过reason字符串判断）
+                    bool isRecharge = reason.Contains("充值") || reason.Contains("模拟充值");
+                    int templateId = isRecharge ? 31 : 30; // 充值成功通知或账户余额变动
+
+                    if (isRecharge)
+                    {
+                        // 充值成功通知
+                        var rechargeParams = new Dictionary<string, object>
+                        {
+                            ["amount"] = amount.ToString("F2"),
+                            ["currentBalance"] = account.Balance.ToString("F2"),
+                            ["transactionId"] = reason.Contains("-") ? reason.Split('-').LastOrDefault()?.Trim() ?? "未知" : "未知"
+                        };
+
+                        await _notificationService.CreateNotificationAsync(
+                            userId,
+                            templateId,
+                            rechargeParams
+                        );
+
+                        _logger?.LogInformation("充值成功通知已发送，用户ID: {UserId}，充值金额: {Amount}，当前余额: {Balance}",
+                            userId, amount, account.Balance);
+                    }
+                    else
+                    {
+                        // 普通余额变动通知
+                        var notificationParams = new Dictionary<string, object>
+                        {
+                            ["changeType"] = "增加",
+                            ["amount"] = amount.ToString("F2"),
+                            ["currentBalance"] = account.Balance.ToString("F2"),
+                            ["transactionTime"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                        };
+
+                        await _notificationService.CreateNotificationAsync(
+                            userId,
+                            templateId,
+                            notificationParams
+                        );
+
+                        _logger?.LogInformation("账户余额增加通知已发送，用户ID: {UserId}，增加金额: {Amount}，当前余额: {Balance}，原因: {Reason}",
+                            userId, amount, account.Balance, reason);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, "发送账户余额增加通知失败，用户ID: {UserId}，增加金额: {Amount}", userId, amount);
+                    // 注意：通知发送失败不应该影响余额增加操作，所以这里只记录日志
+                }
+            }
+
             return true;
         }
         /// <summary>

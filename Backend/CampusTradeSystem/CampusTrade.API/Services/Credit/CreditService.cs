@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using CampusTrade.API.Data;
 using CampusTrade.API.Models.DTOs;      // 引入 CreditEvent
@@ -16,11 +17,13 @@ namespace CampusTrade.API.Services
     {
         private readonly CampusTradeDbContext _context;
         private readonly ILogger<CreditService> _logger;
+        private readonly CampusTrade.API.Services.Notification.NotifiService _notificationService;
 
-        public CreditService(CampusTradeDbContext context, ILogger<CreditService> logger)
+        public CreditService(CampusTradeDbContext context, ILogger<CreditService> logger, CampusTrade.API.Services.Notification.NotifiService notificationService)
         {
             _context = context;
             _logger = logger;
+            _notificationService = notificationService;
         }
 
         public async Task ApplyCreditChangeAsync(CreditEvent creditEvent, bool autoSave = true)
@@ -67,6 +70,37 @@ namespace CampusTrade.API.Services
 
                     _logger.LogInformation("用户 {UserId} 信用变更：{EventType} -> {Delta}，{OldScore} -> {NewScore}",
                         user.UserId, creditEvent.EventType, delta, oldScore, newScore);
+
+                    // 发送信用分变更通知
+                    try
+                    {
+                        var changeTypeDisplayName = GetCreditEventTypeDisplayName(creditEvent.EventType);
+                        var reason = GetCreditChangeReason(creditEvent.EventType, creditEvent.Description);
+                        var changeValueText = delta > 0 ? $"+{delta}" : delta.ToString();
+
+                        var notificationParams = new Dictionary<string, object>
+                        {
+                            ["changeType"] = changeTypeDisplayName,
+                            ["changeValue"] = changeValueText,
+                            ["newScore"] = newScore,
+                            ["reason"] = reason
+                        };
+
+                        await _notificationService.CreateNotificationAsync(
+                            user.UserId,
+                            29, // 信用分变更模板ID
+                            notificationParams
+                        );
+
+                        _logger.LogInformation("信用分变更通知已发送，用户ID: {UserId}，变更类型: {EventType}，变更值: {Delta}",
+                            user.UserId, creditEvent.EventType, delta);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "发送信用分变更通知失败，用户ID: {UserId}，变更类型: {EventType}", 
+                            user.UserId, creditEvent.EventType);
+                        // 注意：通知发送失败不应该影响信用分变更操作，所以这里只记录日志
+                    }
 
                     // 成功执行，退出重试循环
                     break;
@@ -133,5 +167,40 @@ namespace CampusTrade.API.Services
             CreditEventType.NegativeReviewPenalty => -5m,
             _ => 0m
         };
+
+        /// <summary>
+        /// 获取信用事件类型的用户友好显示名称
+        /// </summary>
+        private static string GetCreditEventTypeDisplayName(CreditEventType eventType) => eventType switch
+        {
+            CreditEventType.TransactionCompleted => "交易完成奖励",
+            CreditEventType.PositiveReviewReward => "好评奖励",
+            CreditEventType.LightReportPenalty => "轻度违规处罚",
+            CreditEventType.ModerateReportPenalty => "中度违规处罚",
+            CreditEventType.SevereReportPenalty => "严重违规处罚",
+            CreditEventType.NegativeReviewPenalty => "差评扣分",
+            CreditEventType.ReportPenalty => "举报处罚",
+            _ => "信用调整"
+        };
+
+        /// <summary>
+        /// 获取信用分变更的原因说明
+        /// </summary>
+        private static string GetCreditChangeReason(CreditEventType eventType, string? description = null)
+        {
+            var baseReason = eventType switch
+            {
+                CreditEventType.TransactionCompleted => "感谢您完成交易，诚信经营！",
+                CreditEventType.PositiveReviewReward => "恭喜您收到好评，继续保持优质服务！",
+                CreditEventType.LightReportPenalty => "您的行为存在轻微违规，请注意遵守平台规则。",
+                CreditEventType.ModerateReportPenalty => "您的行为违反平台规则，请严格遵守相关规定。",
+                CreditEventType.SevereReportPenalty => "您的行为严重违反平台规则，如有异议请联系客服申诉。",
+                CreditEventType.NegativeReviewPenalty => "您收到了差评，请改进服务质量。",
+                CreditEventType.ReportPenalty => "您的行为被举报并经确认违规，请注意规范操作。",
+                _ => "信用分已调整。"
+            };
+
+            return string.IsNullOrEmpty(description) ? baseReason : $"{baseReason} {description}";
+        }
     }
 }
