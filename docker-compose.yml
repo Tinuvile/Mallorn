@@ -1,6 +1,6 @@
 services:
   oracle-db:
-    image: ghcr.io/gvenzl/oracle-xe:21-slim
+    image: gvenzl/oracle-xe:latest
     container_name: campus-trade-oracle
     environment:
       ORACLE_PASSWORD: CampusTrade123!
@@ -46,7 +46,7 @@ services:
       context: ./Frontend/campus-trade-web
       dockerfile: Dockerfile
       args:
-        - VITE_API_BASE_URL=http://106.15.79.4:8080
+        - VITE_API_BASE_URL=http://8.222.141.205:8080
     container_name: campus-trade-web
     ports:
       - "80:80"
