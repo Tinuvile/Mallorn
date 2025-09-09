@@ -101,32 +101,39 @@ namespace CampusTrade.API.Services.Review
                 var saved = await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                // 第九步：如果保存成功，发送新评价通知给卖家
+                // 第九步：如果保存成功，异步发送新评价通知给卖家（不等待结果）
                 if (saved > 0)
                 {
-                    try
+                    // 使用 Task.Run 在后台异步发送通知，避免影响主流程
+                    _ = Task.Run(async () =>
                     {
-                        // 发送新评价通知给卖家 - 模板ID为22（收到新评价模板）
-                        var reviewContentText = string.IsNullOrEmpty(dto.Content) ? "" : $"评价内容：{dto.Content}";
-                        var notificationParams = new Dictionary<string, object>
+                        try
                         {
-                            ["rating"] = dto.Rating.ToString(),
-                            ["orderId"] = dto.OrderId.ToString(),
-                            ["reviewContent"] = reviewContentText
-                        };
+                            // 稍微延迟，确保主事务完全提交
+                            await Task.Delay(100);
+                            
+                            // 发送新评价通知给卖家 - 模板ID为22（收到新评价模板）
+                            var reviewContentText = string.IsNullOrEmpty(dto.Content) ? "" : $"评价内容：{dto.Content}";
+                            var notificationParams = new Dictionary<string, object>
+                            {
+                                ["rating"] = dto.Rating.ToString(),
+                                ["orderId"] = dto.OrderId.ToString(),
+                                ["reviewContent"] = reviewContentText
+                            };
 
-                        await _notificationService.CreateNotificationAsync(
-                            order.SellerId,
-                            22, // 收到新评价模板ID
-                            notificationParams,
-                            review.ReviewId
-                        );
-                    }
-                    catch (Exception)
-                    {
-                        // 通知发送失败不影响评价创建结果，只记录异常
-                        // 这里可以添加日志记录，但为了保持代码简洁，暂时省略
-                    }
+                            await _notificationService.CreateNotificationAsync(
+                                order.SellerId,
+                                22, // 收到新评价模板ID
+                                notificationParams,
+                                dto.OrderId // 订单ID
+                            );
+                        }
+                        catch (Exception ex)
+                        {
+                            // 后台任务失败不影响主流程，只记录日志
+                            Console.WriteLine($"后台发送评价通知失败: {ex.Message}");
+                        }
+                    });
                 }
 
                 // 第十步：返回是否保存成功（保存记录数大于0）
@@ -271,30 +278,37 @@ namespace CampusTrade.API.Services.Review
             // 第五步：保存更改
             var updated = await _context.SaveChangesAsync();
 
-            // 第六步：如果保存成功，发送卖家回复评价通知给买家
+            // 第六步：如果保存成功，异步发送卖家回复评价通知给买家（不等待结果）
             if (updated > 0)
             {
-                try
+                // 使用 Task.Run 在后台异步发送通知，避免影响主流程
+                _ = Task.Run(async () =>
                 {
-                    // 发送卖家回复评价通知给买家 - 模板ID为24（卖家回复评价模板）
-                    var notificationParams = new Dictionary<string, object>
+                    try
                     {
-                        ["orderId"] = review.OrderId.ToString(),
-                        ["replyContent"] = dto.SellerReply ?? ""
-                    };
+                        // 稍微延迟，确保主事务完全提交
+                        await Task.Delay(100);
+                        
+                        // 发送卖家回复评价通知给买家 - 模板ID为24（卖家回复评价模板）
+                        var notificationParams = new Dictionary<string, object>
+                        {
+                            ["orderId"] = review.OrderId.ToString(),
+                            ["replyContent"] = dto.SellerReply ?? ""
+                        };
 
-                    await _notificationService.CreateNotificationAsync(
-                        order.BuyerId,
-                        24, // 卖家回复评价模板ID
-                        notificationParams,
-                        review.ReviewId
-                    );
-                }
-                catch (Exception)
-                {
-                    // 通知发送失败不影响回复评价结果，只记录异常
-                    // 这里可以添加日志记录，但为了保持代码简洁，暂时省略
-                }
+                        await _notificationService.CreateNotificationAsync(
+                            order.BuyerId,
+                            24, // 卖家回复评价模板ID
+                            notificationParams,
+                            review.OrderId // 订单ID
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        // 后台任务失败不影响主流程，只记录日志
+                        Console.WriteLine($"后台发送回复通知失败: {ex.Message}");
+                    }
+                });
             }
 
             return updated > 0;
