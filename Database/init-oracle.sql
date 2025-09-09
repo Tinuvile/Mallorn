@@ -694,58 +694,117 @@ INSERT INTO students (student_id, name, department) VALUES ('2354269', '刘笑�
 INSERT INTO students (student_id, name, department) VALUES ('2352749', '戴湘宁', '计算机科学与技术学院');
 INSERT INTO students (student_id, name, department) VALUES ('2351588', '谭鹏翀', '计算机科学与技术学院');
 
--- 插入分类数据
--- 第一级分类
+-- ================================================================
+-- 插入校园交易系统标准分类数据
+-- ================================================================
+
+-- 插入一级分类（校园交易系统专用分类）
 INSERT INTO categories (parent_id, name) VALUES (NULL, '教材');
 INSERT INTO categories (parent_id, name) VALUES (NULL, '数码');
 INSERT INTO categories (parent_id, name) VALUES (NULL, '日用');
+INSERT INTO categories (parent_id, name) VALUES (NULL, '服装');
+INSERT INTO categories (parent_id, name) VALUES (NULL, '运动');
+INSERT INTO categories (parent_id, name) VALUES (NULL, '其他');
 
--- 第二级分类 (教材)
-INSERT INTO categories (parent_id, name) VALUES (1, '计算机类');
-INSERT INTO categories (parent_id, name) VALUES (1, '数学类');
-INSERT INTO categories (parent_id, name) VALUES (1, '英语类');
+-- 插入二级分类（使用查询获取父分类ID）
+DECLARE
+    v_parent_id NUMBER;
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('开始插入二级分类...');
+    
+    -- 教材类的二级分类
+    SELECT category_id INTO v_parent_id FROM categories WHERE name = '教材' AND parent_id IS NULL;
+    
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '计算机科学');
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '数学');
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '英语');
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '物理');
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '化学');
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '其他教材');
+    
+    -- 数码类的二级分类
+    SELECT category_id INTO v_parent_id FROM categories WHERE name = '数码' AND parent_id IS NULL;
+    
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '手机通讯');
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '电脑配件');
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '影音设备');
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '智能设备');
+    
+    -- 日用类的二级分类
+    SELECT category_id INTO v_parent_id FROM categories WHERE name = '日用' AND parent_id IS NULL;
+    
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '文具用品');
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '生活用品');
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '护理用品');
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '食品饮料');
+    
+    -- 服装类的二级分类
+    SELECT category_id INTO v_parent_id FROM categories WHERE name = '服装' AND parent_id IS NULL;
+    
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '男装');
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '女装');
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '鞋包配饰');
+    
+    -- 运动类的二级分类
+    SELECT category_id INTO v_parent_id FROM categories WHERE name = '运动' AND parent_id IS NULL;
+    
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '运动鞋服');
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '健身器材');
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '户外用品');
+    
+    -- 其他类的二级分类
+    SELECT category_id INTO v_parent_id FROM categories WHERE name = '其他' AND parent_id IS NULL;
+    
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '乐器');
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '收藏品');
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '其他商品');
+    
+    DBMS_OUTPUT.PUT_LINE('已插入所有二级分类');
+END;
+/
 
--- 第二级分类 (数码)
-INSERT INTO categories (parent_id, name) VALUES (2, '手机');
-INSERT INTO categories (parent_id, name) VALUES (2, '电脑');
-INSERT INTO categories (parent_id, name) VALUES (2, '配件');
-
--- 第二级分类 (日用)
-INSERT INTO categories (parent_id, name) VALUES (3, '文具');
-INSERT INTO categories (parent_id, name) VALUES (3, '生活用品');
-INSERT INTO categories (parent_id, name) VALUES (3, '服装');
-
--- 第三级分类 (计算机类教材)
-INSERT INTO categories (parent_id, name) VALUES (4, '急出');
-INSERT INTO categories (parent_id, name) VALUES (4, '可议价');
-INSERT INTO categories (parent_id, name) VALUES (4, '支持换物');
+-- 插入三级标签（特殊属性标签）
+DECLARE
+    v_parent_id NUMBER;
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('开始插入三级标签...');
+    
+    -- 为主要二级分类添加标签
+    -- 计算机科学标签
+    SELECT category_id INTO v_parent_id FROM categories WHERE name = '计算机科学';
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '急出');
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '可议价');
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '支持换物');
+    
+    -- 手机通讯标签
+    SELECT category_id INTO v_parent_id FROM categories WHERE name = '手机通讯';
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '急出');
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '可议价');
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '支持换物');
+    
+    -- 电脑配件标签
+    SELECT category_id INTO v_parent_id FROM categories WHERE name = '电脑配件';
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '急出');
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '可议价');
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '支持换物');
+    
+    -- 运动鞋服标签
+    SELECT category_id INTO v_parent_id FROM categories WHERE name = '运动鞋服';
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '急出');
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '可议价');
+    INSERT INTO categories (parent_id, name) VALUES (v_parent_id, '支持换物');
+    
+    DBMS_OUTPUT.PUT_LINE('已插入三级标签');
+END;
+/
 
 -- 插入用户数据
--- 密码都是 "password" 的 BCrypt 哈希值: $2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi
+-- 密码为 "password" 的 BCrypt 哈希值: $2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi
 INSERT INTO users (username, email, password_hash, full_name, student_id, credit_score, login_count, is_locked, failed_login_attempts, two_factor_enabled, email_verified, security_stamp) 
 VALUES ('admin', 'admin@campus.edu', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '系统管理员', 'ADMIN001', 99.9, 0, 0, 0, 0, 1, SYS_GUID());
 
-INSERT INTO users (username, email, password_hash, full_name, student_id, credit_score, login_count, is_locked, failed_login_attempts, two_factor_enabled, email_verified, security_stamp) 
-VALUES ('zhangsan', 'zhangsan@campus.edu', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '张三', 'STU001', 85.0, 0, 0, 0, 0, 1, SYS_GUID());
-
-INSERT INTO users (username, email, password_hash, full_name, student_id, credit_score, login_count, is_locked, failed_login_attempts, two_factor_enabled, email_verified, security_stamp) 
-VALUES ('lisi', 'lisi@campus.edu', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '李四', 'STU002', 75.0, 0, 0, 0, 0, 1, SYS_GUID());
-
-INSERT INTO users (username, email, password_hash, full_name, student_id, credit_score, login_count, is_locked, failed_login_attempts, two_factor_enabled, email_verified, security_stamp) 
-VALUES ('wangwu', 'wangwu@campus.edu', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '王五', 'STU003', 90.0, 0, 0, 0, 0, 1, SYS_GUID());
-
 -- 设置管理员
 INSERT INTO admins (user_id, role) VALUES (1, 'super');
-
--- 插入测试商品数据
-INSERT INTO products (user_id, category_id, title, description, base_price, status)
-VALUES (2, 13, '数据结构与算法教材', '计算机专业必修课教材，九成新，无涂写', 45.00, '在售');
-
-INSERT INTO products (user_id, category_id, title, description, base_price, status)
-VALUES (3, 14, '高等数学习题册', '配套练习册，有少量笔记，可议价', 25.00, '在售');
-
-INSERT INTO products (user_id, category_id, title, description, base_price, status)
-VALUES (4, 15, '英语四级真题', '最新版本，支持换其他考试资料', 30.00, '在售');
 
 -- 提交所有更改
 COMMIT;
@@ -781,6 +840,29 @@ SELECT COUNT(*) AS product_count FROM products;
 SELECT COUNT(*) AS virtual_account_count FROM virtual_accounts;
 SELECT COUNT(*) AS refresh_token_count FROM refresh_tokens;
 
+-- 显示校园交易系统标准分类结构
+SELECT '========================================' AS separator FROM dual;
+SELECT 'CAMPUS TRADING SYSTEM CATEGORIES' AS title FROM dual;
+SELECT '========================================' AS separator FROM dual;
+
+-- 显示一级分类
+SELECT '一级分类:' AS level, name FROM categories WHERE parent_id IS NULL ORDER BY name;
+
+-- 显示二级分类
+SELECT '二级分类:' AS level, c1.name || ' -> ' || c2.name AS category_path
+FROM categories c1
+JOIN categories c2 ON c1.category_id = c2.parent_id
+WHERE c1.parent_id IS NULL
+ORDER BY c1.name, c2.name;
+
+-- 显示三级标签
+SELECT '三级标签:' AS level, c1.name || ' -> ' || c2.name || ' -> ' || c3.name AS category_path
+FROM categories c1
+JOIN categories c2 ON c1.category_id = c2.parent_id
+JOIN categories c3 ON c2.category_id = c3.parent_id
+WHERE c1.parent_id IS NULL
+ORDER BY c1.name, c2.name, c3.name;
+
 -- 显示用户和对应的虚拟账户
 SELECT '========================================' AS separator FROM dual;
 SELECT 'USER ACCOUNTS WITH VIRTUAL BALANCES' AS title FROM dual;
@@ -797,6 +879,7 @@ SELECT '========================================' AS separator FROM dual;
 DESC users;
 
 SELECT '========================================' AS separator FROM dual;
-SELECT 'Database initialization complete with all fixes applied!' AS final_message FROM dual; 
+SELECT 'Database initialization complete with campus trading system categories!' AS final_message FROM dual; 
 SELECT 'Ready for application usage!' AS status FROM dual;
+SELECT '✅ 分类体系：教材 | 数码 | 日用 | 服装 | 运动 | 其他' AS category_system FROM dual;
 SELECT '========================================' AS separator FROM dual; 
