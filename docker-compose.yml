@@ -16,7 +16,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "echo 'SELECT 1 FROM DUAL;' | sqlplus -L -S sys/CampusTrade123!@//localhost:1521/XEPDB1 as sysdba | grep -q '^1'",
+          "echo 'SELECT 1 FROM DUAL;' | sqlplus -L -S 'sys/CampusTrade123!@//localhost:1521/XEPDB1 as sysdba' | grep -q '^1'",
         ]
       interval: 30s
       timeout: 10s
