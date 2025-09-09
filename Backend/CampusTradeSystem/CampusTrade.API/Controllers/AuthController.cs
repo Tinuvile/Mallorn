@@ -8,6 +8,7 @@ using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Auth;
 using CampusTrade.API.Services.Email;
+using CampusTrade.API.Services.Notification;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,14 +24,16 @@ public class AuthController : ControllerBase
     private readonly EmailVerificationService _verificationService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<AuthController> _logger;
+    private readonly NotifiService _notificationService;
 
-    public AuthController(IAuthService authService, EmailService emailService, EmailVerificationService verificationService, IUnitOfWork unitOfWork, ILogger<AuthController> logger)
+    public AuthController(IAuthService authService, EmailService emailService, EmailVerificationService verificationService, IUnitOfWork unitOfWork, ILogger<AuthController> logger, NotifiService notificationService)
     {
         _authService = authService;
         _emailService = emailService;
         _verificationService = verificationService;
         _unitOfWork = unitOfWork;
         _logger = logger;
+        _notificationService = notificationService;
     }
 
     /// <summary>
@@ -66,10 +69,14 @@ public class AuthController : ControllerBase
 
             // 检测异常登录风险
             var riskLevel = LoginLogs.RiskLevels.Low;
+            var shouldSendNotification = false;
+            string notificationLocation = "未知位置"; // 可以集成IP地理位置服务
+
             if (lastLoginIp != null && lastLoginIp != ipAddress)
             {
                 // IP地址变更：中风险
                 riskLevel = LoginLogs.RiskLevels.Medium;
+                shouldSendNotification = true;
                 _logger.LogWarning("异常登录检测：用户 {Username} 登录IP变更，旧IP: {LastIp}，新IP: {NewIp}",
                     loginRequest.Username, lastLoginIp, ipAddress);
             }
@@ -78,6 +85,7 @@ public class AuthController : ControllerBase
             {
                 // 短时间内不同IP登录：高风险
                 riskLevel = LoginLogs.RiskLevels.High;
+                shouldSendNotification = true;
                 _logger.LogError("高危登录告警：用户 {Username} 5分钟内不同IP登录，旧IP: {LastIp}，新IP: {NewIp}",
                     loginRequest.Username, lastLoginIp, ipAddress);
 
@@ -90,6 +98,34 @@ public class AuthController : ControllerBase
                         subject: "校园交易平台 - 异常登录告警",
                         body: warningMsg
                     );
+                }
+            }
+
+            // 发送登录风险通知
+            if (shouldSendNotification && user != null)
+            {
+                try
+                {
+                    var notificationParams = new Dictionary<string, object>
+                    {
+                        ["loginTime"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                        ["ipAddress"] = ipAddress ?? "未知",
+                        ["location"] = notificationLocation
+                    };
+
+                    await _notificationService.CreateNotificationAsync(
+                        user.UserId,
+                        25, // 账户安全提醒模板ID
+                        notificationParams
+                    );
+
+                    _logger.LogInformation("登录风险通知已发送，用户ID: {UserId}，风险等级: {RiskLevel}，IP: {IpAddress}",
+                        user.UserId, riskLevel, ipAddress);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "发送登录风险通知失败，用户ID: {UserId}，IP: {IpAddress}", user?.UserId, ipAddress);
+                    // 注意：通知发送失败不应该影响登录结果，所以这里只记录日志
                 }
             }
 
@@ -584,6 +620,28 @@ public class AuthController : ControllerBase
             user.SecurityStamp = Guid.NewGuid().ToString(); // 更新安全戳，使旧Token失效
 
             await _unitOfWork.SaveChangesAsync();
+
+            // 发送密码修改成功通知
+            try
+            {
+                var notificationParams = new Dictionary<string, object>
+                {
+                    ["changeTime"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                };
+
+                await _notificationService.CreateNotificationAsync(
+                    userId,
+                    26, // 密码修改成功模板ID
+                    notificationParams
+                );
+
+                _logger.LogInformation("密码修改成功通知已发送，用户ID: {UserId}", userId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "发送密码修改成功通知失败，用户ID: {UserId}", userId);
+                // 注意：通知发送失败不应该影响密码修改结果，所以这里只记录日志
+            }
 
             return Ok(ApiResponse.CreateSuccess("密码修改成功"));
         }
