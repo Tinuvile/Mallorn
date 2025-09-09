@@ -60,6 +60,20 @@
       >
         <v-img src="/images/DataAnalyze.png" alt="数据看板" width="30" height="30" contain />
       </v-btn>
+      
+      <!-- 管理员导航按钮 -->
+      <v-btn
+        v-if="isAdmin"
+        class="mx-2"
+        to="/admin"
+        height="40"
+        variant="text"
+        color="orange"
+        prepend-icon="mdi-shield-account"
+      >
+        管理员中心
+      </v-btn>
+      
       <v-spacer></v-spacer>
     </v-app-bar>
     <!-- 错误提示的snackbar -->
@@ -354,6 +368,7 @@
   const isLoading = ref(false)
   const userProfileLoading = ref(false)
   const isLoggedIn = computed(() => userStore.isLoggedIn) // 添加登录状态
+  const isAdmin = computed(() => userStore.isAdmin) // 添加管理员状态
 
   // 计算显示名称
   const displayName = computed(() => {
@@ -473,6 +488,9 @@
         console.warn('获取用户详细信息失败:', result.message)
         showAuthWarning.value = true
         authWarningMessage.value = result.message || '获取用户信息失败'
+      } else {
+        // 用户信息加载成功后，检查管理员身份
+        await userStore.checkAdminStatus()
       }
     } catch (error) {
       console.error('加载用户信息异常:', error)

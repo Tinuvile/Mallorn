@@ -127,7 +127,9 @@ namespace CampusTrade.API.Services
         {
             CreditEventType.TransactionCompleted => +5m,
             CreditEventType.PositiveReviewReward => +3m,
-            CreditEventType.ReportPenalty => -10m,
+            CreditEventType.LightReportPenalty => -5m,      // 轻度处罚 -5分
+            CreditEventType.ModerateReportPenalty => -10m,  // 中度处罚 -10分  
+            CreditEventType.SevereReportPenalty => -15m,    // 重度处罚 -15分
             CreditEventType.NegativeReviewPenalty => -5m,
             _ => 0m
         };

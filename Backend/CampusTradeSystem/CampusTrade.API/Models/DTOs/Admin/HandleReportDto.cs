@@ -28,9 +28,9 @@ namespace CampusTrade.API.Models.DTOs.Admin
 
         /// <summary>
         /// 处罚类型（如果需要处罚）
-        /// 警告/禁言/封号
+        /// 轻度处罚/中度处罚/重度处罚
         /// </summary>
-        [RegularExpression("^(警告|禁言|封号)$", ErrorMessage = "处罚类型只能是警告、禁言或封号")]
+        [RegularExpression("^(轻度处罚|中度处罚|重度处罚)$", ErrorMessage = "处罚类型只能是轻度处罚、中度处罚或重度处罚")]
         public string? PenaltyType { get; set; }
 
         /// <summary>

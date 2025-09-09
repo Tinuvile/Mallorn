@@ -18,6 +18,21 @@ namespace CampusTrade.API.Models.Entities
         ReportPenalty,
 
         /// <summary>
+        /// 轻度举报处罚 -> 数据库值: "举报处罚" (-5分)
+        /// </summary>
+        LightReportPenalty,
+
+        /// <summary>
+        /// 中度举报处罚 -> 数据库值: "举报处罚" (-10分)
+        /// </summary>
+        ModerateReportPenalty,
+
+        /// <summary>
+        /// 重度举报处罚 -> 数据库值: "举报处罚" (-15分)
+        /// </summary>
+        SevereReportPenalty,
+
+        /// <summary>
         /// 好评奖励 -> 数据库值: "好评奖励"
         /// </summary>
         PositiveReviewReward,
@@ -37,6 +52,9 @@ namespace CampusTrade.API.Models.Entities
         {
             CreditEventType.TransactionCompleted => CreditHistory.ChangeTypes.TransactionCompleted,
             CreditEventType.ReportPenalty => CreditHistory.ChangeTypes.ReportPenalty,
+            CreditEventType.LightReportPenalty => CreditHistory.ChangeTypes.ReportPenalty,
+            CreditEventType.ModerateReportPenalty => CreditHistory.ChangeTypes.ReportPenalty,
+            CreditEventType.SevereReportPenalty => CreditHistory.ChangeTypes.ReportPenalty,
             CreditEventType.PositiveReviewReward => CreditHistory.ChangeTypes.PositiveReviewReward,
             CreditEventType.NegativeReviewPenalty => CreditHistory.ChangeTypes.NegativeReviewPenalty,
             _ => throw new ArgumentOutOfRangeException(nameof(eventType), eventType, null)

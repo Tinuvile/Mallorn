@@ -11,11 +11,6 @@
         <span class="nav-icon">🛠️</span>
         <span class="nav-text">内容管理</span>
       </router-link>
-      
-      <router-link to="/admin/system-audit" class="nav-link" :class="{ active: $route.path === '/admin/system-audit' }">
-        <span class="nav-icon">🔍</span>
-        <span class="nav-text">系统审计</span>
-      </router-link>
     </nav>
   </div>
 </template>
