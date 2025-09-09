@@ -57,8 +57,8 @@ public class JwtValidationMiddleware
                         var expiration = DateTimeOffset.FromUnixTimeSeconds(expUnix).DateTime;
                         if (expiration <= DateTime.UtcNow.AddMinutes(5))
                         {
-                            // 添加即将过期的头信息
-                            context.Response.Headers.Append("X-Token-Warning", "Token即将过期，请及时刷新");
+                            // 添加即将过期的头信息（使用ASCII字符）
+                            context.Response.Headers.Append("X-Token-Warning", "Token expires soon, please refresh");
                             Log.Logger.Debug("Token即将过期, JTI: {Jti}, 过期时间: {Expiration}", jti, expiration);
                         }
                     }
