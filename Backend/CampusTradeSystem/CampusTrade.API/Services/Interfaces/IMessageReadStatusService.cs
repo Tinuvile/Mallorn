@@ -3,62 +3,71 @@ using CampusTrade.API.Models.Entities;
 namespace CampusTrade.API.Services.Interfaces
 {
     /// <summary>
-    /// 消息已读状态服务接口
+    /// 消息已读状态服务接口 - 与通知一一对应的已读状态管理
     /// </summary>
     public interface IMessageReadStatusService
     {
         /// <summary>
-        /// 检查消息是否已读
+        /// 检查通知是否已读
         /// </summary>
         /// <param name="userId">用户ID</param>
-        /// <param name="messageId">消息ID</param>
-        /// <param name="messageType">消息类型</param>
+        /// <param name="notificationId">通知ID</param>
         /// <returns>是否已读</returns>
-        Task<bool> IsMessageReadAsync(int userId, int messageId, string messageType);
+        Task<bool> IsNotificationReadAsync(int userId, int notificationId);
 
         /// <summary>
-        /// 标记消息为已读
+        /// 标记通知为已读
         /// </summary>
         /// <param name="userId">用户ID</param>
-        /// <param name="messageType">消息类型</param>
-        /// <param name="messageId">消息ID</param>
+        /// <param name="notificationId">通知ID</param>
         /// <returns>操作是否成功</returns>
-        Task<bool> MarkMessageAsReadAsync(int userId, string messageType, int messageId);
+        Task<bool> MarkNotificationAsReadAsync(int userId, int notificationId);
 
         /// <summary>
-        /// 标记消息为未读
+        /// 标记通知为未读
         /// </summary>
         /// <param name="userId">用户ID</param>
-        /// <param name="messageType">消息类型</param>
-        /// <param name="messageId">消息ID</param>
+        /// <param name="notificationId">通知ID</param>
         /// <returns>操作是否成功</returns>
-        Task<bool> MarkMessageAsUnreadAsync(int userId, string messageType, int messageId);
+        Task<bool> MarkNotificationAsUnreadAsync(int userId, int notificationId);
 
         /// <summary>
-        /// 批量获取消息已读状态
+        /// 批量获取通知已读状态
         /// </summary>
         /// <param name="userId">用户ID</param>
-        /// <param name="messageType">消息类型</param>
-        /// <param name="messageIds">消息ID列表</param>
-        /// <returns>消息ID到已读状态的映射</returns>
-        Task<Dictionary<int, bool>> GetMessagesReadStatusAsync(int userId, string messageType, IEnumerable<int> messageIds);
+        /// <param name="notificationIds">通知ID列表</param>
+        /// <returns>通知ID到已读状态的映射</returns>
+        Task<Dictionary<int, bool>> GetNotificationsReadStatusAsync(int userId, IEnumerable<int> notificationIds);
 
         /// <summary>
-        /// 批量标记消息为已读
+        /// 批量标记通知为已读
         /// </summary>
         /// <param name="userId">用户ID</param>
-        /// <param name="messageType">消息类型</param>
-        /// <param name="messageIds">消息ID列表</param>
+        /// <param name="notificationIds">通知ID列表</param>
         /// <returns>操作是否成功</returns>
-        Task<bool> MarkMessagesAsReadBatchAsync(int userId, string messageType, IEnumerable<int> messageIds);
+        Task<bool> MarkNotificationsAsReadBatchAsync(int userId, IEnumerable<int> notificationIds);
 
         /// <summary>
-        /// 获取用户未读消息数量
+        /// 获取用户未读通知数量
         /// </summary>
         /// <param name="userId">用户ID</param>
-        /// <param name="messageType">消息类型（可选，如果为空则获取所有类型）</param>
-        /// <returns>未读消息数量</returns>
-        Task<int> GetUnreadMessageCountAsync(int userId, string? messageType = null);
+        /// <returns>未读通知数量</returns>
+        Task<int> GetUnreadNotificationCountAsync(int userId);
+
+        /// <summary>
+        /// 获取指定通知列表中用户未读通知数量
+        /// </summary>
+        /// <param name="userId">用户ID</param>
+        /// <param name="notificationIds">通知ID列表</param>
+        /// <returns>未读通知数量</returns>
+        Task<int> GetUnreadNotificationCountAsync(int userId, IEnumerable<int> notificationIds);
+
+        /// <summary>
+        /// 标记用户所有通知为已读
+        /// </summary>
+        /// <param name="userId">用户ID</param>
+        /// <returns>操作是否成功</returns>
+        Task<bool> MarkAllNotificationsAsReadAsync(int userId);
 
         /// <summary>
         /// 清理过期的已读状态记录
@@ -68,13 +77,12 @@ namespace CampusTrade.API.Services.Interfaces
         Task<int> CleanupExpiredReadStatusAsync(DateTime expiredBefore);
 
         /// <summary>
-        /// 创建或更新消息读取状态
+        /// 创建或更新通知读取状态
         /// </summary>
         /// <param name="userId">用户ID</param>
-        /// <param name="messageType">消息类型</param>
-        /// <param name="messageId">消息ID</param>
+        /// <param name="notificationId">通知ID</param>
         /// <param name="isRead">是否已读</param>
         /// <returns>操作是否成功</returns>
-        Task<bool> CreateOrUpdateReadStatusAsync(int userId, string messageType, int messageId, bool isRead);
+        Task<bool> CreateOrUpdateReadStatusAsync(int userId, int notificationId, bool isRead);
     }
 }

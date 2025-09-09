@@ -3,7 +3,6 @@ using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Interfaces;
 using CampusTrade.API.Services.Notification;
-using CampusTrade.API.Services.Message;
 using Microsoft.Extensions.Logging;
 
 namespace CampusTrade.API.Services.Exchange
@@ -19,7 +18,6 @@ namespace CampusTrade.API.Services.Exchange
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<ExchangeService> _logger;
         private readonly NotifiService _notificationService;
-        private readonly IMessageReadStatusService _messageReadStatusService;
 
         public ExchangeService(
             IExchangeRequestsRepository exchangeRequestsRepository,
@@ -27,8 +25,7 @@ namespace CampusTrade.API.Services.Exchange
             IRepository<AbstractOrder> abstractOrderRepository,
             IUnitOfWork unitOfWork,
             ILogger<ExchangeService> logger,
-            NotifiService notificationService,
-            IMessageReadStatusService messageReadStatusService)
+            NotifiService notificationService)
         {
             _exchangeRequestsRepository = exchangeRequestsRepository;
             _productsRepository = productsRepository;
@@ -36,7 +33,6 @@ namespace CampusTrade.API.Services.Exchange
             _unitOfWork = unitOfWork;
             _logger = logger;
             _notificationService = notificationService;
-            _messageReadStatusService = messageReadStatusService;
         }
 
         /// <summary>
@@ -109,21 +105,6 @@ namespace CampusTrade.API.Services.Exchange
                 await _exchangeRequestsRepository.AddAsync(request);
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
-
-                // 为被请求商品的所有者创建交换消息的读取状态记录
-                try
-                {
-                    await _messageReadStatusService.CreateOrUpdateReadStatusAsync(
-                        requestProduct.UserId,
-                        MessageReadStatus.MessageTypes.Exchange,
-                        request.ExchangeId,
-                        false
-                    );
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "创建交换消息读取状态失败");
-                }
 
                 // 发送换物请求通知给被请求商品的所有者
                 try

@@ -5,22 +5,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace CampusTrade.API.Models.Entities
 {
     /// <summary>
-    /// 消息已读状态实体类 - 统一管理所有类型消息的已读状态
+    /// 消息已读状态实体类 - 与通知一一对应的已读状态管理
     /// </summary>
     [Table("MESSAGE_READ_STATUS")]
     public class MessageReadStatus
     {
-        /// <summary>
-        /// 消息类型常量
-        /// </summary>
-        public static class MessageTypes
-        {
-            public const string Notification = "notification";
-            public const string Bargain = "bargain";
-            public const string Swap = "swap";
-            public const string Exchange = "exchange";
-        }
-
         /// <summary>
         /// 已读状态ID
         /// </summary>
@@ -36,19 +25,11 @@ namespace CampusTrade.API.Models.Entities
         public int UserId { get; set; }
 
         /// <summary>
-        /// 消息类型
+        /// 通知ID（对应通知表的主键）
         /// </summary>
         [Required]
-        [Column("MESSAGE_TYPE", TypeName = "VARCHAR2(20)")]
-        [MaxLength(20)]
-        public string MessageType { get; set; } = string.Empty;
-
-        /// <summary>
-        /// 消息ID（对应各类型消息的主键）
-        /// </summary>
-        [Required]
-        [Column("MESSAGE_ID")]
-        public int MessageId { get; set; }
+        [Column("NOTIFICATION_ID")]
+        public int NotificationId { get; set; }
 
         /// <summary>
         /// 是否已读（0=未读, 1=已读）
@@ -74,6 +55,11 @@ namespace CampusTrade.API.Models.Entities
         /// 关联的用户
         /// </summary>
         public virtual User User { get; set; } = null!;
+
+        /// <summary>
+        /// 关联的通知
+        /// </summary>
+        public virtual Notification Notification { get; set; } = null!;
 
         /// <summary>
         /// 是否已读（布尔属性，便于使用）

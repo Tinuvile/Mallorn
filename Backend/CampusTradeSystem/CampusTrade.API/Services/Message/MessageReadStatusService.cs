@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CampusTrade.API.Services.Message
 {
     /// <summary>
-    /// 消息已读状态服务 - 统一管理所有类型消息的已读状态
+    /// 消息已读状态服务 - 与通知一一对应的已读状态管理
     /// </summary>
     public class MessageReadStatusService : IMessageReadStatusService
     {
@@ -22,59 +22,54 @@ namespace CampusTrade.API.Services.Message
         }
 
         /// <summary>
-        /// 检查消息是否已读
+        /// 检查通知是否已读
         /// </summary>
-        public async Task<bool> IsMessageReadAsync(int userId, int messageId, string messageType)
+        public async Task<bool> IsNotificationReadAsync(int userId, int notificationId)
         {
             try
             {
                 var readStatus = await _context.MessageReadStatuses
-                    .FirstOrDefaultAsync(rs => rs.UserId == userId && 
-                                              rs.MessageType == messageType && 
-                                              rs.MessageId == messageId);
+                    .FirstOrDefaultAsync(rs => rs.UserId == userId && rs.NotificationId == notificationId);
 
                 return readStatus?.IsReadBool ?? false; // 如果没有记录，默认为未读
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "检查消息已读状态失败，用户ID: {UserId}, 消息类型: {MessageType}, 消息ID: {MessageId}", 
-                    userId, messageType, messageId);
+                _logger.LogError(ex, "检查通知已读状态失败，用户ID: {UserId}, 通知ID: {NotificationId}", userId, notificationId);
                 return false;
             }
         }
 
         /// <summary>
-        /// 标记消息为已读
+        /// 标记通知为已读
         /// </summary>
-        public async Task<bool> MarkMessageAsReadAsync(int userId, string messageType, int messageId)
+        public async Task<bool> MarkNotificationAsReadAsync(int userId, int notificationId)
         {
-            return await CreateOrUpdateReadStatusAsync(userId, messageType, messageId, true);
+            return await CreateOrUpdateReadStatusAsync(userId, notificationId, true);
         }
 
         /// <summary>
-        /// 标记消息为未读
+        /// 标记通知为未读
         /// </summary>
-        public async Task<bool> MarkMessageAsUnreadAsync(int userId, string messageType, int messageId)
+        public async Task<bool> MarkNotificationAsUnreadAsync(int userId, int notificationId)
         {
-            return await CreateOrUpdateReadStatusAsync(userId, messageType, messageId, false);
+            return await CreateOrUpdateReadStatusAsync(userId, notificationId, false);
         }
 
         /// <summary>
-        /// 批量获取消息已读状态
+        /// 批量获取通知已读状态
         /// </summary>
-        public async Task<Dictionary<int, bool>> GetMessagesReadStatusAsync(int userId, string messageType, IEnumerable<int> messageIds)
+        public async Task<Dictionary<int, bool>> GetNotificationsReadStatusAsync(int userId, IEnumerable<int> notificationIds)
         {
             try
             {
-                var messageIdList = messageIds.ToList();
+                var notificationIdList = notificationIds.ToList();
                 var readStatuses = await _context.MessageReadStatuses
-                    .Where(rs => rs.UserId == userId && 
-                                rs.MessageType == messageType && 
-                                messageIdList.Contains(rs.MessageId))
-                    .ToDictionaryAsync(rs => rs.MessageId, rs => rs.IsReadBool);
+                    .Where(rs => rs.UserId == userId && notificationIdList.Contains(rs.NotificationId))
+                    .ToDictionaryAsync(rs => rs.NotificationId, rs => rs.IsReadBool);
 
-                // 补充没有记录的消息，默认为未读
-                var result = messageIdList.ToDictionary(id => id, id => false);
+                // 补充没有记录的通知，默认为未读
+                var result = notificationIdList.ToDictionary(id => id, id => false);
                 foreach (var kvp in readStatuses)
                 {
                     result[kvp.Key] = kvp.Value;
@@ -84,78 +79,95 @@ namespace CampusTrade.API.Services.Message
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "批量获取消息已读状态失败，用户ID: {UserId}, 消息类型: {MessageType}", userId, messageType);
-                return messageIds.ToDictionary(id => id, id => false);
+                _logger.LogError(ex, "批量获取通知已读状态失败，用户ID: {UserId}", userId);
+                return notificationIds.ToDictionary(id => id, id => false);
             }
         }
 
         /// <summary>
-        /// 获取用户未读消息数量
+        /// 获取用户未读通知数量
         /// </summary>
-        public async Task<int> GetUnreadCountAsync(int userId, string? messageType = null)
+        public async Task<int> GetUnreadNotificationCountAsync(int userId)
         {
             try
             {
-                var query = _context.MessageReadStatuses
-                    .Where(rs => rs.UserId == userId && rs.IsRead == 0);
-
-                if (!string.IsNullOrEmpty(messageType))
-                {
-                    query = query.Where(rs => rs.MessageType == messageType);
-                }
-
-                return await query.CountAsync();
+                return await _context.MessageReadStatuses
+                    .Where(rs => rs.UserId == userId && rs.IsRead == 0)
+                    .CountAsync();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "获取未读消息数量失败，用户ID: {UserId}, 消息类型: {MessageType}", userId, messageType);
+                _logger.LogError(ex, "获取未读通知数量失败，用户ID: {UserId}", userId);
                 return 0;
             }
         }
 
         /// <summary>
-        /// 标记用户某类型的所有消息为已读
+        /// 获取指定通知列表中用户未读通知数量
         /// </summary>
-        public async Task<bool> MarkAllAsReadAsync(int userId, string messageType)
+        public async Task<int> GetUnreadNotificationCountAsync(int userId, IEnumerable<int> notificationIds)
         {
             try
             {
-                var unreadMessages = await _context.MessageReadStatuses
-                    .Where(rs => rs.UserId == userId && 
-                                rs.MessageType == messageType && 
-                                rs.IsRead == 0)
+                var notificationIdList = notificationIds.ToList();
+                if (!notificationIdList.Any())
+                {
+                    return 0;
+                }
+
+                // 计算未读数量：在指定列表中但没有已读记录的，或者已读记录标记为未读的
+                var readStatuses = await _context.MessageReadStatuses
+                    .Where(rs => rs.UserId == userId && notificationIdList.Contains(rs.NotificationId))
                     .ToListAsync();
 
-                foreach (var message in unreadMessages)
+                var readIds = readStatuses.Where(rs => rs.IsRead == 1).Select(rs => rs.NotificationId).ToHashSet();
+                return notificationIdList.Count(id => !readIds.Contains(id));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取指定通知列表中未读通知数量失败，用户ID: {UserId}", userId);
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// 标记用户所有通知为已读
+        /// </summary>
+        public async Task<bool> MarkAllNotificationsAsReadAsync(int userId)
+        {
+            try
+            {
+                var unreadNotifications = await _context.MessageReadStatuses
+                    .Where(rs => rs.UserId == userId && rs.IsRead == 0)
+                    .ToListAsync();
+
+                foreach (var notification in unreadNotifications)
                 {
-                    message.MarkAsRead();
+                    notification.MarkAsRead();
                 }
 
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("用户 {UserId} 的 {MessageType} 类型消息已全部标记为已读，共 {Count} 条",
-                    userId, messageType, unreadMessages.Count);
+                _logger.LogInformation("用户 {UserId} 的所有通知已标记为已读，共 {Count} 条", userId, unreadNotifications.Count);
 
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "标记所有消息为已读失败，用户ID: {UserId}, 消息类型: {MessageType}", userId, messageType);
+                _logger.LogError(ex, "标记所有通知为已读失败，用户ID: {UserId}", userId);
                 return false;
             }
         }
 
         /// <summary>
-        /// 创建或更新消息已读状态记录
+        /// 创建或更新通知已读状态记录
         /// </summary>
-        public async Task<bool> CreateOrUpdateReadStatusAsync(int userId, string messageType, int messageId, bool isRead)
+        public async Task<bool> CreateOrUpdateReadStatusAsync(int userId, int notificationId, bool isRead)
         {
             try
             {
                 var existingStatus = await _context.MessageReadStatuses
-                    .FirstOrDefaultAsync(rs => rs.UserId == userId && 
-                                              rs.MessageType == messageType && 
-                                              rs.MessageId == messageId);
+                    .FirstOrDefaultAsync(rs => rs.UserId == userId && rs.NotificationId == notificationId);
 
                 if (existingStatus != null)
                 {
@@ -175,8 +187,7 @@ namespace CampusTrade.API.Services.Message
                     var newStatus = new MessageReadStatus
                     {
                         UserId = userId,
-                        MessageType = messageType,
-                        MessageId = messageId,
+                        NotificationId = notificationId,
                         IsReadBool = isRead,
                         CreatedAt = DateTime.UtcNow
                     };
@@ -191,60 +202,37 @@ namespace CampusTrade.API.Services.Message
 
                 await _context.SaveChangesAsync();
 
-                _logger.LogDebug("消息已读状态已更新，用户ID: {UserId}, 消息类型: {MessageType}, 消息ID: {MessageId}, 已读: {IsRead}",
-                    userId, messageType, messageId, isRead);
+                _logger.LogDebug("通知已读状态已更新，用户ID: {UserId}, 通知ID: {NotificationId}, 已读: {IsRead}",
+                    userId, notificationId, isRead);
 
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "创建或更新消息已读状态失败，用户ID: {UserId}, 消息类型: {MessageType}, 消息ID: {MessageId}",
-                    userId, messageType, messageId);
+                _logger.LogError(ex, "创建或更新通知已读状态失败，用户ID: {UserId}, 通知ID: {NotificationId}",
+                    userId, notificationId);
                 return false;
             }
         }
 
         /// <summary>
-        /// 批量标记消息为已读
+        /// 批量标记通知为已读
         /// </summary>
-        public async Task<bool> MarkMessagesAsReadBatchAsync(int userId, string messageType, IEnumerable<int> messageIds)
+        public async Task<bool> MarkNotificationsAsReadBatchAsync(int userId, IEnumerable<int> notificationIds)
         {
             try
             {
-                var messageIdList = messageIds.ToList();
-                foreach (var messageId in messageIdList)
+                var notificationIdList = notificationIds.ToList();
+                foreach (var notificationId in notificationIdList)
                 {
-                    await CreateOrUpdateReadStatusAsync(userId, messageType, messageId, true);
+                    await CreateOrUpdateReadStatusAsync(userId, notificationId, true);
                 }
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "批量标记消息已读失败，用户ID: {UserId}, 消息类型: {MessageType}", userId, messageType);
+                _logger.LogError(ex, "批量标记通知已读失败，用户ID: {UserId}", userId);
                 return false;
-            }
-        }
-
-        /// <summary>
-        /// 获取用户未读消息数量
-        /// </summary>
-        public async Task<int> GetUnreadMessageCountAsync(int userId, string? messageType = null)
-        {
-            try
-            {
-                var query = _context.MessageReadStatuses.Where(rs => rs.UserId == userId && rs.IsRead == 0);
-                
-                if (!string.IsNullOrEmpty(messageType))
-                {
-                    query = query.Where(rs => rs.MessageType == messageType);
-                }
-
-                return await query.CountAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "获取未读消息数量失败，用户ID: {UserId}, 消息类型: {MessageType}", userId, messageType);
-                return 0;
             }
         }
 

@@ -2066,16 +2066,9 @@ namespace CampusTrade.API.Data
                     .HasColumnType("NUMBER")
                     .IsRequired();
 
-                // 消息类型配置
-                entity.Property(e => e.MessageType)
-                    .HasColumnName("MESSAGE_TYPE")
-                    .HasColumnType("VARCHAR2(20)")
-                    .IsRequired()
-                    .HasMaxLength(20);
-
-                // 消息ID配置
-                entity.Property(e => e.MessageId)
-                    .HasColumnName("MESSAGE_ID")
+                // 通知ID配置
+                entity.Property(e => e.NotificationId)
+                    .HasColumnName("NOTIFICATION_ID")
                     .HasColumnType("NUMBER")
                     .IsRequired();
 
@@ -2096,29 +2089,35 @@ namespace CampusTrade.API.Data
                     .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
                 // 唯一索引配置
-                entity.HasIndex(e => new { e.UserId, e.MessageType, e.MessageId })
+                entity.HasIndex(e => new { e.UserId, e.NotificationId })
                     .IsUnique()
                     .HasDatabaseName("UK_MESSAGE_READ_STATUS");
 
                 // 其他索引配置
-                entity.HasIndex(e => new { e.UserId, e.MessageType })
-                    .HasDatabaseName("IX_MESSAGE_READ_USER_TYPE");
+                entity.HasIndex(e => e.UserId)
+                    .HasDatabaseName("IX_MESSAGE_READ_USER");
 
-                entity.HasIndex(e => e.MessageType)
-                    .HasDatabaseName("IX_MESSAGE_READ_TYPE");
+                entity.HasIndex(e => e.NotificationId)
+                    .HasDatabaseName("IX_MESSAGE_READ_NOTIFICATION");
 
                 entity.HasIndex(e => e.IsRead)
                     .HasDatabaseName("IX_MESSAGE_READ_STATUS");
 
-                entity.HasIndex(e => new { e.UserId, e.MessageType, e.IsRead })
+                entity.HasIndex(e => new { e.UserId, e.IsRead })
                     .HasDatabaseName("IX_MESSAGE_READ_COMPOUND");
 
                 // 配置与User的关系
                 entity.HasOne(e => e.User)
                     .WithMany()
                     .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // 配置与Notification的关系
+                entity.HasOne(e => e.Notification)
+                    .WithMany()
+                    .HasForeignKey(e => e.NotificationId)
                     .OnDelete(DeleteBehavior.Cascade)
-                    .HasConstraintName("FK_MESSAGE_READ_USER");
+                    .HasConstraintName("FK_MESSAGE_READ_NOTIFICATION");
             });
         }
     }

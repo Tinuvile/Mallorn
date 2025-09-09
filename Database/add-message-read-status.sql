@@ -74,7 +74,7 @@ BEGIN
     EXECUTE IMMEDIATE 'COMMENT ON TABLE message_read_status IS ''消息已读状态表 - 统一管理所有类型消息的已读状态''';
     EXECUTE IMMEDIATE 'COMMENT ON COLUMN message_read_status.read_status_id IS ''已读状态ID''';
     EXECUTE IMMEDIATE 'COMMENT ON COLUMN message_read_status.user_id IS ''用户ID''';
-    EXECUTE IMMEDIATE 'COMMENT ON COLUMN message_read_status.message_type IS ''消息类型：notification, bargain, swap, exchange''';
+    EXECUTE IMMEDIATE 'COMMENT ON COLUMN message_read_status.message_type IS ''消息类型：notification, bargain, swap, exchange, review''';
     EXECUTE IMMEDIATE 'COMMENT ON COLUMN message_read_status.message_id IS ''消息ID（对应各类型消息的主键）''';
     EXECUTE IMMEDIATE 'COMMENT ON COLUMN message_read_status.is_read IS ''是否已读：0=未读, 1=已读''';
     EXECUTE IMMEDIATE 'COMMENT ON COLUMN message_read_status.read_at IS ''已读时间''';

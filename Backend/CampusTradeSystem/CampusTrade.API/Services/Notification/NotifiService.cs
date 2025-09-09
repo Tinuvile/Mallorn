@@ -39,12 +39,16 @@ namespace CampusTrade.API.Services.Notification
         /// <param name="templateId">模板ID</param>
         /// <param name="paramDict">参数字典</param>
         /// <param name="orderId">可选，关联订单</param>
+        /// <param name="messageType">可选，业务消息类型</param>
+        /// <param name="messageId">可选，业务消息ID</param>
         /// <returns>创建结果</returns>
         public async Task<(bool Success, string Message, int? NotificationId)> CreateNotificationAsync(
             int recipientId,
             int templateId,
             Dictionary<string, object> paramDict,
-            int? orderId = null)
+            int? orderId = null,
+            string? messageType = null,
+            int? messageId = null)
         {
             // 1. 校验接收人是否有效
             var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == recipientId && u.IsActive == 1);
@@ -93,9 +97,9 @@ namespace CampusTrade.API.Services.Notification
             // 7. 在MESSAGE_READ_STATUS表中创建对应的未读状态记录
             try
             {
+                // 为通知创建读取状态记录（与通知一一对应）
                 await _messageReadStatusService.CreateOrUpdateReadStatusAsync(
                     recipientId, 
-                    MessageReadStatus.MessageTypes.Notification, 
                     notification.NotificationId, 
                     false // 默认为未读
                 );
@@ -107,8 +111,13 @@ namespace CampusTrade.API.Services.Notification
                 // 这里不影响通知创建的主流程，只记录错误
             }
 
-            // 8. 立即触发后台服务处理新通知
-            NotificationBackgroundService.TriggerProcessing();
+            // 8. 延迟触发后台服务处理新通知，避免与当前事务冲突
+            _ = Task.Run(async () =>
+            {
+                // 延迟100ms，确保当前事务有时间完成
+                await Task.Delay(100);
+                NotificationBackgroundService.TriggerProcessing();
+            });
 
             return (true, "通知已创建并触发发送", notification.NotificationId);
         }
@@ -207,8 +216,8 @@ namespace CampusTrade.API.Services.Notification
                 .ToListAsync();
 
             var messageIds = systemNotificationsRaw.Select(n => n.NotificationId).ToList();
-            var readStatuses = await _messageReadStatusService.GetMessagesReadStatusAsync(
-                userId, MessageReadStatus.MessageTypes.Notification, messageIds);
+            var readStatuses = await _messageReadStatusService.GetNotificationsReadStatusAsync(
+                userId, messageIds);
 
             return systemNotificationsRaw.Select(n => new
             {
@@ -240,8 +249,8 @@ namespace CampusTrade.API.Services.Notification
                 .ToListAsync();
 
             var messageIds = replyMessagesRaw.Select(n => n.NotificationId).ToList();
-            var readStatuses = await _messageReadStatusService.GetMessagesReadStatusAsync(
-                userId, MessageReadStatus.MessageTypes.Notification, messageIds);
+            var readStatuses = await _messageReadStatusService.GetNotificationsReadStatusAsync(
+                userId, messageIds);
 
             return replyMessagesRaw.Select(n => new
             {
@@ -297,8 +306,8 @@ namespace CampusTrade.API.Services.Notification
             // 获取所有议价消息的ID，用于批量查询已读状态
             var allNegotiationIds = buyerNegotiations.Concat(sellerNegotiations)
                 .Select(n => n.NegotiationId).ToList();
-            var readStatuses = await _messageReadStatusService.GetMessagesReadStatusAsync(
-                userId, MessageReadStatus.MessageTypes.Bargain, allNegotiationIds);
+            var readStatuses = await _messageReadStatusService.GetNotificationsReadStatusAsync(
+                userId, allNegotiationIds);
 
             // 处理买家发起的议价消息
             foreach (var negotiation in buyerNegotiations)
@@ -481,8 +490,8 @@ namespace CampusTrade.API.Services.Notification
             // 获取所有换物消息的ID，用于批量查询已读状态
             var allExchangeIds = receivedRequests.Concat(sentRequests)
                 .Select(r => r.ExchangeId).ToList();
-            var readStatuses = await _messageReadStatusService.GetMessagesReadStatusAsync(
-                userId, MessageReadStatus.MessageTypes.Swap, allExchangeIds);
+            var readStatuses = await _messageReadStatusService.GetNotificationsReadStatusAsync(
+                userId, allExchangeIds);
 
             foreach (var request in receivedRequests)
             {
@@ -586,8 +595,8 @@ namespace CampusTrade.API.Services.Notification
 
                 if (notification != null)
                 {
-                    return await _messageReadStatusService.MarkMessageAsReadAsync(
-                        userId, MessageReadStatus.MessageTypes.Notification, messageId);
+                    return await _messageReadStatusService.MarkNotificationAsReadAsync(
+                        userId, messageId);
                 }
 
                 // 然后尝试标记议价消息为已读
@@ -598,8 +607,8 @@ namespace CampusTrade.API.Services.Notification
 
                 if (negotiation != null)
                 {
-                    return await _messageReadStatusService.MarkMessageAsReadAsync(
-                        userId, MessageReadStatus.MessageTypes.Bargain, messageId);
+                    return await _messageReadStatusService.MarkNotificationAsReadAsync(
+                        userId, messageId);
                 }
 
                 // 最后尝试标记换物消息为已读
@@ -611,8 +620,8 @@ namespace CampusTrade.API.Services.Notification
 
                 if (exchangeRequest != null)
                 {
-                    return await _messageReadStatusService.MarkMessageAsReadAsync(
-                        userId, MessageReadStatus.MessageTypes.Swap, messageId);
+                    return await _messageReadStatusService.MarkNotificationAsReadAsync(
+                        userId, messageId);
                 }
 
                 return false;
@@ -814,24 +823,96 @@ namespace CampusTrade.API.Services.Notification
                 if (string.IsNullOrEmpty(category) || category == "all")
                 {
                     // 统计所有类型的未读消息
-                    var systemUnread = await _messageReadStatusService.GetUnreadMessageCountAsync(userId, MessageReadStatus.MessageTypes.Notification);
-                    var bargainUnread = await _messageReadStatusService.GetUnreadMessageCountAsync(userId, MessageReadStatus.MessageTypes.Bargain);
-                    var swapUnread = await _messageReadStatusService.GetUnreadMessageCountAsync(userId, MessageReadStatus.MessageTypes.Swap);
                     
-                    unreadCount = systemUnread + bargainUnread + swapUnread;
+                    // 1. 统计系统通知的未读数量
+                    var systemNotificationIds = await _context.Notifications
+                        .Where(n => n.RecipientId == userId &&
+                                   (n.Template!.TemplateName.Contains("系统") || 
+                                    n.Template.TemplateName.Contains("管理员")))
+                        .Select(n => n.NotificationId)
+                        .ToListAsync();
+                    
+                    var systemUnread = await _messageReadStatusService.GetUnreadNotificationCountAsync(userId, systemNotificationIds);
+                    
+                    // 2. 统计回复消息的未读数量
+                    var replyNotificationIds = await _context.Notifications
+                        .Where(n => n.RecipientId == userId &&
+                                   !n.Template!.TemplateName.Contains("系统") &&
+                                   !n.Template.TemplateName.Contains("管理员") &&
+                                   !n.Template.TemplateName.Contains("议价") &&
+                                   !n.Template.TemplateName.Contains("换物"))
+                        .Select(n => n.NotificationId)
+                        .ToListAsync();
+                    
+                    var replyUnread = await _messageReadStatusService.GetUnreadNotificationCountAsync(userId, replyNotificationIds);
+                    
+                    // 3. 统计议价消息的未读数量
+                    var bargainIds = await _context.Negotiations
+                        .Include(n => n.Order)
+                        .Where(n => n.Order.BuyerId == userId || n.Order.SellerId == userId)
+                        .Select(n => n.NegotiationId)
+                        .ToListAsync();
+                    
+                    var bargainUnread = await _messageReadStatusService.GetUnreadNotificationCountAsync(userId, bargainIds);
+                    
+                    // 4. 统计换物消息的未读数量
+                    var swapIds = await _context.ExchangeRequests
+                        .Include(e => e.OfferProduct)
+                        .Include(e => e.RequestProduct)
+                        .Where(e => e.OfferProduct.UserId == userId || e.RequestProduct.UserId == userId)
+                        .Select(e => e.ExchangeId)
+                        .ToListAsync();
+                    
+                    var swapUnread = await _messageReadStatusService.GetUnreadNotificationCountAsync(userId, swapIds);
+                    
+                    unreadCount = systemUnread + replyUnread + bargainUnread + swapUnread;
                 }
                 else
                 {
-                    // 根据分类映射到消息类型
-                    string messageType = category switch
+                    // 根据分类获取对应的消息ID列表并统计未读数量
+                    List<int> messageIds = new List<int>();
+                    
+                    switch (category)
                     {
-                        "system" => MessageReadStatus.MessageTypes.Notification,
-                        "bargain" => MessageReadStatus.MessageTypes.Bargain,
-                        "swap" => MessageReadStatus.MessageTypes.Swap,
-                        _ => MessageReadStatus.MessageTypes.Notification
-                    };
+                        case "system":
+                            messageIds = await _context.Notifications
+                                .Where(n => n.RecipientId == userId &&
+                                           (n.Template!.TemplateName.Contains("系统") || 
+                                            n.Template.TemplateName.Contains("管理员")))
+                                .Select(n => n.NotificationId)
+                                .ToListAsync();
+                            break;
+                            
+                        case "reply":
+                            messageIds = await _context.Notifications
+                                .Where(n => n.RecipientId == userId &&
+                                           !n.Template!.TemplateName.Contains("系统") &&
+                                           !n.Template.TemplateName.Contains("管理员") &&
+                                           !n.Template.TemplateName.Contains("议价") &&
+                                           !n.Template.TemplateName.Contains("换物"))
+                                .Select(n => n.NotificationId)
+                                .ToListAsync();
+                            break;
+                            
+                        case "bargain":
+                            messageIds = await _context.Negotiations
+                                .Include(n => n.Order)
+                                .Where(n => n.Order.BuyerId == userId || n.Order.SellerId == userId)
+                                .Select(n => n.NegotiationId)
+                                .ToListAsync();
+                            break;
+                            
+                        case "swap":
+                            messageIds = await _context.ExchangeRequests
+                                .Include(e => e.OfferProduct)
+                                .Include(e => e.RequestProduct)
+                                .Where(e => e.OfferProduct.UserId == userId || e.RequestProduct.UserId == userId)
+                                .Select(e => e.ExchangeId)
+                                .ToListAsync();
+                            break;
+                    }
 
-                    unreadCount = await _messageReadStatusService.GetUnreadMessageCountAsync(userId, messageType);
+                    unreadCount = await _messageReadStatusService.GetUnreadNotificationCountAsync(userId, messageIds);
                 }
 
                 _logger.LogDebug("用户 {UserId} 的未读消息数量: {UnreadCount} (分类: {Category})", userId, unreadCount, category ?? "all");
