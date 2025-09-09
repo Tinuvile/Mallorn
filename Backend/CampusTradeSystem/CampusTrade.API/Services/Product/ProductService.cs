@@ -130,7 +130,7 @@ public class ProductService : IProductService
                     userId,
                     9, // 商品上架成功模板ID
                     notificationParams,
-                    product.ProductId
+                    null // 商品上架通知不关联订单
                 );
 
                 _logger.LogInformation("商品上架成功通知已发送，商品ID: {ProductId}，用户ID: {UserId}，商品标题: {ProductTitle}",
@@ -297,7 +297,7 @@ public class ProductService : IProductService
                     userId,
                     10, // 商品下架通知模板ID
                     notificationParams,
-                    productId
+                    null // 商品下架通知不关联订单
                 );
 
                 _logger.LogInformation("商品下架通知已发送，商品ID: {ProductId}，用户ID: {UserId}，商品标题: {ProductTitle}，下架原因: 主动删除",
@@ -823,7 +823,7 @@ public class ProductService : IProductService
                         product.UserId,
                         13, // 商品即将过期模板ID
                         notificationParams,
-                        product.ProductId
+                        null // 商品过期通知不关联订单
                     );
 
                     _logger.LogInformation("商品即将过期通知已发送，商品ID: {ProductId}，用户ID: {UserId}，商品标题: {ProductTitle}，过期时间: {ExpireTime}",
@@ -1006,7 +1006,7 @@ public class ProductService : IProductService
                             product.UserId,
                             10, // 商品下架通知模板ID
                             notificationParams,
-                            product.ProductId
+                            null // 商品下架通知不关联订单
                         );
 
                         _logger.LogInformation("商品自动下架通知已发送，商品ID: {ProductId}，用户ID: {UserId}，商品标题: {ProductTitle}，下架原因: 自动过期下架",
