@@ -35,6 +35,7 @@ namespace CampusTrade.API.Data
         public DbSet<Reports> Reports { get; set; }
         public DbSet<ReportEvidence> ReportEvidences { get; set; }
         public DbSet<CreditHistory> CreditHistory { get; set; }
+        public DbSet<MessageReadStatus> MessageReadStatuses { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -2045,6 +2046,79 @@ namespace CampusTrade.API.Data
                     .HasDatabaseName("IX_REPORT_EVIDENCE_TYPE_TIME");
 
                 // Report关系已在Reports实体中配置
+            });
+
+            // 配置消息已读状态表
+            modelBuilder.Entity<MessageReadStatus>(entity =>
+            {
+                entity.ToTable("MESSAGE_READ_STATUS");
+                entity.HasKey(e => e.ReadStatusId);
+
+                // 主键配置
+                entity.Property(e => e.ReadStatusId)
+                    .HasColumnName("READ_STATUS_ID")
+                    .HasColumnType("NUMBER")
+                    .ValueGeneratedOnAdd();
+
+                // 用户ID外键配置
+                entity.Property(e => e.UserId)
+                    .HasColumnName("USER_ID")
+                    .HasColumnType("NUMBER")
+                    .IsRequired();
+
+                // 消息类型配置
+                entity.Property(e => e.MessageType)
+                    .HasColumnName("MESSAGE_TYPE")
+                    .HasColumnType("VARCHAR2(20)")
+                    .IsRequired()
+                    .HasMaxLength(20);
+
+                // 消息ID配置
+                entity.Property(e => e.MessageId)
+                    .HasColumnName("MESSAGE_ID")
+                    .HasColumnType("NUMBER")
+                    .IsRequired();
+
+                // 已读状态配置
+                entity.Property(e => e.IsRead)
+                    .HasColumnName("IS_READ")
+                    .HasDefaultValue(0);
+
+                // 已读时间配置
+                entity.Property(e => e.ReadAt)
+                    .HasColumnName("READ_AT")
+                    .HasColumnType("TIMESTAMP");
+
+                // 创建时间配置
+                entity.Property(e => e.CreatedAt)
+                    .HasColumnName("CREATED_AT")
+                    .HasColumnType("TIMESTAMP")
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                // 唯一索引配置
+                entity.HasIndex(e => new { e.UserId, e.MessageType, e.MessageId })
+                    .IsUnique()
+                    .HasDatabaseName("UK_MESSAGE_READ_STATUS");
+
+                // 其他索引配置
+                entity.HasIndex(e => new { e.UserId, e.MessageType })
+                    .HasDatabaseName("IX_MESSAGE_READ_USER_TYPE");
+
+                entity.HasIndex(e => e.MessageType)
+                    .HasDatabaseName("IX_MESSAGE_READ_TYPE");
+
+                entity.HasIndex(e => e.IsRead)
+                    .HasDatabaseName("IX_MESSAGE_READ_STATUS");
+
+                entity.HasIndex(e => new { e.UserId, e.MessageType, e.IsRead })
+                    .HasDatabaseName("IX_MESSAGE_READ_COMPOUND");
+
+                // 配置与User的关系
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .HasConstraintName("FK_MESSAGE_READ_USER");
             });
         }
     }

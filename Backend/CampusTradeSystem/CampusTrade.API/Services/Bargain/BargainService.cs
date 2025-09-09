@@ -3,6 +3,7 @@ using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Interfaces;
 using CampusTrade.API.Services.Notification;
+using CampusTrade.API.Services.Message;
 using Microsoft.Extensions.Logging;
 
 namespace CampusTrade.API.Services.Bargain
@@ -18,6 +19,7 @@ namespace CampusTrade.API.Services.Bargain
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<BargainService> _logger;
         private readonly NotifiService _notificationService;
+        private readonly IMessageReadStatusService _messageReadStatusService;
 
         public BargainService(
             INegotiationsRepository negotiationsRepository,
@@ -25,7 +27,8 @@ namespace CampusTrade.API.Services.Bargain
             IRepository<Models.Entities.Product> productsRepository,
             IUnitOfWork unitOfWork,
             ILogger<BargainService> logger,
-            NotifiService notificationService)
+            NotifiService notificationService,
+            IMessageReadStatusService messageReadStatusService)
         {
             _negotiationsRepository = negotiationsRepository;
             _ordersRepository = ordersRepository;
@@ -33,6 +36,7 @@ namespace CampusTrade.API.Services.Bargain
             _unitOfWork = unitOfWork;
             _logger = logger;
             _notificationService = notificationService;
+            _messageReadStatusService = messageReadStatusService;
         }
 
         /// <summary>
@@ -82,6 +86,21 @@ namespace CampusTrade.API.Services.Bargain
 
                 await _negotiationsRepository.AddAsync(negotiation);
                 await _unitOfWork.CommitTransactionAsync();
+
+                // 为卖家创建议价消息的读取状态记录
+                try
+                {
+                    await _messageReadStatusService.CreateOrUpdateReadStatusAsync(
+                        order.SellerId,
+                        MessageReadStatus.MessageTypes.Bargain,
+                        negotiation.NegotiationId,
+                        false
+                    );
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "创建议价消息读取状态失败");
+                }
 
                 // 发送议价请求通知给卖家
                 try
@@ -213,6 +232,21 @@ namespace CampusTrade.API.Services.Bargain
                     };
 
                     await _negotiationsRepository.AddAsync(counterNegotiation);
+
+                    // 为买家创建反报价消息的读取状态记录
+                    try
+                    {
+                        await _messageReadStatusService.CreateOrUpdateReadStatusAsync(
+                            order.BuyerId,
+                            MessageReadStatus.MessageTypes.Bargain,
+                            counterNegotiation.NegotiationId,
+                            false
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "创建反报价消息读取状态失败");
+                    }
 
                     // 发送反报价通知给买家
                     try

@@ -8,8 +8,18 @@
       <v-btn icon color="indigo" @click="goToUserDetail" class="mx-2">
         <v-icon size="40">mdi-account-circle</v-icon>
       </v-btn>
-      <v-btn icon @click="goToMessage" class="mx-2">
+      <v-btn icon @click="goToMessage" class="mx-2" style="position: relative;">
         <v-icon size="40">mdi-view-list</v-icon>
+        <!-- 未读消息数量显示 -->
+        <v-badge
+          v-if="unreadMessageCount > 0"
+          :content="unreadMessageCount > 99 ? '99+' : unreadMessageCount.toString()"
+          color="red"
+          location="top end"
+          offset-x="4"
+          offset-y="4"
+        >
+        </v-badge>
       </v-btn>
 
       <v-btn
@@ -359,7 +369,7 @@
   import { useRouter } from 'vue-router'
   import { useUserStore } from '@/stores/user'
   import CategoryHoverMenu from '@/components/CategoryHoverMenu.vue'
-  import { productApi } from '@/services/api'
+  import { productApi, notificationApi } from '@/services/api'
 
   const router = useRouter()
   const userStore = useUserStore()
@@ -369,6 +379,7 @@
   const userProfileLoading = ref(false)
   const isLoggedIn = computed(() => userStore.isLoggedIn) // 添加登录状态
   const isAdmin = computed(() => userStore.isAdmin) // 添加管理员状态
+  const unreadMessageCount = ref(0) // 未读消息数量
 
   // 计算显示名称
   const displayName = computed(() => {
@@ -491,6 +502,8 @@
       } else {
         // 用户信息加载成功后，检查管理员身份
         await userStore.checkAdminStatus()
+        // 加载未读消息数量
+        await loadUnreadMessageCount()
       }
     } catch (error) {
       console.error('加载用户信息异常:', error)
@@ -498,6 +511,26 @@
       authWarningMessage.value = '加载用户信息失败，请稍后重试'
     } finally {
       userProfileLoading.value = false
+    }
+  }
+
+  // 加载未读消息数量
+  const loadUnreadMessageCount = async () => {
+    if (!userStore.isLoggedIn || !userStore.user?.userId) {
+      unreadMessageCount.value = 0
+      return
+    }
+
+    try {
+      const response = await notificationApi.getUnreadMessageCount(userStore.user.userId)
+      if (response.success && response.data) {
+        unreadMessageCount.value = response.data.unreadCount
+      } else {
+        unreadMessageCount.value = 0
+      }
+    } catch (error) {
+      console.error('获取未读消息数量失败:', error)
+      unreadMessageCount.value = 0
     }
   }
 
@@ -513,6 +546,9 @@
       // 仅在从未登录变为已登录时才加载用户信息
       console.log('登录状态变化，加载用户信息')
       loadUserProfile()
+    } else if (!newValue && oldValue) {
+      // 从已登录变为未登录时，清零未读消息数量
+      unreadMessageCount.value = 0
     }
   })
 

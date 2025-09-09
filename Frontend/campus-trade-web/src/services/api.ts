@@ -1543,6 +1543,17 @@ export const notificationApi = {
   getBargainConversation: (orderId: number): Promise<ApiResponse<any[]>> => {
     return api.get(`/api/notification/bargain-conversation/${orderId}`)
   },
+
+  // 获取用户未读消息数量
+  getUnreadMessageCount: (
+    userId: number,
+    category?: 'system' | 'bargain' | 'reply' | 'swap' | 'all'
+  ): Promise<ApiResponse<{ unreadCount: number; category: string }>> => {
+    const params = new URLSearchParams()
+    if (category) params.append('category', category)
+
+    return api.get(`/api/notification/user/${userId}/unread-count?${params.toString()}`)
+  },
 }
 
 // 议价相关接口数据格式
