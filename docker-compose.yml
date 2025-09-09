@@ -30,6 +30,7 @@ services:
     volumes:
       - ./Storage:/Storage
       - ./logs:/app/logs
+    user: "0:0" # 以root用户运行以确保有写入权限
     restart: unless-stopped
 
   campus-trade-web:

@@ -2,7 +2,6 @@
 
 # 此阶段用于在快速模式(默认为调试配置)下从 VS 运行时
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
@@ -27,4 +26,9 @@ RUN dotnet publish "./CampusTrade.API.csproj" -c $BUILD_CONFIGURATION -o /app/pu
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+
+# 创建Storage目录并设置权限
+RUN mkdir -p /Storage/products /Storage/reports /Storage/avatars /Storage/others && \
+    chmod -R 755 /Storage
+
 ENTRYPOINT ["dotnet", "CampusTrade.API.dll"]
