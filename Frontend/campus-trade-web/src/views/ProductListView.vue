@@ -322,6 +322,9 @@
         sortOrder: sortOrder,
       }
 
+      console.log('商品查询参数:', queryParams)
+      console.log('选中的分类ID:', selectedCategoryId.value)
+
       let response
       if (searchKeyword.value.trim()) {
         // 使用搜索接口
@@ -336,6 +339,8 @@
         response = await productApi.getProducts(queryParams)
       }
 
+      console.log('API响应:', response)
+
       if (response.success && response.data) {
         // 映射后端数据格式到前端显示格式
         products.value = (response.data.products || []).map(product => ({
@@ -344,9 +349,9 @@
           price: product.base_price,
           primaryImage: product.main_image_url,
           status: product.status,
-          categoryName: product.category.name,
-          sellerName: product.user.username,
-          viewCount: product.view_count,
+          categoryName: product.category?.name || '未分类',
+          sellerName: product.user?.username || '未知用户',
+          viewCount: product.view_count || 0,
           createdAt: product.publish_time,
         }))
         totalCount.value = response.data.total_count || 0
@@ -367,8 +372,10 @@
   const loadCategories = async () => {
     try {
       const response = await categoryApi.getCategoryTree()
+      console.log('分类数据响应:', response)
       if (response.success && response.data) {
         rootCategories.value = response.data.root_categories || []
+        console.log('加载的分类数据:', rootCategories.value)
       }
     } catch (error) {
       console.error('获取分类失败:', error)

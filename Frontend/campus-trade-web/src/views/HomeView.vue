@@ -8,7 +8,7 @@
       <v-btn icon color="indigo" @click="goToUserDetail" class="mx-2">
         <v-icon size="40">mdi-account-circle</v-icon>
       </v-btn>
-      <v-btn icon @click="goToMessage" class="mx-2" style="position: relative;">
+      <v-btn icon @click="goToMessage" class="mx-2" style="position: relative">
         <v-icon size="40">mdi-view-list</v-icon>
         <!-- 未读消息数量显示 -->
         <v-badge
@@ -70,7 +70,7 @@
       >
         <v-img src="/images/DataAnalyze.png" alt="数据看板" width="30" height="30" contain />
       </v-btn>
-      
+
       <!-- 管理员导航按钮 -->
       <v-btn
         v-if="isAdmin"
@@ -83,7 +83,7 @@
       >
         管理员中心
       </v-btn>
-      
+
       <v-spacer></v-spacer>
     </v-app-bar>
     <!-- 错误提示的snackbar -->
@@ -313,8 +313,9 @@
                 :alt="product.name"
                 height="200"
                 rounded
-                contain
+                cover
                 loading="lazy"
+                style="object-position: center center"
               />
               <v-card-item>
                 <v-card-title class="text-center pt-2">

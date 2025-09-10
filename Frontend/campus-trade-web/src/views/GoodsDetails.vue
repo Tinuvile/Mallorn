@@ -134,11 +134,10 @@
             <v-chip class="mr-1" color="gold" text-color="white" small> 领券立减 </v-chip>
             <span>送你500淘金币，下单直抵5元</span>
           </div>
-          <!-- 配送信息 -->
+          <!-- 商品所在位置 -->
           <div class="mb-3">
-            <span class="mr-2" style="color: red">配送</span>
-            <span>48小时内发货 快递:免运费</span>
-            <span class="grey--text ml-2">北京 至 上海嘉定</span>
+            <span class="mr-2" style="color: red">商品所在</span>
+            <span>{{ productDetail?.location || '位置信息暂未提供' }}</span>
           </div>
           <!-- 保障信息 -->
           <div class="mb-3" style="color: red">
@@ -472,6 +471,7 @@
       { name: '商品名称', value: productDetail.value.title },
       { name: '价格', value: `¥${productDetail.value.base_price}` },
       { name: '分类', value: productDetail.value.category?.name || '未分类' },
+      { name: '商品所在', value: productDetail.value.location || '位置信息暂未提供' },
       { name: '卖家', value: productDetail.value.user?.username || '未知卖家' },
       { name: '状态', value: productDetail.value.status },
       { name: '发布时间', value: new Date(productDetail.value.publish_time).toLocaleDateString() },

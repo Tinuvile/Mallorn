@@ -164,6 +164,8 @@
               <v-select
                 v-model="productData.condition"
                 :items="conditionOptions"
+                item-title="text"
+                item-value="value"
                 label="商品成色"
                 variant="outlined"
                 density="compact"
