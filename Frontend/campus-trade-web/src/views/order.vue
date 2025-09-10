@@ -212,14 +212,19 @@
                         </v-btn>
                       </div>
                       <!-- 评价显示区域 -->
-                      <div
-                        v-if="currentUserRoleInOrder === 'seller' && currentStep >= 4"
-                        class="mt-2"
-                      >
-                        <div v-if="selectedOrder.review" class="text-body-2">
+                      <div v-if="currentStep >= 4 && selectedOrder.review" class="mt-2">
+                        <div v-if="currentUserRoleInOrder === 'seller'" class="text-body-2">
                           买家评价：{{ selectedOrder.review }}
                         </div>
-                        <div v-else class="text-body-2 text-grey">买家暂未评价</div>
+                        <div v-else-if="currentUserRoleInOrder === 'buyer'" class="text-body-2 text-success">
+                          已评价：{{ selectedOrder.review }}
+                        </div>
+                      </div>
+                      <div
+                        v-if="currentUserRoleInOrder === 'seller' && currentStep >= 4 && !selectedOrder.review"
+                        class="mt-2"
+                      >
+                        <div class="text-body-2 text-grey">买家暂未评价</div>
                       </div>
                     </v-card>
                   </template>
@@ -387,11 +392,8 @@
                 <div v-if="selectedOrder?.review" class="mt-4">
                   <div v-if="selectedOrder?.sellerResponse" class="mb-3">
                     <div class="text-h6 mb-2">卖家回应：</div>
-                    <v-card variant="outlined" class="pa-4" color="blue-grey-lighten-5">
+                    <v-card variant="outlined" class="pa-4" color="mb-5">
                       <div class="text-body-1">{{ selectedOrder.sellerResponse }}</div>
-                      <div class="text-caption text-grey mt-2">
-                        回应时间：{{ formatDate(selectedOrder.sellerResponseDate) }}
-                      </div>
                     </v-card>
                   </div>
 
@@ -1040,9 +1042,43 @@
   })
 
   // 显示订单详情
-  const showOrderDetails = order => {
+  const showOrderDetails = async order => {
     selectedOrder.value = order
     showDialog.value = true
+    
+    // 如果订单已完成，尝试加载评价信息
+    if (order.status === 'completed') {
+      try {
+        const reviewResponse = await reviewApi.getOrderReview(order.id)
+        if (reviewResponse.success && reviewResponse.data) {
+          // 更新选中订单的评价信息
+          selectedOrder.value.review = reviewResponse.data.content || ''
+          selectedOrder.value.rating = reviewResponse.data.rating
+          selectedOrder.value.reviewDate = reviewResponse.data.createTime
+          selectedOrder.value.sellerResponse = reviewResponse.data.sellerReply // 修正字段名
+          selectedOrder.value.sellerResponseDate = reviewResponse.data.sellerResponseTime
+          selectedOrder.value.descAccuracy = reviewResponse.data.descAccuracy
+          selectedOrder.value.serviceAttitude = reviewResponse.data.serviceAttitude
+          selectedOrder.value.isAnonymous = reviewResponse.data.isAnonymous
+          
+          console.log('成功加载订单评价信息:', reviewResponse.data)
+        } else {
+          // 没有评价数据，清空评价字段
+          selectedOrder.value.review = ''
+          selectedOrder.value.rating = 0
+          selectedOrder.value.reviewDate = ''
+          selectedOrder.value.sellerResponse = ''
+          selectedOrder.value.sellerResponseDate = ''
+          console.log('该订单暂无评价')
+        }
+      } catch (error) {
+        console.error('加载评价信息失败:', error)
+        // 出错时也清空评价字段
+        selectedOrder.value.review = ''
+        selectedOrder.value.rating = 0
+        selectedOrder.value.reviewDate = ''
+      }
+    }
   }
 
   // 计算当前用户在选中订单中的身份
@@ -1141,7 +1177,14 @@
     }
     // 步骤4：评价
     if (step === 4) {
-      return status === 'completed' && role === 'buyer' && !selectedOrder.value.review
+      if (role === 'buyer' && status === 'completed') {
+        // 买家在订单完成后，始终显示按钮（评价或查看评价）
+        return true
+      } else if (role === 'seller' && status === 'completed') {
+        // 卖家在订单完成后，只有买家已评价时才显示查看评价按钮
+        return !!selectedOrder.value.review
+      }
+      return false
     }
 
     return false
@@ -1282,7 +1325,7 @@
             selectedOrder.value.review = reviewResponse.data.content || selectedOrder.value.review
             selectedOrder.value.rating = reviewResponse.data.rating
             selectedOrder.value.reviewDate = reviewResponse.data.createTime
-            selectedOrder.value.sellerResponse = reviewResponse.data.sellerResponse
+            selectedOrder.value.sellerResponse = reviewResponse.data.sellerReply // 修正字段名
             selectedOrder.value.sellerResponseDate = reviewResponse.data.sellerResponseTime
 
             // 可以根据需要添加更多字段
@@ -1308,16 +1351,21 @@
 
   // 关闭评价对话框
   const closeReviewDialog = () => {
+    // 先关闭对话框，避免状态重置时的闪现
     showReviewDialogState.value = false
-    reviewText.value = ''
-    isViewingReview.value = false
-    isSubmittingReview.value = false
+    
+    // 延迟重置状态，确保对话框完全关闭后再重置
+    setTimeout(() => {
+      reviewText.value = ''
+      isViewingReview.value = false
+      isSubmittingReview.value = false
 
-    // 重置评分值
-    overallRating.value = 5
-    descAccuracy.value = 5
-    serviceAttitude.value = 5
-    isAnonymous.value = false
+      // 重置评分值
+      overallRating.value = 5
+      descAccuracy.value = 5
+      serviceAttitude.value = 5
+      isAnonymous.value = false
+    }, 150) // 延迟150ms，确保对话框过渡动画完成
   }
 
   // 提交评价
@@ -1338,6 +1386,16 @@
       })
 
       if (response.success) {
+        // 立即更新当前选中订单的评价信息
+        if (selectedOrder.value) {
+          selectedOrder.value.review = reviewText.value.trim() || ''
+          selectedOrder.value.rating = overallRating.value
+          selectedOrder.value.descAccuracy = descAccuracy.value
+          selectedOrder.value.serviceAttitude = serviceAttitude.value
+          selectedOrder.value.isAnonymous = isAnonymous.value
+          selectedOrder.value.reviewDate = new Date().toISOString()
+        }
+        
         // 重新加载订单数据以获取最新信息
         await loadOrders()
 
@@ -1380,23 +1438,32 @@
 
       // 调用真实API回应评价
       const response = await reviewApi.createReviewResponse({
-        reviewId: reviewResponse.data.reviewId,
-        responseContent: responseText.value.trim(),
+        ReviewId: reviewResponse.data.reviewId,
+        SellerReply: responseText.value.trim(),
       })
 
       if (response.success) {
-        // 重新加载订单数据以获取最新信息
-        await loadOrders()
+        // 立即更新当前选中订单的回应信息
+        if (selectedOrder.value) {
+          selectedOrder.value.sellerResponse = responseText.value.trim()
+          selectedOrder.value.sellerResponseDate = new Date().toISOString()
+        }
 
-        // 更新选中订单的引用
-        const updatedOrder = orders.value.find(order => order.id === selectedOrder.value?.id)
-        if (updatedOrder) {
-          selectedOrder.value = updatedOrder
+        // 同时更新订单列表中对应的订单
+        const orderInList = orders.value.find(order => order.id === selectedOrder.value?.id)
+        if (orderInList) {
+          orderInList.sellerResponse = responseText.value.trim()
+          orderInList.sellerResponseDate = new Date().toISOString()
         }
 
         responseText.value = ''
         console.log('回应提交成功:', response.message)
         alert('回应提交成功！')
+
+        // 后台重新加载订单数据以保持数据同步（但不等待）
+        loadOrders().catch(error => {
+          console.error('后台更新订单数据失败:', error)
+        })
       } else {
         console.error('回应提交失败:', response.message)
         alert(`回应提交失败：${response.message}`)
@@ -1625,7 +1692,12 @@
     const role = currentUserRoleInOrder.value
 
     if (role === 'seller') {
-      return status === 'processing' || status === 'completed'
+      if (status === 'processing') return true
+      if (status === 'completed') {
+        // 卖家在订单完成后，只有买家已评价时才显示查看评价按钮
+        return !!selectedOrder.value.review
+      }
+      return false
     } else {
       return (
         status === 'pending' ||
@@ -1895,6 +1967,45 @@
   const loadOrders = async () => {
     try {
       await orderStore.getUserOrders()
+      
+      // 为已完成的订单加载评价信息
+      const completedOrders = orders.value.filter(order => order.status === 'completed')
+      
+      if (completedOrders.length > 0) {
+        console.log(`发现 ${completedOrders.length} 个已完成的订单，开始加载评价信息...`)
+        
+        // 并行加载所有已完成订单的评价信息
+        const reviewPromises = completedOrders.map(async order => {
+          try {
+            const reviewResponse = await reviewApi.getOrderReview(order.id)
+            if (reviewResponse.success && reviewResponse.data) {
+              // 更新订单的评价信息
+              order.review = reviewResponse.data.content || ''
+              order.rating = reviewResponse.data.rating
+              order.reviewDate = reviewResponse.data.createTime
+              order.sellerResponse = reviewResponse.data.sellerReply // 修正字段名
+              order.sellerResponseDate = reviewResponse.data.sellerResponseTime
+              order.descAccuracy = reviewResponse.data.descAccuracy
+              order.serviceAttitude = reviewResponse.data.serviceAttitude
+              order.isAnonymous = reviewResponse.data.isAnonymous
+              console.log(`订单 ${order.id} 评价信息加载成功`)
+            } else {
+              // 没有评价，清空相关字段
+              order.review = ''
+              order.rating = 0
+              console.log(`订单 ${order.id} 暂无评价`)
+            }
+          } catch (error) {
+            console.error(`加载订单 ${order.id} 评价信息失败:`, error)
+            // 出错时也清空评价字段
+            order.review = ''
+            order.rating = 0
+          }
+        })
+        
+        await Promise.all(reviewPromises)
+        console.log('所有订单评价信息加载完成')
+      }
     } catch (error) {
       console.error('加载订单数据失败:', error)
     }
