@@ -760,8 +760,9 @@
   const initCreditChart = () => {
     console.log('开始初始化信用评分图表...')
 
-    // 使用可选链操作符安全获取canvas context
-    const ctx = document.getElementById('creditChart')?.getContext('2d')
+    // 使用类型断言安全获取canvas context
+    const canvas = document.getElementById('creditChart') as HTMLCanvasElement
+    const ctx = canvas?.getContext('2d')
     console.log('获取到canvas context:', ctx)
     console.log('信用评分数据长度:', creditHistory.value.length)
     console.log('信用评分数据:', creditHistory.value)
