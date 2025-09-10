@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using CampusTrade.API.Infrastructure.Extensions;
-using CampusTrade.API.Models.DTOs.VirtualAccount;
 using CampusTrade.API.Models.DTOs.Common;
+using CampusTrade.API.Models.DTOs.VirtualAccount;
 using CampusTrade.API.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

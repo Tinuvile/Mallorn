@@ -182,7 +182,7 @@ namespace CampusTrade.API.Services.Order
         public async Task<(List<RechargeResponse> Records, int TotalCount)> GetUserRechargeRecordsAsync(
             int userId, int pageIndex = 1, int pageSize = 10)
         {
-            _logger.LogInformation("获取用户充值记录，用户ID: {UserId}, 页码: {PageIndex}, 页大小: {PageSize}", 
+            _logger.LogInformation("获取用户充值记录，用户ID: {UserId}, 页码: {PageIndex}, 页大小: {PageSize}",
                 userId, pageIndex, pageSize);
 
             var (records, totalCount) = await _rechargeRepository.GetByUserIdAsync(userId, pageIndex, pageSize);
@@ -197,7 +197,7 @@ namespace CampusTrade.API.Services.Order
                 ExpireTime = r.CompleteTime ?? r.CreateTime.AddMinutes(RECHARGE_TIMEOUT_MINUTES)
             }).ToList();
 
-            _logger.LogInformation("用户 {UserId} 充值记录查询完成，记录数: {Count}, 总数: {TotalCount}", 
+            _logger.LogInformation("用户 {UserId} 充值记录查询完成，记录数: {Count}, 总数: {TotalCount}",
                 userId, responseList.Count, totalCount);
 
             return (responseList, totalCount);

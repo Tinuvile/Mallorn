@@ -26,17 +26,17 @@ namespace CampusTrade.API.Repositories.Implementations
                 .Include(r => r.User)
                 .Where(r => r.UserId == userId)
                 .OrderByDescending(r => r.CreateTime);
-            
+
             var totalCount = await query.CountAsync();
-            
+
             // 如果传入的pageIndex是基于1的，则需要减1来转换为基于0的
             var skipCount = pageIndex > 0 ? (pageIndex - 1) * pageSize : 0;
-            
+
             var records = await query
                 .Skip(skipCount)
                 .Take(pageSize)
                 .ToListAsync();
-                
+
             return (records, totalCount);
         }
 

@@ -239,8 +239,8 @@ namespace CampusTrade.API.Services.Notification
         /// 获取用户通知列表（包含已读状态）
         /// </summary>
         public async Task<List<Models.Entities.Notification>> GetUserNotificationsWithReadStatusAsync(
-            int userId, 
-            int pageSize = 10, 
+            int userId,
+            int pageSize = 10,
             int pageIndex = 0,
             bool? isRead = null)
         {
