@@ -290,32 +290,27 @@
                   ¥{{ remainingBalance.toFixed(2) }}
                 </span>
               </div>
-              <v-alert
-                v-if="remainingBalance < 0"
-                type="warning"
-                dense
-                class="mt-2 mb-0"
-              >
+              <v-alert v-if="remainingBalance < 0" type="warning" dense class="mt-2 mb-0">
                 余额不足，请先充值
               </v-alert>
             </v-card>
           </div>
-          
+
           <!-- 余额加载中 -->
           <div v-else class="text-center py-4">
             <v-progress-circular indeterminate color="primary" size="24"></v-progress-circular>
             <span class="ml-2">获取余额中...</span>
           </div>
         </v-card-text>
-        
+
         <v-card-actions class="py-3 px-4 justify-end">
           <v-btn text @click="orderConfirm = false" class="mr-2"> 取消 </v-btn>
-          <v-btn 
-            color="pink" 
+          <v-btn
+            color="pink"
             :disabled="isBalanceLoading || isCreatingOrder"
             :loading="isCreatingOrder"
             @click="confirmCreateOrder"
-          > 
+          >
             确认创建订单
           </v-btn>
         </v-card-actions>
@@ -497,7 +492,7 @@
   const orderSubmitted = ref(false)
   const orderConfirm = ref(false)
   const insufficientBalance = ref(false)
-  
+
   // 余额相关状态
   const currentBalance = ref(0)
   const isBalanceLoading = ref(false)
@@ -551,7 +546,7 @@
       const orderRequest = {
         productId: orderItems.value[0].id,
         finalPrice: finalPayment.value,
-        remarks: `收货地址：${address.value.recipient} ${address.value.phone} ${address.value.location}`
+        remarks: `收货地址：${address.value.recipient} ${address.value.phone} ${address.value.location}`,
       }
 
       // 调用创建订单API
@@ -559,13 +554,13 @@
 
       if (result.success) {
         orderConfirm.value = false
-        
+
         // 显示成功提示
         orderSubmitted.value = true
 
         // 3秒后跳转到订单页面
         setTimeout(() => {
-          router.push('/orders')
+          router.push('/order')
         }, 3000)
       } else {
         alert(`创建订单失败: ${result.message}`)
