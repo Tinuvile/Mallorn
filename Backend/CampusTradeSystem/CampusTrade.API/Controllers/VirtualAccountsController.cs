@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CampusTrade.API.Infrastructure.Extensions;
 using CampusTrade.API.Models.DTOs.VirtualAccount;
+using CampusTrade.API.Models.DTOs.Common;
 using CampusTrade.API.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -31,13 +32,13 @@ namespace CampusTrade.API.Controllers
         /// </summary>
         /// <returns>账户余额信息</returns>
         [HttpGet("balance")]
-        public async Task<ActionResult<object>> GetBalance()
+        public async Task<ActionResult<ApiResponse<object>>> GetBalance()
         {
             try
             {
                 var userId = User.GetUserId();
                 if (userId == 0)
-                    return Unauthorized("用户身份验证失败");
+                    return Unauthorized(ApiResponse.CreateError("用户身份验证失败"));
 
                 var balance = await _virtualAccountRepository.GetBalanceAsync(userId);
                 var account = await _virtualAccountRepository.GetByUserIdAsync(userId);
@@ -50,12 +51,12 @@ namespace CampusTrade.API.Controllers
                 };
 
                 _logger.LogInformation("用户 {UserId} 查询余额: {Balance}", userId, balance);
-                return Ok(result);
+                return Ok(ApiResponse<object>.CreateSuccess(result, "获取余额成功"));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "获取用户余额时发生错误");
-                return StatusCode(500, "服务器内部错误");
+                return StatusCode(500, ApiResponse.CreateError("服务器内部错误"));
             }
         }
 
@@ -64,18 +65,18 @@ namespace CampusTrade.API.Controllers
         /// </summary>
         /// <returns>账户详细信息</returns>
         [HttpGet("details")]
-        public async Task<ActionResult<object>> GetAccountDetails()
+        public async Task<ActionResult<ApiResponse<object>>> GetAccountDetails()
         {
             try
             {
                 var userId = User.GetUserId();
                 if (userId == 0)
-                    return Unauthorized("用户身份验证失败");
+                    return Unauthorized(ApiResponse.CreateError("用户身份验证失败"));
 
                 var account = await _virtualAccountRepository.GetByUserIdAsync(userId);
                 if (account == null)
                 {
-                    return NotFound("虚拟账户不存在");
+                    return NotFound(ApiResponse.CreateError("虚拟账户不存在"));
                 }
 
                 var result = new
@@ -87,12 +88,12 @@ namespace CampusTrade.API.Controllers
                 };
 
                 _logger.LogInformation("用户 {UserId} 查询账户详情", userId);
-                return Ok(result);
+                return Ok(ApiResponse<object>.CreateSuccess(result, "获取账户详情成功"));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "获取账户详情时发生错误");
-                return StatusCode(500, "服务器内部错误");
+                return StatusCode(500, ApiResponse.CreateError("服务器内部错误"));
             }
         }
 
@@ -102,16 +103,16 @@ namespace CampusTrade.API.Controllers
         /// <param name="amount">需要检查的金额</param>
         /// <returns>是否余额充足</returns>
         [HttpGet("check-balance")]
-        public async Task<ActionResult<object>> CheckBalance([FromQuery] decimal amount)
+        public async Task<ActionResult<ApiResponse<object>>> CheckBalance([FromQuery] decimal amount)
         {
             try
             {
                 var userId = User.GetUserId();
                 if (userId == 0)
-                    return Unauthorized("用户身份验证失败");
+                    return Unauthorized(ApiResponse.CreateError("用户身份验证失败"));
 
                 if (amount <= 0)
-                    return BadRequest("检查金额必须大于0");
+                    return BadRequest(ApiResponse.CreateError("检查金额必须大于0"));
 
                 var hasSufficientBalance = await _virtualAccountRepository.HasSufficientBalanceAsync(userId, amount);
                 var currentBalance = await _virtualAccountRepository.GetBalanceAsync(userId);
@@ -127,12 +128,12 @@ namespace CampusTrade.API.Controllers
                 _logger.LogInformation("用户 {UserId} 检查余额，需要 {Amount}，当前 {Balance}，充足: {Sufficient}",
                     userId, amount, currentBalance, hasSufficientBalance);
 
-                return Ok(result);
+                return Ok(ApiResponse<object>.CreateSuccess(result, "余额检查成功"));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "检查余额时发生错误");
-                return StatusCode(500, "服务器内部错误");
+                return StatusCode(500, ApiResponse.CreateError("服务器内部错误"));
             }
         }
     }

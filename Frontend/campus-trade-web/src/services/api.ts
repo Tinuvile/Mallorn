@@ -397,6 +397,13 @@ export interface OrderStatisticsResponse {
 
 export interface CreateOrderRequest {
   productId: number
+  finalPrice?: number
+  remarks?: string
+}
+
+// 用于前端订单确认显示的详细信息接口
+export interface OrderConfirmRequest {
+  productId: number
   productName: string
   productImage: string
   specification: string
@@ -1189,7 +1196,6 @@ export interface RechargeRecord {
   status: string
   createTime: string
   completeTime?: string
-  remarks?: string
 }
 
 export interface UserRechargeRecordsResponse {

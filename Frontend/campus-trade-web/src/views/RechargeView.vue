@@ -66,7 +66,7 @@
 
               <v-card-text class="py-6 px-6">
                 <div class="text-center mb-6">
-                  <div v-if="accountStore.isLoading && !accountStore.account" class="py-4">
+                  <div v-if="accountStore.isLoading" class="py-4">
                     <v-progress-circular
                       indeterminate
                       color="primary"
@@ -79,6 +79,9 @@
                       <span class="balance-amount">¥{{ currentBalance.toFixed(2) }}</span>
                     </div>
                     <div class="balance-label">账户余额</div>
+                    <div v-if="accountStore.account?.lastUpdateTime" class="balance-update-time">
+                      更新时间: {{ new Date(accountStore.account.lastUpdateTime).toLocaleString('zh-CN') }}
+                    </div>
                   </div>
                 </div>
 
@@ -195,7 +198,6 @@
                       </div>
                       <div class="record-details">
                         <div class="record-time">{{ formatDate(record.createTime) }}</div>
-                        <div v-if="record.remarks" class="record-remarks">{{ record.remarks }}</div>
                       </div>
                     </div>
                   </v-list-item>
@@ -286,7 +288,7 @@
   const rechargeRecords = ref<RechargeRecord[]>([])
   const currentPage = ref(1)
   const totalPages = ref(1)
-  const pageSize = 10
+  const pageSize = 9  // 每页显示9条记录
 
   // 快速充值金额选项
   const quickAmounts = ref([10, 20, 50, 100, 200, 500])
@@ -298,7 +300,11 @@
   })
 
   // 计算属性
-  const currentBalance = computed(() => accountStore.account?.balance || 0)
+  const currentBalance = computed(() => {
+    // 确保返回数字类型，避免显示为0的问题
+    const balance = accountStore.account?.balance
+    return typeof balance === 'number' ? balance : 0
+  })
 
   const finalAmount = computed(() => {
     if (customAmount.value) {
@@ -340,6 +346,8 @@
     if (!isValidAmount.value) {
       return
     }
+    // 重置之前的充值结果
+    rechargeResult.value = { success: false, message: '' }
     showConfirmDialog.value = true
   }
 
@@ -355,7 +363,6 @@
           success: false,
           message: createResult.message,
         }
-        showResultDialog.value = true
         return
       }
 
@@ -395,7 +402,8 @@
 
   const closeResultDialog = () => {
     showResultDialog.value = false
-    rechargeResult.value = { success: false, message: '' }
+    // 不需要立即重置 rechargeResult，避免闪现问题
+    // rechargeResult 会在下次充值时被重新设置
   }
 
   // 加载充值记录
@@ -403,14 +411,19 @@
     recordsLoading.value = true
 
     try {
+      console.log('开始加载充值记录，页码:', currentPage.value, '页大小:', pageSize)
       const result = await accountStore.getRechargeRecords(currentPage.value, pageSize)
+      console.log('充值记录API响应:', result)
 
       if (result.success && result.data) {
         rechargeRecords.value = result.data.records
         totalPages.value = result.data.totalPages
+        console.log('充值记录加载成功，记录数:', result.data.records.length, '总页数:', result.data.totalPages)
+      } else {
+        console.error('充值记录加载失败:', result.message)
       }
     } catch (error) {
-      console.error('加载充值记录失败:', error)
+      console.error('加载充值记录异常:', error)
     } finally {
       recordsLoading.value = false
     }
@@ -431,11 +444,14 @@
   // 获取状态颜色
   const getStatusColor = (status: string) => {
     switch (status) {
-      case '已完成':
+      case '成功':
+      case 'Completed':
         return 'green'
-      case '待支付':
+      case '处理中':
+      case 'Pending':
         return 'orange'
-      case '已失败':
+      case '失败':
+      case 'Failed':
         return 'red'
       default:
         return 'grey'
@@ -445,10 +461,13 @@
   // 获取状态文本
   const getStatusText = (status: string) => {
     switch (status) {
+      case '成功':
       case 'Completed':
         return '已完成'
+      case '处理中':
       case 'Pending':
         return '待支付'
+      case '失败':
       case 'Failed':
         return '已失败'
       default:
@@ -461,10 +480,23 @@
 
   // 组件挂载时初始化
   onMounted(async () => {
-    // 获取账户余额
-    await accountStore.fetchBalance()
-    // 加载充值记录
-    await loadRechargeRecords()
+    try {
+      // 初始化账户存储
+      accountStore.initializeAccount()
+      
+      // 强制从服务器获取最新的账户余额
+      const balanceResult = await accountStore.fetchBalance()
+      if (!balanceResult.success) {
+        console.error('获取账户余额失败:', balanceResult.message)
+      } else {
+        console.log('余额获取成功:', balanceResult.data)
+      }
+      
+      // 加载充值记录
+      await loadRechargeRecords()
+    } catch (error) {
+      console.error('初始化账户信息失败:', error)
+    }
   })
 </script>
 
@@ -547,6 +579,12 @@
     font-size: 1rem;
     color: #666;
     margin-top: 8px;
+  }
+
+  .balance-update-time {
+    font-size: 0.8rem;
+    color: #999;
+    margin-top: 4px;
   }
 
   /* 快速金额按钮样式 */
