@@ -17,13 +17,16 @@ namespace CampusTrade.API.Controllers
     public class VirtualAccountsController : ControllerBase
     {
         private readonly IVirtualAccountsRepository _virtualAccountRepository;
+        private readonly ICreditHistoryRepository _creditHistoryRepository;
         private readonly ILogger<VirtualAccountsController> _logger;
 
         public VirtualAccountsController(
             IVirtualAccountsRepository virtualAccountRepository,
+            ICreditHistoryRepository creditHistoryRepository,
             ILogger<VirtualAccountsController> logger)
         {
             _virtualAccountRepository = virtualAccountRepository;
+            _creditHistoryRepository = creditHistoryRepository;
             _logger = logger;
         }
 
@@ -133,6 +136,70 @@ namespace CampusTrade.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "检查余额时发生错误");
+                return StatusCode(500, ApiResponse.CreateError("服务器内部错误"));
+            }
+        }
+
+        /// <summary>
+        /// 获取当前用户的信用评分变化历史
+        /// </summary>
+        /// <param name="days">获取最近几天的记录，默认30天</param>
+        /// <returns>信用评分历史记录</returns>
+        [HttpGet("credit-history")]
+        public async Task<ActionResult<ApiResponse<object>>> GetCreditHistory([FromQuery] int days = 30)
+        {
+            try
+            {
+                var userId = User.GetUserId();
+                if (userId == 0)
+                    return Unauthorized(ApiResponse.CreateError("用户身份验证失败"));
+
+                if (days <= 0 || days > 365)
+                    return BadRequest(ApiResponse.CreateError("天数必须在1-365之间"));
+
+                // 获取用户的信用历史记录
+                var creditHistories = await _creditHistoryRepository.GetByUserIdAsync(userId);
+
+                // 过滤最近N天的记录
+                var cutoffDate = DateTime.UtcNow.AddDays(-days);
+                var recentHistories = creditHistories
+                    .Where(h => h.CreatedAt >= cutoffDate)
+                    .OrderBy(h => h.CreatedAt)
+                    .ToList();
+
+                // 如果没有历史记录，创建一个初始记录（假设初始信用分为60.0）
+                object result;
+                if (!recentHistories.Any())
+                {
+                    // 如果没有任何历史记录，返回当前信用分作为单点数据
+                    result = new[]
+                    {
+                        new
+                        {
+                            date = DateTime.UtcNow.ToString("yyyy-MM-dd"),
+                            score = 60.0m,
+                            changeType = "初始分数"
+                        }
+                    };
+                }
+                else
+                {
+                    // 转换为前端需要的格式
+                    result = recentHistories.Select(h => new
+                    {
+                        date = h.CreatedAt.ToString("yyyy-MM-dd"),
+                        score = h.NewScore,
+                        changeType = h.ChangeType
+                    }).ToArray();
+                }
+
+                var recordCount = recentHistories.Any() ? recentHistories.Count : 1;
+                _logger.LogInformation("用户 {UserId} 查询信用历史，返回 {Count} 条记录", userId, recordCount);
+                return Ok(ApiResponse<object>.CreateSuccess(result, "获取信用历史成功"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取信用历史时发生错误");
                 return StatusCode(500, ApiResponse.CreateError("服务器内部错误"));
             }
         }

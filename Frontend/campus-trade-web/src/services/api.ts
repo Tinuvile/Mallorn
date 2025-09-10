@@ -1151,6 +1151,12 @@ export interface BalanceCheckResult {
   hasSufficientBalance: boolean
 }
 
+export interface CreditHistoryRecord {
+  date: string
+  score: number
+  changeType: string
+}
+
 // 虚拟账户相关接口
 export const virtualAccountApi = {
   // 获取余额
@@ -1166,6 +1172,11 @@ export const virtualAccountApi = {
   // 检查余额是否充足
   checkBalance: (amount: number): Promise<ApiResponse<BalanceCheckResult>> => {
     return api.get(`/api/virtualaccounts/check-balance?amount=${amount}`)
+  },
+
+  // 获取信用评分历史
+  getCreditHistory: (days: number = 30): Promise<ApiResponse<CreditHistoryRecord[]>> => {
+    return api.get(`/api/virtualaccounts/credit-history?days=${days}`)
   },
 }
 

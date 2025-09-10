@@ -245,27 +245,50 @@
                   </div>
                 </div>
 
-                <!-- 信用评分区域 -->
+                <!-- 信用评分变化图表 -->
                 <v-card class="pa-4 mt-4 credit-score-card rounded-lg">
                   <div class="d-flex justify-space-between align-center mb-3">
-                    <span class="font-weight-medium">信用评分:</span>
                     <div class="d-flex align-center">
-                      <span class="text-h4 font-weight-bold mr-2">{{
+                      <v-icon color="amber" class="mr-2">mdi-chart-line</v-icon>
+                      <span class="font-weight-medium">信用评分变化趋势</span>
+                    </div>
+                    <div class="d-flex align-center">
+                      <span class="text-h6 font-weight-bold mr-1">{{
                         userStore.user?.creditScore || 'N/A'
                       }}</span>
-                      <v-icon color="amber">mdi-star</v-icon>
+                      <span class="text-caption text--secondary">分</span>
                     </div>
                   </div>
-                  <v-progress-linear
-                    :value="calculateCreditScorePercentage(userStore.user?.creditScore)"
-                    color="amber"
-                    height="10"
-                    rounded
-                    class="mb-2"
-                  ></v-progress-linear>
-                  <div class="d-flex justify-space-between text-caption text--secondary">
-                    <span>0</span>
-                    <span>5</span>
+
+                  <!-- 图表容器 -->
+                  <div class="credit-chart-container">
+                    <!-- 加载状态 -->
+                    <div v-if="isLoadingCreditHistory" class="chart-loading">
+                      <v-progress-circular
+                        indeterminate
+                        color="primary"
+                        size="32"
+                      ></v-progress-circular>
+                      <p class="mt-2 text-caption text--secondary">加载信用评分历史中...</p>
+                    </div>
+
+                    <!-- 图表 -->
+                    <canvas v-else id="creditChart"></canvas>
+
+                    <!-- 无数据占位符 -->
+                    <div
+                      v-if="!isLoadingCreditHistory && creditHistory.length === 0"
+                      class="no-data-placeholder"
+                    >
+                      <v-icon size="32" color="#ccc">mdi-chart-line-variant</v-icon>
+                      <p class="text-caption text--secondary mt-1">暂无信用评分历史</p>
+                    </div>
+                  </div>
+
+                  <!-- 图表说明 -->
+                  <div class="d-flex justify-space-between text-caption text--secondary mt-2">
+                    <span>最近30天变化趋势</span>
+                    <span>0-100分</span>
                   </div>
                 </v-card>
               </v-card>
@@ -600,7 +623,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, onMounted } from 'vue'
+  import { ref, onMounted, nextTick } from 'vue'
   import { useRouter } from 'vue-router'
   import { useUserStore } from '@/stores/user'
   import { useVirtualAccountStore, type VirtualAccount } from '@/stores/virtualaccount'
@@ -610,7 +633,12 @@
     type UserRechargeRecordsResponse,
     type RechargeResponse,
     OrderStatus,
+    virtualAccountApi,
   } from '@/services/api'
+  import { Chart, registerables } from 'chart.js'
+
+  // 注册Chart.js的所有功能
+  Chart.register(...registerables)
 
   // 路由
   const router = useRouter()
@@ -662,6 +690,11 @@
   // 交易记录数据
   const transactions = ref<TransactionRecord[]>([])
   const isLoadingTransactions = ref(false)
+
+  // 信用评分历史数据
+  const creditHistory = ref<Array<{ date: string; score: number; changeType: string }>>([])
+  const isLoadingCreditHistory = ref(false)
+  let creditChartInstance: Chart | null = null
 
   // 计算信用评分百分比
   const calculateCreditScorePercentage = (score: number | undefined) => {
@@ -723,6 +756,125 @@
     }
   }
 
+  // 初始化信用评分折线图
+  const initCreditChart = () => {
+    const canvas = document.getElementById('creditChart') as HTMLCanvasElement
+    if (!canvas || creditHistory.value.length === 0) return
+
+    // 销毁旧图表实例
+    if (creditChartInstance) {
+      creditChartInstance.destroy()
+    }
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    // 准备图表数据
+    const labels = creditHistory.value.map(record => {
+      const date = new Date(record.date)
+      return `${date.getMonth() + 1}/${date.getDate()}`
+    })
+    const scores = creditHistory.value.map(record => record.score)
+
+    creditChartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: '信用评分',
+            data: scores,
+            borderColor: '#FF85A2',
+            backgroundColor: 'rgba(255, 133, 162, 0.1)',
+            tension: 0.4,
+            fill: true,
+            pointBackgroundColor: '#FF85A2',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            pointHoverBackgroundColor: '#FF6B90',
+            pointHoverBorderColor: '#fff',
+            pointHoverBorderWidth: 2,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            titleColor: '#333',
+            bodyColor: '#666',
+            borderColor: '#FF85A2',
+            borderWidth: 1,
+            padding: 12,
+            cornerRadius: 8,
+            displayColors: false,
+            callbacks: {
+              title: function (context) {
+                const index = context[0].dataIndex
+                return `日期: ${creditHistory.value[index].date}`
+              },
+              label: function (context) {
+                const index = context.dataIndex
+                const record = creditHistory.value[index]
+                return [`信用评分: ${record.score}`, `变更原因: ${record.changeType}`]
+              },
+            },
+          },
+        },
+        scales: {
+          y: {
+            beginAtZero: false,
+            min: 0,
+            max: 100,
+            grid: {
+              color: 'rgba(0, 0, 0, 0.05)',
+            },
+            ticks: {
+              color: '#666',
+              font: {
+                size: 11,
+              },
+              callback: function (value) {
+                return value + '分'
+              },
+            },
+            title: {
+              display: true,
+              text: '信用评分',
+              color: '#666',
+              font: {
+                size: 12,
+                weight: 'bold',
+              },
+            },
+          },
+          x: {
+            grid: {
+              display: false,
+            },
+            ticks: {
+              color: '#666',
+              font: {
+                size: 11,
+              },
+            },
+          },
+        },
+        interaction: {
+          intersect: false,
+          mode: 'index',
+        },
+      },
+    })
+  }
+
   // 获取账户详情
   const fetchAccountDetails = async () => {
     try {
@@ -737,6 +889,53 @@
     isLoading.value = true
     virtualAccountStore.error = null
     await loadData()
+  }
+
+  // 获取信用评分历史
+  const fetchCreditHistory = async () => {
+    isLoadingCreditHistory.value = true
+    try {
+      const response = await virtualAccountApi.getCreditHistory(30) // 获取最近30天的记录
+      if (response.success && response.data) {
+        creditHistory.value = response.data.map((record: any) => ({
+          date: record.date,
+          score: parseFloat(record.score),
+          changeType: record.changeType,
+        }))
+
+        // 确保有足够的数据点进行图表展示
+        if (creditHistory.value.length === 0) {
+          // 如果没有历史数据，创建一个默认数据点
+          const currentScore = userStore.user?.creditScore || 60.0
+          creditHistory.value = [
+            {
+              date: new Date().toISOString().split('T')[0],
+              score: currentScore,
+              changeType: '当前分数',
+            },
+          ]
+        }
+
+        // 在下一个tick初始化图表
+        await nextTick()
+        initCreditChart()
+      }
+    } catch (error) {
+      console.error('获取信用评分历史失败:', error)
+      // 如果获取失败，使用默认数据
+      const currentScore = userStore.user?.creditScore || 60.0
+      creditHistory.value = [
+        {
+          date: new Date().toISOString().split('T')[0],
+          score: currentScore,
+          changeType: '当前分数',
+        },
+      ]
+      await nextTick()
+      initCreditChart()
+    } finally {
+      isLoadingCreditHistory.value = false
+    }
   }
 
   // 获取交易记录
@@ -802,8 +1001,8 @@
       // 按时间排序（最新的在前面）
       allTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
-      // 只取前3条记录
-      transactions.value = allTransactions.slice(0, 3)
+      // 只取前10条记录
+      transactions.value = allTransactions.slice(0, 10)
     } catch (error) {
       console.error('获取交易记录失败:', error)
       showSnackbar('获取交易记录失败', 'error')
@@ -839,6 +1038,9 @@
 
       // 获取交易记录
       await fetchTransactions()
+
+      // 获取信用评分历史
+      await fetchCreditHistory()
     } catch (error) {
       console.error('加载用户信息失败:', error)
     } finally {
@@ -1293,6 +1495,43 @@
     min-height: 100%;
   }
 
+  /* 信用评分图表样式 */
+  .credit-chart-container {
+    position: relative;
+    height: 200px; /* 固定图表高度 */
+    width: 100%;
+  }
+
+  .chart-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #999;
+  }
+
+  .no-data-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #999;
+  }
+
+  #creditChart {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  /* 信用评分卡片悬停效果增强 */
+  .credit-score-card:hover {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15) !important;
+    transform: translateY(-1px);
+    transition: all 0.3s ease;
+  }
+
   /* 响应式调整 */
   @media (max-width: 960px) {
     .action-btn {
@@ -1303,6 +1542,11 @@
     /* 移动端稍微缩小滚动容器高度 */
     .transaction-scroll-container {
       height: 240px;
+    }
+
+    /* 移动端图表高度调整 */
+    .credit-chart-container {
+      height: 160px;
     }
   }
 </style>
