@@ -1782,6 +1782,10 @@
       console.log('发货操作:', orderId)
       await orderStore.shipOrder(orderId)
       console.log('发货成功')
+
+      // 重新加载订单数据以确保状态同步
+      await loadOrders()
+      console.log('订单数据已刷新')
     } catch (error) {
       console.error('发货失败:', error)
       alert('发货失败，请重试')
@@ -1793,6 +1797,10 @@
       console.log('付款操作:', orderId)
       await orderStore.payOrder(orderId)
       console.log('付款成功')
+
+      // 重新加载订单数据以确保状态同步
+      await loadOrders()
+      console.log('订单数据已刷新')
     } catch (error) {
       console.error('付款失败:', error)
       alert('付款失败，请重试')
@@ -1804,6 +1812,10 @@
       console.log('确认收货操作:', orderId)
       await orderStore.confirmDelivery(orderId)
       console.log('确认收货成功')
+
+      // 重新加载订单数据以确保状态同步
+      await loadOrders()
+      console.log('订单数据已刷新')
     } catch (error) {
       console.error('确认收货失败:', error)
       alert('确认收货失败，请重试')
