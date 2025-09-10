@@ -104,7 +104,7 @@
               <v-card-text>
                 <v-row align="center">
                   <v-col cols="2">
-                    <v-img :src="getProductImageUrl(order.productImage)" height="80" cover></v-img>
+                    <v-img :src="order.productImage" height="80" cover></v-img>
                   </v-col>
                   <v-col cols="6">
                     <div class="text-h6">{{ order.productName }}</div>
@@ -261,11 +261,7 @@
                       <div class="text-h6 mb-2">商品信息</div>
                       <v-row align="center">
                         <v-col cols="2">
-                          <v-img
-                            :src="getProductImageUrl(selectedOrder.productImage)"
-                            height="80"
-                            cover
-                          ></v-img>
+                          <v-img :src="selectedOrder.productImage" height="80" cover></v-img>
                         </v-col>
                         <v-col cols="10">
                           <div class="text-h6">{{ selectedOrder.productName }}</div>
@@ -312,11 +308,7 @@
               <div v-if="selectedOrder" class="mb-4">
                 <v-row align="center">
                   <v-col cols="3">
-                    <v-img
-                      :src="getProductImageUrl(selectedOrder.productImage)"
-                      height="60"
-                      cover
-                    ></v-img>
+                    <v-img :src="selectedOrder.productImage" height="60" cover></v-img>
                   </v-col>
                   <v-col cols="9">
                     <div class="text-h6">{{ selectedOrder.productName }}</div>
@@ -1001,27 +993,6 @@
     }
     return titleMap[activeTab.value] || '我的订单'
   })
-
-  // 图片路径处理函数 - 与GoodsDetails.vue保持一致
-  const getProductImageUrl = imageUrl => {
-    // 如果图片路径为空或无效，返回占位图
-    if (!imageUrl || imageUrl === '/images/default-product.png' || imageUrl.trim() === '') {
-      return '/images/placeholder.jpg'
-    }
-
-    // 如果是相对路径，确保正确的格式
-    if (imageUrl.startsWith('/') && !imageUrl.startsWith('http')) {
-      return imageUrl
-    }
-
-    // 如果是完整URL，直接返回
-    if (imageUrl.startsWith('http')) {
-      return imageUrl
-    }
-
-    // 其他情况，添加前缀斜杠
-    return `/${imageUrl}`
-  }
 
   // 使用真实的订单数据
   const orders = computed(() => orderStore.orders)
