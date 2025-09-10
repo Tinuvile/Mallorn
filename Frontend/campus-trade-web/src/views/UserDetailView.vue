@@ -197,8 +197,25 @@
                 </div>
 
                 <v-row class="flex-grow-1" style="align-content: flex-start">
+                  <!-- 交易记录加载状态 -->
+                  <v-col cols="12" v-if="isLoadingTransactions">
+                    <div class="text-center py-4">
+                      <v-progress-circular
+                        indeterminate
+                        color="primary"
+                        size="32"
+                      ></v-progress-circular>
+                      <p class="mt-2 text-caption text--secondary">加载交易记录中...</p>
+                    </div>
+                  </v-col>
+
                   <!-- 交易记录列表 -->
-                  <v-col cols="12" v-for="(transaction, index) in transactions" :key="index">
+                  <v-col
+                    cols="12"
+                    v-else-if="transactions.length > 0"
+                    v-for="(transaction, index) in transactions"
+                    :key="index"
+                  >
                     <v-card class="pa-3 info-card rounded-lg">
                       <div class="d-flex justify-space-between align-center mb-1">
                         <span class="font-weight-medium">{{ transaction.title }}</span>
@@ -209,7 +226,24 @@
                         </span>
                       </div>
                       <div class="text-caption text--secondary">{{ transaction.date }}</div>
+                      <!-- 交易类型标识 -->
+                      <div class="text-caption mt-1">
+                        <v-chip
+                          :color="getTransactionChipColor(transaction.type)"
+                          x-small
+                          outlined
+                          class="mr-1"
+                        >
+                          {{ getTransactionTypeText(transaction.type) }}
+                        </v-chip>
+                      </div>
                     </v-card>
+                  </v-col>
+
+                  <!-- 暂无交易记录 -->
+                  <v-col cols="12" v-else class="text-center py-4">
+                    <v-icon color="grey lighten-1" size="48" class="mb-2">mdi-history</v-icon>
+                    <p class="text--secondary">暂无交易记录</p>
                   </v-col>
                 </v-row>
 
@@ -572,6 +606,12 @@
   import { useRouter } from 'vue-router'
   import { useUserStore } from '@/stores/user'
   import { useVirtualAccountStore, type VirtualAccount } from '@/stores/virtualaccount'
+  import { useOrderStore } from '@/stores/order'
+  import {
+    rechargeApi,
+    type UserRechargeRecordsResponse,
+    type RechargeResponse,
+  } from '@/services/api'
 
   // 路由
   const router = useRouter()
@@ -579,6 +619,7 @@
   // 状态管理
   const userStore = useUserStore()
   const virtualAccountStore = useVirtualAccountStore()
+  const orderStore = useOrderStore()
   const isLoading = ref(true)
   const isLoggingOut = ref(false)
 
@@ -611,13 +652,17 @@
   // 表单引用
   const passwordForm = ref(null)
 
+  // 交易记录接口定义
+  interface TransactionRecord {
+    title: string
+    amount: number
+    date: string
+    type: 'recharge' | 'purchase' | 'sale' | 'other'
+  }
+
   // 交易记录数据
-  const transactions = ref([
-    { title: '二手教材', amount: 50.0, date: '2024-03-15 14:30' },
-    { title: '校园卡充值', amount: -100.0, date: '2024-03-10 09:15' },
-    { title: '代取快递', amount: 15.0, date: '2024-03-05 17:45' },
-    { title: '校园周边', amount: -35.0, date: '2024-02-28 13:20' },
-  ])
+  const transactions = ref<TransactionRecord[]>([])
+  const isLoadingTransactions = ref(false)
 
   // 计算信用评分百分比
   const calculateCreditScorePercentage = (score: number | undefined) => {
@@ -649,6 +694,36 @@
     }
   }
 
+  // 获取交易类型颜色
+  const getTransactionChipColor = (type: string) => {
+    switch (type) {
+      case 'recharge':
+        return 'success'
+      case 'purchase':
+        return 'warning'
+      case 'sale':
+        return 'info'
+      default:
+        return 'default'
+    }
+  }
+
+  // 获取交易类型文本
+  const getTransactionTypeText = (type: string) => {
+    switch (type) {
+      case 'recharge':
+        return '充值'
+      case 'purchase':
+        return '购买'
+      case 'sale':
+        return '出售'
+      case 'other':
+        return '其他'
+      default:
+        return '未知'
+    }
+  }
+
   // 获取账户详情
   const fetchAccountDetails = async () => {
     try {
@@ -663,6 +738,79 @@
     isLoading.value = true
     virtualAccountStore.error = null
     await loadData()
+  }
+
+  // 获取交易记录
+  const fetchTransactions = async () => {
+    isLoadingTransactions.value = true
+    try {
+      const allTransactions: TransactionRecord[] = []
+
+      // 获取充值记录
+      try {
+        const rechargeResult = await virtualAccountStore.getRechargeRecords(1, 10)
+        if (rechargeResult.success && rechargeResult.data?.records) {
+          const rechargeTransactions = rechargeResult.data.records.map(
+            (record: RechargeResponse) => ({
+              title: '账户充值',
+              amount: record.amount, // 充值是正数
+              date: new Date(record.createTime).toLocaleString('zh-CN'),
+              type: 'recharge' as const,
+            })
+          )
+          allTransactions.push(...rechargeTransactions)
+        }
+      } catch (error) {
+        console.error('获取充值记录失败:', error)
+      }
+
+      // 获取订单记录
+      try {
+        const currentUserId = userStore.user?.userId
+        if (currentUserId) {
+          // 获取买家订单（支出）
+          const buyerResult = await orderStore.getUserOrders({ role: 'buyer' })
+          if (buyerResult.success && buyerResult.data?.orders) {
+            const buyerTransactions = buyerResult.data.orders
+              .filter(order => order.status === '已完成') // 只显示已完成的交易
+              .map(order => ({
+                title: `购买：${order.productTitle}`,
+                amount: -order.finalPrice, // 买家支出为负数
+                date: new Date(order.createTime).toLocaleString('zh-CN'),
+                type: 'purchase' as const,
+              }))
+            allTransactions.push(...buyerTransactions)
+          }
+
+          // 获取卖家订单（收入）
+          const sellerResult = await orderStore.getUserOrders({ role: 'seller' })
+          if (sellerResult.success && sellerResult.data?.orders) {
+            const sellerTransactions = sellerResult.data.orders
+              .filter(order => order.status === '已完成') // 只显示已完成的交易
+              .map(order => ({
+                title: `出售：${order.productTitle}`,
+                amount: order.finalPrice, // 卖家收入为正数
+                date: new Date(order.createTime).toLocaleString('zh-CN'),
+                type: 'sale' as const,
+              }))
+            allTransactions.push(...sellerTransactions)
+          }
+        }
+      } catch (error) {
+        console.error('获取订单记录失败:', error)
+      }
+
+      // 按时间排序（最新的在前面）
+      allTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+      // 只取前10条记录
+      transactions.value = allTransactions.slice(0, 10)
+    } catch (error) {
+      console.error('获取交易记录失败:', error)
+      showSnackbar('获取交易记录失败', 'error')
+    } finally {
+      isLoadingTransactions.value = false
+    }
   }
 
   // 加载数据
@@ -689,6 +837,9 @@
         // 否则单独获取虚拟账户信息
         await virtualAccountStore.fetchBalance()
       }
+
+      // 获取交易记录
+      await fetchTransactions()
     } catch (error) {
       console.error('加载用户信息失败:', error)
     } finally {
