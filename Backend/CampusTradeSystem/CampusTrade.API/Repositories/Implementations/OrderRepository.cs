@@ -20,7 +20,7 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<IEnumerable<Order>> GetByBuyerIdAsync(int buyerId)
         {
-            return await _dbSet.Where(o => o.BuyerId == buyerId).Include(o => o.Product).Include(o => o.Seller).Include(o => o.Negotiations).OrderByDescending(o => o.CreateTime).ToListAsync();
+            return await _dbSet.Where(o => o.BuyerId == buyerId).Include(o => o.Product).ThenInclude(p => p.ProductImages).Include(o => o.Seller).Include(o => o.Negotiations).OrderByDescending(o => o.CreateTime).ToListAsync();
         }
 
         /// <summary>
@@ -28,7 +28,7 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<IEnumerable<Order>> GetBySellerIdAsync(int sellerId)
         {
-            return await _dbSet.Where(o => o.SellerId == sellerId).Include(o => o.Product).Include(o => o.Buyer).Include(o => o.Negotiations).OrderByDescending(o => o.CreateTime).ToListAsync();
+            return await _dbSet.Where(o => o.SellerId == sellerId).Include(o => o.Product).ThenInclude(p => p.ProductImages).Include(o => o.Buyer).Include(o => o.Negotiations).OrderByDescending(o => o.CreateTime).ToListAsync();
         }
 
         /// <summary>
@@ -66,7 +66,7 @@ namespace CampusTrade.API.Repositories.Implementations
             if (startDate.HasValue) query = query.Where(o => o.CreateTime >= startDate.Value);
             if (endDate.HasValue) query = query.Where(o => o.CreateTime <= endDate.Value);
             var totalCount = await query.CountAsync();
-            var orders = await query.Include(o => o.Product).Include(o => o.Buyer).Include(o => o.Seller).OrderByDescending(o => o.CreateTime).Skip((pageIndex - 1) * pageSize).Take(pageSize).ToListAsync();
+            var orders = await query.Include(o => o.Product).ThenInclude(p => p.ProductImages).Include(o => o.Buyer).Include(o => o.Seller).OrderByDescending(o => o.CreateTime).Skip((pageIndex - 1) * pageSize).Take(pageSize).ToListAsync();
             return (orders, totalCount);
         }
 
@@ -89,7 +89,7 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<IEnumerable<Order>> GetExpiredOrdersAsync()
         {
-            return await _dbSet.Where(o => o.ExpireTime.HasValue && o.ExpireTime.Value < DateTime.Now && o.Status == Order.OrderStatus.PendingPayment).Include(o => o.Product).Include(o => o.Buyer).ToListAsync();
+            return await _dbSet.Where(o => o.ExpireTime.HasValue && o.ExpireTime.Value < DateTime.Now && o.Status == Order.OrderStatus.PendingPayment).Include(o => o.Product).ThenInclude(p => p.ProductImages).Include(o => o.Buyer).ToListAsync();
         }
 
         /// <summary>
@@ -104,6 +104,7 @@ namespace CampusTrade.API.Repositories.Implementations
                            o.ExpireTime.Value > currentTime &&
                            o.ExpireTime.Value <= cutoffTime)
                 .Include(o => o.Product)
+                .ThenInclude(p => p.ProductImages)
                 .Include(o => o.Buyer)
                 .Include(o => o.Seller)
                 .OrderBy(o => o.ExpireTime)
