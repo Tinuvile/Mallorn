@@ -1776,48 +1776,117 @@
 
   // 判断是否显示操作按钮（已移除，现在使用stepper中的按钮）
 
-  // 真实 API 调用
+  // 真实 API 调用 - 乐观更新
   const shipOrder = async orderId => {
+    // 先找到对应的订单
+    const order = orders.value.find(o => o.id === orderId)
+    const originalStatus = order?.status
+
     try {
       console.log('发货操作:', orderId)
-      await orderStore.shipOrder(orderId)
-      console.log('发货成功')
 
-      // 重新加载订单数据以确保状态同步
-      await loadOrders()
-      console.log('订单数据已刷新')
+      // 1. 立即更新本地状态（乐观更新）
+      if (order) {
+        order.status = 'shipped'
+        // 同时更新选中的订单状态（如果有对话框打开）
+        if (selectedOrder.value && selectedOrder.value.id === orderId) {
+          selectedOrder.value.status = 'shipped'
+        }
+        console.log('UI状态已立即更新为已发货')
+      }
+
+      // 2. 同时调用后端API
+      await orderStore.shipOrder(orderId)
+      console.log('发货API调用成功')
     } catch (error) {
       console.error('发货失败:', error)
+
+      // 3. 如果API失败，回滚本地状态
+      if (order && originalStatus) {
+        order.status = originalStatus
+        // 同时回滚选中的订单状态（如果有对话框打开）
+        if (selectedOrder.value && selectedOrder.value.id === orderId) {
+          selectedOrder.value.status = originalStatus
+        }
+        console.log('API失败，已回滚UI状态')
+      }
+
       alert('发货失败，请重试')
     }
   }
 
   const payOrder = async orderId => {
+    // 先找到对应的订单
+    const order = orders.value.find(o => o.id === orderId)
+    const originalStatus = order?.status
+
     try {
       console.log('付款操作:', orderId)
-      await orderStore.payOrder(orderId)
-      console.log('付款成功')
 
-      // 重新加载订单数据以确保状态同步
-      await loadOrders()
-      console.log('订单数据已刷新')
+      // 1. 立即更新本地状态（乐观更新）
+      if (order) {
+        order.status = 'processing'
+        // 同时更新选中的订单状态（如果有对话框打开）
+        if (selectedOrder.value && selectedOrder.value.id === orderId) {
+          selectedOrder.value.status = 'processing'
+        }
+        console.log('UI状态已立即更新为待发货')
+      }
+
+      // 2. 同时调用后端API
+      await orderStore.payOrder(orderId)
+      console.log('付款API调用成功')
     } catch (error) {
       console.error('付款失败:', error)
+
+      // 3. 如果API失败，回滚本地状态
+      if (order && originalStatus) {
+        order.status = originalStatus
+        // 同时回滚选中的订单状态（如果有对话框打开）
+        if (selectedOrder.value && selectedOrder.value.id === orderId) {
+          selectedOrder.value.status = originalStatus
+        }
+        console.log('API失败，已回滚UI状态')
+      }
+
       alert('付款失败，请重试')
     }
   }
 
   const confirmReceived = async orderId => {
+    // 先找到对应的订单
+    const order = orders.value.find(o => o.id === orderId)
+    const originalStatus = order?.status
+
     try {
       console.log('确认收货操作:', orderId)
-      await orderStore.confirmDelivery(orderId)
-      console.log('确认收货成功')
 
-      // 重新加载订单数据以确保状态同步
-      await loadOrders()
-      console.log('订单数据已刷新')
+      // 1. 立即更新本地状态（乐观更新）
+      if (order) {
+        order.status = 'completed'
+        // 同时更新选中的订单状态（如果有对话框打开）
+        if (selectedOrder.value && selectedOrder.value.id === orderId) {
+          selectedOrder.value.status = 'completed'
+        }
+        console.log('UI状态已立即更新为已完成')
+      }
+
+      // 2. 同时调用后端API
+      await orderStore.confirmDelivery(orderId)
+      console.log('确认收货API调用成功')
     } catch (error) {
       console.error('确认收货失败:', error)
+
+      // 3. 如果API失败，回滚本地状态
+      if (order && originalStatus) {
+        order.status = originalStatus
+        // 同时回滚选中的订单状态（如果有对话框打开）
+        if (selectedOrder.value && selectedOrder.value.id === orderId) {
+          selectedOrder.value.status = originalStatus
+        }
+        console.log('API失败，已回滚UI状态')
+      }
+
       alert('确认收货失败，请重试')
     }
   }
