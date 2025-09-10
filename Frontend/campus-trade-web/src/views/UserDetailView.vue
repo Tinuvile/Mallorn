@@ -611,6 +611,7 @@
     rechargeApi,
     type UserRechargeRecordsResponse,
     type RechargeResponse,
+    OrderStatus,
   } from '@/services/api'
 
   // 路由
@@ -772,11 +773,11 @@
           const buyerResult = await orderStore.getUserOrders({ role: 'buyer' })
           if (buyerResult.success && buyerResult.data?.orders) {
             const buyerTransactions = buyerResult.data.orders
-              .filter(order => order.status === '已完成') // 只显示已完成的交易
+              .filter(order => order.status === OrderStatus.COMPLETED) // 只显示已完成的交易
               .map(order => ({
-                title: `购买：${order.productTitle}`,
-                amount: -order.finalPrice, // 买家支出为负数
-                date: new Date(order.createTime).toLocaleString('zh-CN'),
+                title: `购买：${order.productName}`,
+                amount: -order.totalAmount, // 买家支出为负数
+                date: new Date(order.orderDate).toLocaleString('zh-CN'),
                 type: 'purchase' as const,
               }))
             allTransactions.push(...buyerTransactions)
@@ -786,11 +787,11 @@
           const sellerResult = await orderStore.getUserOrders({ role: 'seller' })
           if (sellerResult.success && sellerResult.data?.orders) {
             const sellerTransactions = sellerResult.data.orders
-              .filter(order => order.status === '已完成') // 只显示已完成的交易
+              .filter(order => order.status === OrderStatus.COMPLETED) // 只显示已完成的交易
               .map(order => ({
-                title: `出售：${order.productTitle}`,
-                amount: order.finalPrice, // 卖家收入为正数
-                date: new Date(order.createTime).toLocaleString('zh-CN'),
+                title: `出售：${order.productName}`,
+                amount: order.totalAmount, // 卖家收入为正数
+                date: new Date(order.orderDate).toLocaleString('zh-CN'),
                 type: 'sale' as const,
               }))
             allTransactions.push(...sellerTransactions)
