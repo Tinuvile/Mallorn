@@ -140,7 +140,6 @@ try
     builder.Services.AddHostedService<EmailVerificationCleanupTask>();
     builder.Services.AddHostedService<ProductManagementTask>();
     builder.Services.AddHostedService<OrderProcessingTask>();
-    builder.Services.AddHostedService<UserCreditScoreCalculationTask>();
     builder.Services.AddHostedService<StatisticalAnalysisTask>();
     builder.Services.AddHostedService<NotificationPushTask>();
 

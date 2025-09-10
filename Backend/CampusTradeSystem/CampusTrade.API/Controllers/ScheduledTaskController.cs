@@ -183,7 +183,6 @@ namespace CampusTrade.API.Controllers
                 "LogCleanupTask" => DateTime.UtcNow.AddDays(1),
                 "ProductManagementTask" => DateTime.UtcNow.AddDays(1),
                 "OrderProcessingTask" => DateTime.UtcNow.AddHours(6),
-                "UserCreditScoreCalculationTask" => DateTime.UtcNow.AddDays(7),
                 "StatisticalAnalysisTask" => DateTime.UtcNow.AddDays(1),
                 "NotificationPushTask" => DateTime.UtcNow.AddHours(1),
                 _ => DateTime.UtcNow.AddHours(1)
@@ -198,7 +197,6 @@ namespace CampusTrade.API.Controllers
                 "LogCleanupTask" => "清理过期的系统日志",
                 "ProductManagementTask" => "管理商品状态，自动下架过期商品",
                 "OrderProcessingTask" => "处理订单状态，自动取消超时订单",
-                "UserCreditScoreCalculationTask" => "计算用户信用分数",
                 "StatisticalAnalysisTask" => "生成系统统计分析报告",
                 "NotificationPushTask" => "推送待发送的通知消息",
                 _ => "定时任务"
