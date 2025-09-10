@@ -334,6 +334,25 @@
           pageSize: pageSize.value,
           categoryId: selectedCategoryId.value,
         })
+      } else if (selectedCategoryId.value) {
+        // 检查是否为一级分类（有子分类的分类）
+        const selectedCategory = findCategoryById(rootCategories.value, selectedCategoryId.value)
+        const hasChildren =
+          selectedCategory && selectedCategory.children && selectedCategory.children.length > 0
+
+        if (hasChildren) {
+          // 一级分类：使用包含子分类的查询接口
+          console.log('使用分类查询接口，包含子分类')
+          response = await productApi.getProductsByCategory(
+            selectedCategoryId.value,
+            currentPage.value - 1, // API使用0基索引
+            pageSize.value,
+            true // 包含子分类
+          )
+        } else {
+          // 叶子分类：使用普通查询接口
+          response = await productApi.getProducts(queryParams)
+        }
       } else {
         // 使用普通查询接口
         response = await productApi.getProducts(queryParams)
@@ -342,8 +361,21 @@
       console.log('API响应:', response)
 
       if (response.success && response.data) {
+        // 处理不同API接口的数据格式差异
+        let productsData = []
+        let totalCountData = 0
+
+        if (response.data.products) {
+          // 通用的商品数据格式
+          productsData = response.data.products
+          totalCountData = response.data.total_count || response.data.totalCount || 0
+        }
+
+        console.log('处理的商品数据:', productsData)
+        console.log('商品总数:', totalCountData)
+
         // 映射后端数据格式到前端显示格式
-        products.value = (response.data.products || []).map(product => ({
+        products.value = (productsData || []).map(product => ({
           id: product.product_id,
           title: product.title,
           price: product.base_price,
@@ -354,7 +386,7 @@
           viewCount: product.view_count || 0,
           createdAt: product.publish_time,
         }))
-        totalCount.value = response.data.total_count || 0
+        totalCount.value = totalCountData
       } else {
         console.error('获取商品列表失败:', response.message)
         products.value = []
