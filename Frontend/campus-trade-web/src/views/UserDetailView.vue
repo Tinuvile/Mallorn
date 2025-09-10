@@ -196,27 +196,25 @@
                   <h3 class="text-h5 font-weight-bold primary--text">交易记录</h3>
                 </div>
 
-                <v-row class="flex-grow-1" style="align-content: flex-start">
+                <!-- 交易记录滚动容器 -->
+                <div class="transaction-scroll-container">
                   <!-- 交易记录加载状态 -->
-                  <v-col cols="12" v-if="isLoadingTransactions">
-                    <div class="text-center py-4">
-                      <v-progress-circular
-                        indeterminate
-                        color="primary"
-                        size="32"
-                      ></v-progress-circular>
-                      <p class="mt-2 text-caption text--secondary">加载交易记录中...</p>
-                    </div>
-                  </v-col>
+                  <div v-if="isLoadingTransactions" class="text-center py-4">
+                    <v-progress-circular
+                      indeterminate
+                      color="primary"
+                      size="32"
+                    ></v-progress-circular>
+                    <p class="mt-2 text-caption text--secondary">加载交易记录中...</p>
+                  </div>
 
                   <!-- 交易记录列表 -->
-                  <v-col
-                    cols="12"
-                    v-else-if="transactions.length > 0"
-                    v-for="(transaction, index) in transactions"
-                    :key="index"
-                  >
-                    <v-card class="pa-3 info-card rounded-lg">
+                  <div v-else-if="transactions.length > 0" class="transaction-list">
+                    <v-card
+                      v-for="(transaction, index) in transactions"
+                      :key="index"
+                      class="pa-3 info-card rounded-lg mb-3"
+                    >
                       <div class="d-flex justify-space-between align-center mb-1">
                         <span class="font-weight-medium">{{ transaction.title }}</span>
                         <span :class="transaction.amount > 0 ? 'green--text' : 'red--text'">
@@ -238,14 +236,14 @@
                         </v-chip>
                       </div>
                     </v-card>
-                  </v-col>
+                  </div>
 
                   <!-- 暂无交易记录 -->
-                  <v-col cols="12" v-else class="text-center py-4">
+                  <div v-else class="text-center py-4">
                     <v-icon color="grey lighten-1" size="48" class="mb-2">mdi-history</v-icon>
                     <p class="text--secondary">暂无交易记录</p>
-                  </v-col>
-                </v-row>
+                  </div>
+                </div>
 
                 <!-- 信用评分区域 -->
                 <v-card class="pa-4 mt-4 credit-score-card rounded-lg">
@@ -804,8 +802,8 @@
       // 按时间排序（最新的在前面）
       allTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
-      // 只取前10条记录
-      transactions.value = allTransactions.slice(0, 10)
+      // 只取前3条记录
+      transactions.value = allTransactions.slice(0, 3)
     } catch (error) {
       console.error('获取交易记录失败:', error)
       showSnackbar('获取交易记录失败', 'error')
@@ -1247,11 +1245,64 @@
     margin: 0 4px;
   }
 
+  /* 交易记录滚动容器样式 */
+  .transaction-scroll-container {
+    height: 280px; /* 固定高度，大约可显示3个交易记录 */
+    overflow-y: auto; /* 垂直滚动 */
+    overflow-x: hidden; /* 隐藏水平滚动 */
+    padding-right: 4px; /* 为滚动条留出空间 */
+    margin-right: -4px; /* 抵消padding的影响 */
+  }
+
+  /* 自定义滚动条样式 */
+  .transaction-scroll-container::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .transaction-scroll-container::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+  }
+
+  .transaction-scroll-container::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+    transition: background 0.3s ease;
+  }
+
+  .transaction-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.4);
+  }
+
+  /* 交易记录列表样式 */
+  .transaction-list {
+    padding: 0;
+  }
+
+  /* 确保最后一个交易记录不会有多余的下边距 */
+  .transaction-list .v-card:last-child {
+    margin-bottom: 0 !important;
+  }
+
+  /* 滚动容器内的内容对齐 */
+  .transaction-scroll-container .text-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100%;
+  }
+
   /* 响应式调整 */
   @media (max-width: 960px) {
     .action-btn {
       max-width: 120px;
       font-size: 14px;
+    }
+
+    /* 移动端稍微缩小滚动容器高度 */
+    .transaction-scroll-container {
+      height: 240px;
     }
   }
 </style>
