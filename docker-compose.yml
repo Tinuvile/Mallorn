@@ -14,7 +14,7 @@ services:
       - ./Database/add-students.sql:/container-entrypoint-initdb.d/02-add-students.sql
       - ./Database/upgrade-notifications-table.sql:/container-entrypoint-initdb.d/03-upgrade-notifications-table.sql
       - ./Database/insert-notification-templates.sql:/container-entrypoint-initdb.d/04-insert-notification-templates.sql
-      - ./Database/insert-standard-categories.sql:/container-entrypoint-initdb.d/05-create-message-read-status.sql
+      - ./Database/create-message-read-status.sql:/container-entrypoint-initdb.d/05-create-message-read-status.sql
 
   campus-trade-api:
     build:
