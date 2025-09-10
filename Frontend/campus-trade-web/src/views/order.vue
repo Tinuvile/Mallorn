@@ -913,12 +913,14 @@
     { text: '其他问题', value: '其他' },
   ]
 
-  // 订单选项（用于举报表单）
+  // 订单选项（用于举报表单）- 只显示当前用户作为买家的订单
   const orderOptions = computed(() => {
-    return orders.value.map(order => ({
-      text: `${order.orderNumber} - ${order.productName}`,
-      value: order.id,
-    }))
+    return orders.value
+      .filter(order => order.userRole === 'buyer') // 只显示用户作为买家的订单
+      .map(order => ({
+        text: `${order.orderNumber} - ${order.productName}`,
+        value: order.id,
+      }))
   })
 
   // 评价输入验证规则（评价内容可选，但如果填写则需要满足长度要求）

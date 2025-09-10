@@ -13,16 +13,19 @@ namespace CampusTrade.API.Services.Report
     public class ReportService : IReportService
     {
         private readonly IReportsRepository _reportsRepository;
+        private readonly IOrderRepository _orderRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<ReportService> _logger;
         private readonly Serilog.ILogger _serilogLogger;
 
         public ReportService(
             IReportsRepository reportsRepository,
+            IOrderRepository orderRepository,
             IUnitOfWork unitOfWork,
             ILogger<ReportService> logger)
         {
             _reportsRepository = reportsRepository;
+            _orderRepository = orderRepository;
             _unitOfWork = unitOfWork;
             _logger = logger;
             _serilogLogger = Log.ForContext<ReportService>();
@@ -53,6 +56,23 @@ namespace CampusTrade.API.Services.Report
             {
                 _serilogLogger.Information("开始创建举报 - 订单ID: {OrderId}, 举报人ID: {ReporterId}, 类型: {ReportType}",
                     orderId, reporterId, type);
+
+                // 验证订单是否存在并检查用户身份
+                var order = await _orderRepository.GetByPrimaryKeyAsync(orderId);
+                if (order == null)
+                {
+                    _serilogLogger.Warning("举报订单不存在 - 订单ID: {OrderId}, 举报人ID: {ReporterId}",
+                        orderId, reporterId);
+                    return (false, "订单不存在", null);
+                }
+
+                // 验证只有买家才能举报
+                if (order.BuyerId != reporterId)
+                {
+                    _serilogLogger.Warning("举报权限验证失败 - 订单ID: {OrderId}, 买家ID: {BuyerId}, 举报人ID: {ReporterId}, 卖家ID: {SellerId}",
+                        orderId, order.BuyerId, reporterId, order.SellerId);
+                    return (false, "只有买家才能对订单进行举报", null);
+                }
 
                 // 验证举报类型
                 var validTypes = new[] { "商品问题", "服务问题", "欺诈", "虚假描述", "其他" };
