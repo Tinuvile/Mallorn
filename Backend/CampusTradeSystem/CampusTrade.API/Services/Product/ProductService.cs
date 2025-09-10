@@ -661,18 +661,65 @@ public class ProductService : IProductService
                 GetAllSubCategoryIds(targetCategory, categoryIds);
             }
 
-            // 查询商品
-            var queryDto = new ProductQueryDto
+            // 如果只有一个分类ID，使用原有的查询方式
+            if (categoryIds.Count == 1)
             {
-                CategoryId = categoryId, // 这里仍使用单个分类ID，由Repository层处理子分类逻辑
+                var queryDto = new ProductQueryDto
+                {
+                    CategoryId = categoryId,
+                    PageIndex = pageIndex,
+                    PageSize = pageSize,
+                    Status = Models.Entities.Product.ProductStatus.OnSale,
+                    SortBy = ProductSortBy.PublishTime,
+                    SortDirection = SortDirection.Descending
+                };
+
+                return await GetProductsAsync(queryDto);
+            }
+
+            // 多个分类ID时，需要分别查询每个分类然后合并结果
+            var allProducts = new List<Models.Entities.Product>();
+            var totalCategoryCount = 0;
+
+            foreach (var catId in categoryIds)
+            {
+                var (categoryProducts, count) = await _unitOfWork.Products.GetPagedProductsAsync(
+                    1, // 页索引，先获取所有数据
+                    int.MaxValue, // 页大小，获取该分类下的所有商品
+                    catId,
+                    Models.Entities.Product.ProductStatus.OnSale,
+                    null, null, null, null
+                );
+
+                allProducts.AddRange(categoryProducts);
+                totalCategoryCount += count;
+            }
+
+            // 去重（防止重复商品）、排序和分页
+            var distinctProducts = allProducts
+                .GroupBy(p => p.ProductId)
+                .Select(g => g.First())
+                .OrderByDescending(p => p.PublishTime)
+                .ToList();
+
+            var totalCount = distinctProducts.Count;
+            var pagedProducts = distinctProducts
+                .Skip(pageIndex * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            var productDtos = await ConvertToProductListDtosAsync(pagedProducts, null);
+
+            return ApiResponse<ProductPagedListDto>.CreateSuccess(new ProductPagedListDto
+            {
+                Products = productDtos,
+                TotalCount = totalCount,
                 PageIndex = pageIndex,
                 PageSize = pageSize,
-                Status = Models.Entities.Product.ProductStatus.OnSale, // 只显示在售商品
-                SortBy = ProductSortBy.PublishTime,
-                SortDirection = SortDirection.Descending
-            };
-
-            return await GetProductsAsync(queryDto);
+                TotalPages = (int)Math.Ceiling((double)totalCount / pageSize),
+                HasNextPage = (pageIndex + 1) * pageSize < totalCount,
+                HasPreviousPage = pageIndex > 0
+            });
         }
         catch (Exception ex)
         {

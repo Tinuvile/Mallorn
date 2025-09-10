@@ -322,8 +322,8 @@
         sortOrder: sortOrder,
       }
 
-      console.log('商品查询参数:', queryParams)
-      console.log('选中的分类ID:', selectedCategoryId.value)
+      // console.log('商品查询参数:', queryParams)
+      // console.log('选中的分类ID:', selectedCategoryId.value)
 
       let response
       if (searchKeyword.value.trim()) {
@@ -342,7 +342,7 @@
 
         if (hasChildren) {
           // 一级分类：使用包含子分类的查询接口
-          console.log('使用分类查询接口，包含子分类')
+          console.log(`一级分类查询: categoryId=${selectedCategoryId.value}, 包含所有子分类`)
           response = await productApi.getProductsByCategory(
             selectedCategoryId.value,
             currentPage.value - 1, // API使用0基索引
@@ -358,7 +358,7 @@
         response = await productApi.getProducts(queryParams)
       }
 
-      console.log('API响应:', response)
+      // console.log('API响应:', response)
 
       if (response.success && response.data) {
         // 处理不同API接口的数据格式差异
@@ -371,8 +371,7 @@
           totalCountData = response.data.total_count || response.data.totalCount || 0
         }
 
-        console.log('处理的商品数据:', productsData)
-        console.log('商品总数:', totalCountData)
+        console.log(`查询结果: 找到${totalCountData}件商品`)
 
         // 映射后端数据格式到前端显示格式
         products.value = (productsData || []).map(product => ({
@@ -404,10 +403,9 @@
   const loadCategories = async () => {
     try {
       const response = await categoryApi.getCategoryTree()
-      console.log('分类数据响应:', response)
       if (response.success && response.data) {
         rootCategories.value = response.data.root_categories || []
-        console.log('加载的分类数据:', rootCategories.value)
+        // console.log('加载的分类数据:', rootCategories.value)
       }
     } catch (error) {
       console.error('获取分类失败:', error)
