@@ -25,16 +25,19 @@ namespace CampusTrade.API.Controllers
     {
         private readonly IOrderRepository _orderRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IProductRepository _productRepository;
         private readonly ILogger<DashboardController> _logger;
 
         // 注入日志服务
         public DashboardController(
             IOrderRepository orderRepository,
             IUserRepository userRepository,
+            IProductRepository productRepository,
             ILogger<DashboardController> logger)
         {
             _orderRepository = orderRepository;
             _userRepository = userRepository;
+            _productRepository = productRepository;
             _logger = logger;
         }
 
@@ -48,6 +51,15 @@ namespace CampusTrade.API.Controllers
             {
                 _logger.LogInformation("开始获取报表统计数据，年份：{Year}，活跃天数：{ActivityDays}", year, activityDays);
                 var stats = new DashboardStatsDto();
+
+                // 获取总体统计数据
+                var (totalOrders, totalAmount) = await _orderRepository.GetOverallStatisticsAsync();
+                stats.TotalOrders = totalOrders;
+                stats.TotalTransactionAmount = totalAmount;
+                stats.TotalUsers = await _userRepository.GetUserCountAsync();
+                stats.TotalProducts = await _productRepository.GetTotalProductsNumberAsync();
+                _logger.LogDebug("已获取总体统计数据，订单数：{TotalOrders}，交易额：{TotalAmount}，用户数：{TotalUsers}，商品数：{TotalProducts}", 
+                    totalOrders, totalAmount, stats.TotalUsers, stats.TotalProducts);
 
                 // 批量获取月度交易数据
                 stats.MonthlyTransactions = await _orderRepository.GetMonthlyTransactionsAsync(year);
