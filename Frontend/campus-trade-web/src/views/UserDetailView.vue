@@ -262,8 +262,11 @@
 
                   <!-- 图表容器 -->
                   <div class="credit-chart-container">
-                    <!-- 加载状态 -->
-                    <div v-if="isLoadingCreditHistory" class="chart-loading">
+                    <!-- 图表canvas - 始终存在 -->
+                    <canvas id="creditChart"></canvas>
+
+                    <!-- 加载状态覆盖层 -->
+                    <div v-if="isLoadingCreditHistory" class="chart-loading overlay">
                       <v-progress-circular
                         indeterminate
                         color="primary"
@@ -272,13 +275,10 @@
                       <p class="mt-2 text-caption text--secondary">加载信用评分历史中...</p>
                     </div>
 
-                    <!-- 图表 -->
-                    <canvas v-else id="creditChart"></canvas>
-
-                    <!-- 无数据占位符 -->
+                    <!-- 无数据占位符覆盖层 -->
                     <div
                       v-if="!isLoadingCreditHistory && creditHistory.length === 0"
-                      class="no-data-placeholder"
+                      class="no-data-placeholder overlay"
                     >
                       <v-icon size="32" color="#ccc">mdi-chart-line-variant</v-icon>
                       <p class="text-caption text--secondary mt-1">暂无信用评分历史</p>
@@ -759,30 +759,20 @@
   // 初始化信用评分折线图
   const initCreditChart = () => {
     console.log('开始初始化信用评分图表...')
-    const canvas = document.getElementById('creditChart') as HTMLCanvasElement
-    console.log('找到canvas元素:', canvas)
+
+    // 使用可选链操作符安全获取canvas context
+    const ctx = document.getElementById('creditChart')?.getContext('2d')
+    console.log('获取到canvas context:', ctx)
     console.log('信用评分数据长度:', creditHistory.value.length)
     console.log('信用评分数据:', creditHistory.value)
 
-    if (!canvas) {
-      console.error('找不到creditChart canvas元素')
+    if (!ctx) {
+      console.error('无法获取creditChart canvas context')
       return
     }
 
     if (creditHistory.value.length === 0) {
       console.error('没有信用评分数据')
-      return
-    }
-
-    // 销毁旧图表实例
-    if (creditChartInstance) {
-      console.log('销毁旧图表实例')
-      creditChartInstance.destroy()
-    }
-
-    const ctx = canvas.getContext('2d')
-    if (!ctx) {
-      console.error('无法获取canvas context')
       return
     }
 
@@ -947,8 +937,13 @@
         }
 
         console.log('准备初始化图表，数据长度:', creditHistory.value.length)
-        // 在下一个tick初始化图表
-        await nextTick()
+
+        // 销毁旧图表（如果存在）
+        if (creditChartInstance) {
+          creditChartInstance.destroy()
+        }
+
+        // 直接初始化图表
         initCreditChart()
       } else {
         console.error('API响应格式错误或无数据:', response)
@@ -964,7 +959,13 @@
           changeType: '当前分数',
         },
       ]
-      await nextTick()
+
+      // 销毁旧图表（如果存在）
+      if (creditChartInstance) {
+        creditChartInstance.destroy()
+      }
+
+      // 初始化图表
       initCreditChart()
     } finally {
       isLoadingCreditHistory.value = false
@@ -1552,6 +1553,17 @@
     justify-content: center;
     height: 100%;
     color: #999;
+  }
+
+  /* 覆盖层样式 */
+  .overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.9);
+    z-index: 1;
   }
 
   #creditChart {
