@@ -81,6 +81,11 @@ namespace CampusTrade.API.Repositories.Interfaces
         /// 获取月度交易数据
         /// </summary>
         Task<List<MonthlyTransactionDto>> GetMonthlyTransactionsAsync(int year);
+
+        /// <summary>
+        /// 获取总体统计数据（总订单数、总交易额等）
+        /// </summary>
+        Task<(int TotalOrders, decimal TotalAmount)> GetOverallStatisticsAsync();
         #endregion
 
         #region 更新操作

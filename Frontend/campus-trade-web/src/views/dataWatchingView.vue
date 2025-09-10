@@ -80,33 +80,29 @@
           <div class="stat-card">
             <div class="stat-title">总用户数</div>
             <div class="stat-value">{{ totalUsers || '--' }}</div>
-            <div class="stat-desc" v-if="hasData">较上月增长 {{ userGrowthRate }}%</div>
-            <div class="stat-desc" v-else>暂无数据</div>
           </div>
           <div class="stat-card">
             <div class="stat-title">活跃用户</div>
             <div class="stat-value">{{ activeUsers || '--' }}</div>
-            <div class="stat-desc" v-if="hasData">较上月增长 {{ activeUserGrowthRate }}%</div>
-            <div class="stat-desc" v-else>暂无数据</div>
           </div>
           <div class="stat-card">
             <div class="stat-title">总订单数</div>
             <div class="stat-value">{{ totalOrders || '--' }}</div>
-            <div class="stat-desc" v-if="hasData">较上月增长 {{ orderGrowthRate }}%</div>
-            <div class="stat-desc" v-else>暂无数据</div>
           </div>
           <div class="stat-card">
-            <div class="stat-title">本月交易额</div>
+            <div class="stat-title">总交易额</div>
             <div class="stat-value" v-if="hasData">¥{{ monthlySales.toLocaleString() }}</div>
             <div class="stat-value" v-else>--</div>
-            <div class="stat-desc" v-if="hasData">较上月增长 {{ salesGrowthRate }}%</div>
-            <div class="stat-desc" v-else>暂无数据</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-title">总商品数</div>
+            <div class="stat-value">{{ dashboardData.totalProducts || '--' }}</div>
           </div>
         </div>
 
         <div class="charts-container">
           <div class="chart-wrapper">
-            <div class="chart-title">用户活跃度趋势</div>
+            <div class="chart-title">近30天用户活跃度趋势</div>
             <div class="chart-container">
               <canvas id="activityChart"></canvas>
               <div v-if="!hasData" class="no-data-placeholder">
@@ -175,13 +171,30 @@ Chart.register(...registerables)
 
 // 响应式数据
 const selectedYear = ref(new Date().getFullYear())
-const availableYears = ref([2022, 2023, 2024])
+const availableYears = ref([])
 const loading = ref(false)
 const error = ref(null)
 const lastUpdated = ref(new Date().toLocaleDateString())
 
+// 初始化可选年份
+const initAvailableYears = () => {
+  const currentYear = new Date().getFullYear()
+  const years = []
+  // 从前5年到当前年份
+  for (let year = currentYear - 5; year <= currentYear; year++) {
+    years.push(year)
+  }
+  availableYears.value = years.reverse() // 倒序排列，最新年份在前
+}
+
 // 统计数据
 const dashboardData = ref({
+  // 总体统计数据
+  totalOrders: 0,
+  totalTransactionAmount: 0,
+  totalUsers: 0,
+  totalProducts: 0,
+  // 详细数据
   monthlyTransactions: [],
   popularProducts: [],
   userActivities: []
@@ -191,12 +204,14 @@ const dashboardData = ref({
 const hasData = computed(() => {
   return dashboardData.value.monthlyTransactions.length > 0 || 
          dashboardData.value.popularProducts.length > 0 || 
-         dashboardData.value.userActivities.length > 0
+         dashboardData.value.userActivities.length > 0 ||
+         dashboardData.value.totalOrders > 0
 })
 
 const totalUsers = computed(() => {
-  if (!dashboardData.value.userActivities.length) return 0
-  return dashboardData.value.userActivities.reduce((sum, activity) => sum + activity.newUserCount, 0)
+  // 优先使用后端返回的总用户数，如果没有则计算
+  return dashboardData.value.totalUsers || 
+         dashboardData.value.userActivities.reduce((sum, activity) => sum + activity.newUserCount, 0)
 })
 
 const activeUsers = computed(() => {
@@ -205,14 +220,24 @@ const activeUsers = computed(() => {
 })
 
 const totalOrders = computed(() => {
-  if (!dashboardData.value.monthlyTransactions.length) return 0
-  return dashboardData.value.monthlyTransactions.reduce((sum, transaction) => sum + transaction.orderCount, 0)
+  // 优先使用后端返回的总订单数
+  return dashboardData.value.totalOrders || 
+         dashboardData.value.monthlyTransactions.reduce((sum, transaction) => sum + transaction.orderCount, 0)
 })
 
 const monthlySales = computed(() => {
+  // 使用后端返回的总交易额作为本月交易额显示
+  // 也可以根据需要显示当前月份的交易额
+  if (dashboardData.value.totalTransactionAmount > 0) {
+    return dashboardData.value.totalTransactionAmount
+  }
+  
+  // 备选方案：如果需要显示当前月份的交易额
   if (!dashboardData.value.monthlyTransactions.length) return 0
   const currentMonth = new Date().getMonth() + 1
-  const currentMonthData = dashboardData.value.monthlyTransactions.find(t => t.month === `${currentMonth}月`)
+  const currentYear = new Date().getFullYear()
+  const monthString = `${currentYear}-${currentMonth.toString().padStart(2, '0')}`
+  const currentMonthData = dashboardData.value.monthlyTransactions.find(t => t.month === monthString)
   return currentMonthData ? currentMonthData.totalAmount : 0
 })
 
@@ -220,17 +245,12 @@ const popularProducts = computed(() => {
   return dashboardData.value.popularProducts || []
 })
 
-// 增长率计算（简化处理，实际应根据上月数据计算）
-const userGrowthRate = computed(() => 12.5)
-const activeUserGrowthRate = computed(() => 8.3)
-const orderGrowthRate = computed(() => 15.2)
-const salesGrowthRate = computed(() => 10.8)
-
 // 图表实例引用
 let activityChartInstance = null
 let transactionChartInstance = null
 
 onMounted(() => {
+  initAvailableYears()
   loadDashboardData()
 })
 
@@ -735,36 +755,31 @@ function initCharts() {
 .stats-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: 15px;
   margin-bottom: 30px;
 }
 
 .stat-card {
   flex: 1;
-  min-width: 200px;
+  min-width: 180px;
   background-color: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  border-left: 5px solid #FFD1DC;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-left: 4px solid #FFD1DC;
+  text-align: center;
 }
 
 .stat-title {
-  font-size: 16px;
+  font-size: 14px;
   color: #666;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .stat-value {
-  font-size: 32px;
+  font-size: 24px;
   font-weight: bold;
   color: #FF85A2;
-  margin-bottom: 5px;
-}
-
-.stat-desc {
-  font-size: 14px;
-  color: #888;
 }
 
 .charts-container {

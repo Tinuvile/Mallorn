@@ -160,7 +160,7 @@ namespace CampusTrade.API.Repositories.Implementations
         {
             // 先在数据库层面进行分组和聚合，获取原始数据
             var rawData = await _dbSet
-                .Where(o => o.CreateTime.Year == year && o.Status == "交易完成")
+                .Where(o => o.CreateTime.Year == year && o.Status == Models.Entities.Order.OrderStatus.Completed)
                 .GroupBy(o => new { o.CreateTime.Year, o.CreateTime.Month })
                 .Select(g => new
                 {
@@ -181,6 +181,22 @@ namespace CampusTrade.API.Repositories.Implementations
                 })
                 .OrderBy(dto => dto.Month)
                 .ToList();
+        }
+
+        /// <summary>
+        /// 获取总体统计数据
+        /// </summary>
+        public async Task<(int TotalOrders, decimal TotalAmount)> GetOverallStatisticsAsync()
+        {
+            var completedOrders = await _dbSet
+                .Where(o => o.Status == Models.Entities.Order.OrderStatus.Completed)
+                .Select(o => o.TotalAmount ?? 0)
+                .ToListAsync();
+
+            var totalOrders = completedOrders.Count;
+            var totalAmount = completedOrders.Sum();
+
+            return (totalOrders, totalAmount);
         }
         #endregion
 

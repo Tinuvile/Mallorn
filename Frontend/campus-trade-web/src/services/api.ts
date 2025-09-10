@@ -1392,6 +1392,12 @@ export const reportApi = {
 }
 
 export interface DashboardStatsDto {
+  // 总体统计数据
+  totalOrders: number
+  totalTransactionAmount: number
+  totalUsers: number
+  totalProducts: number
+  // 详细数据
   monthlyTransactions: MonthlyTransactionDto[]
   popularProducts: PopularProductDto[]
   userActivities: UserActivityDto[]
