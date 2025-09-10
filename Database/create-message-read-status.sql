@@ -1,6 +1,6 @@
 -- ================================================================
--- 消息已读状态表结构升级脚本
--- 简化设计：与通知一一对应，移除消息类型字段
+-- 消息已读状态表创建/升级脚本
+-- 统一脚本：支持新建和升级，简化设计与通知一一对应
 -- ================================================================
 
 -- 设置容器到 XEPDB1
@@ -11,12 +11,15 @@ ALTER SESSION SET CURRENT_SCHEMA=CAMPUS_TRADE_USER;
 SET SERVEROUTPUT ON;
 
 -- ================================================================
--- 1. 备份现有数据（如果表存在）
+-- 1. 检查并备份现有数据
 -- ================================================================
 BEGIN
-    DBMS_OUTPUT.PUT_LINE('开始备份现有数据...');
+    DBMS_OUTPUT.PUT_LINE('========================================');
+    DBMS_OUTPUT.PUT_LINE('消息已读状态系统初始化/升级');
+    DBMS_OUTPUT.PUT_LINE('========================================');
+    DBMS_OUTPUT.PUT_LINE('开始检查现有结构...');
     
-    -- 检查表是否存在
+    -- 检查表是否存在并备份
     FOR table_rec IN (
         SELECT table_name FROM user_tables WHERE table_name = 'MESSAGE_READ_STATUS'
     ) LOOP
@@ -33,12 +36,12 @@ END;
 /
 
 -- ================================================================
--- 2. 删除现有表和索引
+-- 2. 清理现有结构
 -- ================================================================
 BEGIN
     DBMS_OUTPUT.PUT_LINE('开始清理现有结构...');
     
-    -- 删除索引
+    -- 删除现有索引
     FOR idx_rec IN (
         SELECT index_name FROM user_indexes 
         WHERE table_name = 'MESSAGE_READ_STATUS' 
@@ -53,7 +56,7 @@ BEGIN
         END;
     END LOOP;
     
-    -- 删除表
+    -- 删除现有表
     FOR table_rec IN (
         SELECT table_name FROM user_tables WHERE table_name = 'MESSAGE_READ_STATUS'
     ) LOOP
@@ -69,10 +72,10 @@ END;
 /
 
 -- ================================================================
--- 3. 创建新的消息已读状态表
+-- 3. 创建消息已读状态表
 -- ================================================================
 BEGIN
-    DBMS_OUTPUT.PUT_LINE('开始创建新的消息已读状态表...');
+    DBMS_OUTPUT.PUT_LINE('开始创建消息已读状态表...');
     
     EXECUTE IMMEDIATE '
         CREATE TABLE message_read_status (
@@ -197,11 +200,11 @@ END;
 /
 
 -- ================================================================
--- 8. 验证升级结果
+-- 8. 验证结果
 -- ================================================================
 BEGIN
     DBMS_OUTPUT.PUT_LINE('========================================');
-    DBMS_OUTPUT.PUT_LINE('升级验证');
+    DBMS_OUTPUT.PUT_LINE('创建/升级验证');
     DBMS_OUTPUT.PUT_LINE('========================================');
     
     -- 验证表是否创建成功
@@ -211,6 +214,16 @@ BEGIN
         WHERE table_name = 'MESSAGE_READ_STATUS'
     ) LOOP
         DBMS_OUTPUT.PUT_LINE('✓ 表: ' || table_rec.table_name || ' 创建成功');
+    END LOOP;
+    
+    -- 验证字段结构
+    FOR col_rec IN (
+        SELECT column_name, data_type, nullable, data_default 
+        FROM user_tab_columns 
+        WHERE table_name = 'MESSAGE_READ_STATUS' 
+        ORDER BY column_id
+    ) LOOP
+        DBMS_OUTPUT.PUT_LINE('✓ 字段: ' || col_rec.column_name || ' - 类型: ' || col_rec.data_type || ' - 可空: ' || col_rec.nullable);
     END LOOP;
     
     -- 验证索引是否创建成功
@@ -238,10 +251,24 @@ BEGIN
         DBMS_OUTPUT.PUT_LINE('  未读消息: ' || total_rec.total_unread);
     END LOOP;
     
+    -- 验证外键约束
+    FOR fk_rec IN (
+        SELECT constraint_name, table_name, r_constraint_name
+        FROM user_constraints
+        WHERE table_name = 'MESSAGE_READ_STATUS'
+        AND constraint_type = 'R'
+    ) LOOP
+        DBMS_OUTPUT.PUT_LINE('✓ 外键约束: ' || fk_rec.constraint_name);
+    END LOOP;
+    
     DBMS_OUTPUT.PUT_LINE('');
     DBMS_OUTPUT.PUT_LINE('========================================');
-    DBMS_OUTPUT.PUT_LINE('消息已读状态系统升级完成！');
-    DBMS_OUTPUT.PUT_LINE('简化设计：与通知一一对应的已读状态管理');
+    DBMS_OUTPUT.PUT_LINE('消息已读状态系统创建/升级完成！');
+    DBMS_OUTPUT.PUT_LINE('设计特点：');
+    DBMS_OUTPUT.PUT_LINE('  - 与通知表一一对应');
+    DBMS_OUTPUT.PUT_LINE('  - 支持用户级别的已读状态管理');
+    DBMS_OUTPUT.PUT_LINE('  - 自动初始化现有通知的已读状态');
+    DBMS_OUTPUT.PUT_LINE('  - 完整的索引优化和约束保护');
     DBMS_OUTPUT.PUT_LINE('========================================');
     
 END;
