@@ -762,13 +762,24 @@
 
     // 使用类型断言安全获取canvas context
     const canvas = document.getElementById('creditChart') as HTMLCanvasElement
+    console.log('找到的canvas元素:', canvas)
+    console.log('canvas是否存在:', !!canvas)
+    console.log('canvas类型:', canvas?.tagName)
+    console.log('canvas宽度:', canvas?.width)
+    console.log('canvas高度:', canvas?.height)
+
     const ctx = canvas?.getContext('2d')
     console.log('获取到canvas context:', ctx)
     console.log('信用评分数据长度:', creditHistory.value.length)
     console.log('信用评分数据:', creditHistory.value)
 
+    if (!canvas) {
+      console.error('找不到creditChart canvas元素')
+      return
+    }
+
     if (!ctx) {
-      console.error('无法获取creditChart canvas context')
+      console.error('无法获取creditChart canvas context，canvas元素存在但getContext失败')
       return
     }
 
