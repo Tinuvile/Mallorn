@@ -58,7 +58,7 @@ namespace CampusTrade.API.Controllers
                 stats.TotalTransactionAmount = totalAmount;
                 stats.TotalUsers = await _userRepository.GetUserCountAsync();
                 stats.TotalProducts = await _productRepository.GetTotalProductsNumberAsync();
-                _logger.LogDebug("已获取总体统计数据，订单数：{TotalOrders}，交易额：{TotalAmount}，用户数：{TotalUsers}，商品数：{TotalProducts}", 
+                _logger.LogDebug("已获取总体统计数据，订单数：{TotalOrders}，交易额：{TotalAmount}，用户数：{TotalUsers}，商品数：{TotalProducts}",
                     totalOrders, totalAmount, stats.TotalUsers, stats.TotalProducts);
 
                 // 批量获取月度交易数据

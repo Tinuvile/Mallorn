@@ -7,7 +7,7 @@ public class DashboardStatsDto
     public decimal TotalTransactionAmount { get; set; }
     public int TotalUsers { get; set; }
     public int TotalProducts { get; set; }
-    
+
     // 月度交易数据
     public List<MonthlyTransactionDto> MonthlyTransactions { get; set; } = new();
 
