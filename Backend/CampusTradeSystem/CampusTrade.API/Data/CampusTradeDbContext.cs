@@ -35,7 +35,6 @@ namespace CampusTrade.API.Data
         public DbSet<Reports> Reports { get; set; }
         public DbSet<ReportEvidence> ReportEvidences { get; set; }
         public DbSet<CreditHistory> CreditHistory { get; set; }
-        public DbSet<MessageReadStatus> MessageReadStatuses { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -1490,6 +1489,16 @@ namespace CampusTrade.API.Data
                     .HasColumnName("SENT_AT")
                     .HasColumnType("TIMESTAMP");
 
+                // 是否已读配置 - 默认值0
+                entity.Property(e => e.IsRead)
+                    .HasColumnName("IS_READ")
+                    .HasDefaultValue(0);
+
+                // 已读时间配置
+                entity.Property(e => e.ReadAt)
+                    .HasColumnName("READ_AT")
+                    .HasColumnType("TIMESTAMP");
+
                 // 索引配置
                 entity.HasIndex(e => e.TemplateId)
                     .HasDatabaseName("IX_NOTIFICATIONS_TEMPLATE_ID");
@@ -1524,6 +1533,16 @@ namespace CampusTrade.API.Data
 
                 entity.HasIndex(e => new { e.RecipientId, e.CreatedAt })
                     .HasDatabaseName("IX_NOTIFICATIONS_RECIPIENT_TIME");
+
+                // 已读状态相关索引
+                entity.HasIndex(e => e.IsRead)
+                    .HasDatabaseName("IX_NOTIFICATIONS_IS_READ");
+
+                entity.HasIndex(e => new { e.RecipientId, e.IsRead })
+                    .HasDatabaseName("IX_NOTIFICATIONS_USER_UNREAD");
+
+                entity.HasIndex(e => e.ReadAt)
+                    .HasDatabaseName("IX_NOTIFICATIONS_READ_AT");
 
                 // 配置与User的多对一关系（接收者）
                 entity.HasOne(e => e.Recipient)
@@ -2046,78 +2065,6 @@ namespace CampusTrade.API.Data
                     .HasDatabaseName("IX_REPORT_EVIDENCE_TYPE_TIME");
 
                 // Report关系已在Reports实体中配置
-            });
-
-            // 配置消息已读状态表
-            modelBuilder.Entity<MessageReadStatus>(entity =>
-            {
-                entity.ToTable("MESSAGE_READ_STATUS");
-                entity.HasKey(e => e.ReadStatusId);
-
-                // 主键配置
-                entity.Property(e => e.ReadStatusId)
-                    .HasColumnName("READ_STATUS_ID")
-                    .HasColumnType("NUMBER")
-                    .ValueGeneratedOnAdd();
-
-                // 用户ID外键配置
-                entity.Property(e => e.UserId)
-                    .HasColumnName("USER_ID")
-                    .HasColumnType("NUMBER")
-                    .IsRequired();
-
-                // 通知ID配置
-                entity.Property(e => e.NotificationId)
-                    .HasColumnName("NOTIFICATION_ID")
-                    .HasColumnType("NUMBER")
-                    .IsRequired();
-
-                // 已读状态配置
-                entity.Property(e => e.IsRead)
-                    .HasColumnName("IS_READ")
-                    .HasDefaultValue(0);
-
-                // 已读时间配置
-                entity.Property(e => e.ReadAt)
-                    .HasColumnName("READ_AT")
-                    .HasColumnType("TIMESTAMP");
-
-                // 创建时间配置
-                entity.Property(e => e.CreatedAt)
-                    .HasColumnName("CREATED_AT")
-                    .HasColumnType("TIMESTAMP")
-                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                // 唯一索引配置
-                entity.HasIndex(e => new { e.UserId, e.NotificationId })
-                    .IsUnique()
-                    .HasDatabaseName("UK_MESSAGE_READ_STATUS");
-
-                // 其他索引配置
-                entity.HasIndex(e => e.UserId)
-                    .HasDatabaseName("IX_MESSAGE_READ_USER");
-
-                entity.HasIndex(e => e.NotificationId)
-                    .HasDatabaseName("IX_MESSAGE_READ_NOTIFICATION");
-
-                entity.HasIndex(e => e.IsRead)
-                    .HasDatabaseName("IX_MESSAGE_READ_STATUS");
-
-                entity.HasIndex(e => new { e.UserId, e.IsRead })
-                    .HasDatabaseName("IX_MESSAGE_READ_COMPOUND");
-
-                // 配置与User的关系
-                entity.HasOne(e => e.User)
-                    .WithMany()
-                    .HasForeignKey(e => e.UserId)
-                    .OnDelete(DeleteBehavior.Cascade);
-
-                // 配置与Notification的关系
-                entity.HasOne(e => e.Notification)
-                    .WithMany()
-                    .HasForeignKey(e => e.NotificationId)
-                    .OnDelete(DeleteBehavior.Cascade)
-                    .HasConstraintName("FK_MESSAGE_READ_NOTIFICATION");
             });
         }
     }

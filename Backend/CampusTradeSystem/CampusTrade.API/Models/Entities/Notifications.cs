@@ -92,6 +92,19 @@ namespace CampusTrade.API.Models.Entities
         public DateTime? SentAt { get; set; }
 
         /// <summary>
+        /// 是否已读（0=未读, 1=已读）
+        /// </summary>
+        [Required]
+        [Column("IS_READ")]
+        public int IsRead { get; set; } = 0;
+
+        /// <summary>
+        /// 已读时间
+        /// </summary>
+        [Column("READ_AT")]
+        public DateTime? ReadAt { get; set; }
+
+        /// <summary>
         /// 关联的通知模板
         /// </summary>
         public virtual NotificationTemplate Template { get; set; } = null!;
@@ -115,6 +128,34 @@ namespace CampusTrade.API.Models.Entities
         /// 关联的邮件通知发送记录
         /// </summary>
         public virtual ICollection<EmailNotification> EmailNotifications { get; set; } = new List<EmailNotification>();
+
+        /// <summary>
+        /// 是否已读（布尔属性，便于使用）
+        /// </summary>
+        [NotMapped]
+        public bool IsReadBool
+        {
+            get => IsRead == 1;
+            set => IsRead = value ? 1 : 0;
+        }
+
+        /// <summary>
+        /// 标记为已读
+        /// </summary>
+        public void MarkAsRead()
+        {
+            IsRead = 1;
+            ReadAt = DateTime.UtcNow;
+        }
+
+        /// <summary>
+        /// 标记为未读
+        /// </summary>
+        public void MarkAsUnread()
+        {
+            IsRead = 0;
+            ReadAt = null;
+        }
 
         /// <summary>
         /// 获取渲染后的通知内容
