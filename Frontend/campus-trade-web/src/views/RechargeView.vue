@@ -66,7 +66,7 @@
 
               <v-card-text class="py-6 px-6">
                 <div class="text-center mb-6">
-                  <div v-if="accountStore.isLoading && !accountStore.account" class="py-4">
+                  <div v-if="accountStore.isLoading" class="py-4">
                     <v-progress-circular
                       indeterminate
                       color="primary"
@@ -79,6 +79,9 @@
                       <span class="balance-amount">¥{{ currentBalance.toFixed(2) }}</span>
                     </div>
                     <div class="balance-label">账户余额</div>
+                    <div v-if="accountStore.account?.lastUpdateTime" class="balance-update-time">
+                      更新时间: {{ new Date(accountStore.account.lastUpdateTime).toLocaleString('zh-CN') }}
+                    </div>
                   </div>
                 </div>
 
@@ -298,7 +301,11 @@
   })
 
   // 计算属性
-  const currentBalance = computed(() => accountStore.account?.balance || 0)
+  const currentBalance = computed(() => {
+    // 确保返回数字类型，避免显示为0的问题
+    const balance = accountStore.account?.balance
+    return typeof balance === 'number' ? balance : 0
+  })
 
   const finalAmount = computed(() => {
     if (customAmount.value) {
@@ -340,6 +347,8 @@
     if (!isValidAmount.value) {
       return
     }
+    // 重置之前的充值结果
+    rechargeResult.value = { success: false, message: '' }
     showConfirmDialog.value = true
   }
 
@@ -355,7 +364,6 @@
           success: false,
           message: createResult.message,
         }
-        showResultDialog.value = true
         return
       }
 
@@ -395,7 +403,8 @@
 
   const closeResultDialog = () => {
     showResultDialog.value = false
-    rechargeResult.value = { success: false, message: '' }
+    // 不需要立即重置 rechargeResult，避免闪现问题
+    // rechargeResult 会在下次充值时被重新设置
   }
 
   // 加载充值记录
@@ -461,10 +470,23 @@
 
   // 组件挂载时初始化
   onMounted(async () => {
-    // 获取账户余额
-    await accountStore.fetchBalance()
-    // 加载充值记录
-    await loadRechargeRecords()
+    try {
+      // 初始化账户存储
+      accountStore.initializeAccount()
+      
+      // 强制从服务器获取最新的账户余额
+      const balanceResult = await accountStore.fetchBalance()
+      if (!balanceResult.success) {
+        console.error('获取账户余额失败:', balanceResult.message)
+      } else {
+        console.log('余额获取成功:', balanceResult.data)
+      }
+      
+      // 加载充值记录
+      await loadRechargeRecords()
+    } catch (error) {
+      console.error('初始化账户信息失败:', error)
+    }
   })
 </script>
 
@@ -547,6 +569,12 @@
     font-size: 1rem;
     color: #666;
     margin-top: 8px;
+  }
+
+  .balance-update-time {
+    font-size: 0.8rem;
+    color: #999;
+    margin-top: 4px;
   }
 
   /* 快速金额按钮样式 */
