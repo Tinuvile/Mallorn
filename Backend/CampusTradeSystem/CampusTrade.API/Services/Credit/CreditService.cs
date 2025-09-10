@@ -115,7 +115,7 @@ namespace CampusTrade.API.Services
                             {
                                 // 延迟确保主事务提交
                                 await Task.Delay(100);
-                                
+
                                 var changeTypeDisplayName = GetCreditEventTypeDisplayName(creditEvent.EventType);
                                 var reason = GetCreditChangeReason(creditEvent.EventType, creditEvent.Description);
                                 var changeValueText = delta > 0 ? $"+{delta}" : delta.ToString();

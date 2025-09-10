@@ -99,8 +99,8 @@ namespace CampusTrade.API.Services.Notification
             {
                 // 为通知创建读取状态记录（与通知一一对应）
                 await _messageReadStatusService.CreateOrUpdateReadStatusAsync(
-                    recipientId, 
-                    notification.NotificationId, 
+                    recipientId,
+                    notification.NotificationId,
                     false // 默认为未读
                 );
                 _logger.LogDebug("已为通知 {NotificationId} 创建未读状态记录", notification.NotificationId);
@@ -602,7 +602,7 @@ namespace CampusTrade.API.Services.Notification
                 // 然后尝试标记议价消息为已读
                 var negotiation = await _context.Negotiations
                     .Include(n => n.Order)
-                    .FirstOrDefaultAsync(n => n.NegotiationId == messageId && 
+                    .FirstOrDefaultAsync(n => n.NegotiationId == messageId &&
                                              (n.Order.BuyerId == userId || n.Order.SellerId == userId));
 
                 if (negotiation != null)
@@ -615,7 +615,7 @@ namespace CampusTrade.API.Services.Notification
                 var exchangeRequest = await _context.ExchangeRequests
                     .Include(e => e.OfferProduct)
                     .Include(e => e.RequestProduct)
-                    .FirstOrDefaultAsync(e => e.ExchangeId == messageId && 
+                    .FirstOrDefaultAsync(e => e.ExchangeId == messageId &&
                                              (e.OfferProduct.UserId == userId || e.RequestProduct.UserId == userId));
 
                 if (exchangeRequest != null)
@@ -823,17 +823,17 @@ namespace CampusTrade.API.Services.Notification
                 if (string.IsNullOrEmpty(category) || category == "all")
                 {
                     // 统计所有类型的未读消息
-                    
+
                     // 1. 统计系统通知的未读数量
                     var systemNotificationIds = await _context.Notifications
                         .Where(n => n.RecipientId == userId &&
-                                   (n.Template!.TemplateName.Contains("系统") || 
+                                   (n.Template!.TemplateName.Contains("系统") ||
                                     n.Template.TemplateName.Contains("管理员")))
                         .Select(n => n.NotificationId)
                         .ToListAsync();
-                    
+
                     var systemUnread = await _messageReadStatusService.GetUnreadNotificationCountAsync(userId, systemNotificationIds);
-                    
+
                     // 2. 统计回复消息的未读数量
                     var replyNotificationIds = await _context.Notifications
                         .Where(n => n.RecipientId == userId &&
@@ -843,18 +843,18 @@ namespace CampusTrade.API.Services.Notification
                                    !n.Template.TemplateName.Contains("换物"))
                         .Select(n => n.NotificationId)
                         .ToListAsync();
-                    
+
                     var replyUnread = await _messageReadStatusService.GetUnreadNotificationCountAsync(userId, replyNotificationIds);
-                    
+
                     // 3. 统计议价消息的未读数量
                     var bargainIds = await _context.Negotiations
                         .Include(n => n.Order)
                         .Where(n => n.Order.BuyerId == userId || n.Order.SellerId == userId)
                         .Select(n => n.NegotiationId)
                         .ToListAsync();
-                    
+
                     var bargainUnread = await _messageReadStatusService.GetUnreadNotificationCountAsync(userId, bargainIds);
-                    
+
                     // 4. 统计换物消息的未读数量
                     var swapIds = await _context.ExchangeRequests
                         .Include(e => e.OfferProduct)
@@ -862,27 +862,27 @@ namespace CampusTrade.API.Services.Notification
                         .Where(e => e.OfferProduct.UserId == userId || e.RequestProduct.UserId == userId)
                         .Select(e => e.ExchangeId)
                         .ToListAsync();
-                    
+
                     var swapUnread = await _messageReadStatusService.GetUnreadNotificationCountAsync(userId, swapIds);
-                    
+
                     unreadCount = systemUnread + replyUnread + bargainUnread + swapUnread;
                 }
                 else
                 {
                     // 根据分类获取对应的消息ID列表并统计未读数量
                     List<int> messageIds = new List<int>();
-                    
+
                     switch (category)
                     {
                         case "system":
                             messageIds = await _context.Notifications
                                 .Where(n => n.RecipientId == userId &&
-                                           (n.Template!.TemplateName.Contains("系统") || 
+                                           (n.Template!.TemplateName.Contains("系统") ||
                                             n.Template.TemplateName.Contains("管理员")))
                                 .Select(n => n.NotificationId)
                                 .ToListAsync();
                             break;
-                            
+
                         case "reply":
                             messageIds = await _context.Notifications
                                 .Where(n => n.RecipientId == userId &&
@@ -893,7 +893,7 @@ namespace CampusTrade.API.Services.Notification
                                 .Select(n => n.NotificationId)
                                 .ToListAsync();
                             break;
-                            
+
                         case "bargain":
                             messageIds = await _context.Negotiations
                                 .Include(n => n.Order)
@@ -901,7 +901,7 @@ namespace CampusTrade.API.Services.Notification
                                 .Select(n => n.NegotiationId)
                                 .ToListAsync();
                             break;
-                            
+
                         case "swap":
                             messageIds = await _context.ExchangeRequests
                                 .Include(e => e.OfferProduct)

@@ -111,7 +111,7 @@ namespace CampusTrade.API.Services.Review
                         {
                             // 稍微延迟，确保主事务完全提交
                             await Task.Delay(100);
-                            
+
                             // 发送新评价通知给卖家 - 模板ID为22（收到新评价模板）
                             var reviewContentText = string.IsNullOrEmpty(dto.Content) ? "" : $"评价内容：{dto.Content}";
                             var notificationParams = new Dictionary<string, object>
@@ -288,7 +288,7 @@ namespace CampusTrade.API.Services.Review
                     {
                         // 稍微延迟，确保主事务完全提交
                         await Task.Delay(100);
-                        
+
                         // 发送卖家回复评价通知给买家 - 模板ID为24（卖家回复评价模板）
                         var notificationParams = new Dictionary<string, object>
                         {

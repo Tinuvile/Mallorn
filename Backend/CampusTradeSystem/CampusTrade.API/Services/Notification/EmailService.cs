@@ -135,9 +135,9 @@ namespace CampusTrade.API.Services.Email
             // 检查当前连接是否已在事务中
             var currentTransaction = _context.Database.CurrentTransaction;
             var needOwnTransaction = currentTransaction == null;
-            
+
             Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? transaction = null;
-            
+
             try
             {
                 // 只有在没有现有事务时才创建新事务
@@ -145,7 +145,7 @@ namespace CampusTrade.API.Services.Email
                 {
                     transaction = await _context.Database.BeginTransactionAsync();
                 }
-                
+
                 // 保存邮件通知记录
                 _context.EmailNotifications.Add(emailNotification);
                 await _context.SaveChangesAsync();
@@ -185,13 +185,13 @@ namespace CampusTrade.API.Services.Email
 
                 // 保存状态更新
                 await _context.SaveChangesAsync();
-                
+
                 // 只有在创建了自己的事务时才提交
                 if (needOwnTransaction && transaction != null)
                 {
                     await transaction.CommitAsync();
                 }
-                
+
                 return (sendResult.Success, sendResult.Message);
             }
             catch (Exception ex)
@@ -201,15 +201,15 @@ namespace CampusTrade.API.Services.Email
                 {
                     await transaction.RollbackAsync();
                 }
-                
+
                 var errorMsg = $"邮件通知发送异常: {ex.Message}";
                 _logger.LogError(ex, $"邮件通知发送异常 - Email: {emailNotification.RecipientEmail}");
 
                 // 在异常情况下，通过单独的方法处理错误状态保存
                 // 这样避免了在已经异常的上下文中再次使用可能有问题的DbContext
                 _ = Task.Run(async () => await TryUpdateFailedEmailStatusAsync(
-                    emailNotification.NotificationId, 
-                    emailNotification.RecipientEmail, 
+                    emailNotification.NotificationId,
+                    emailNotification.RecipientEmail,
                     errorMsg));
 
                 return (false, errorMsg);
@@ -233,19 +233,19 @@ namespace CampusTrade.API.Services.Email
             {
                 // 稍微延迟一下，等待可能的数据库操作完成
                 await Task.Delay(100);
-                
+
                 // 直接在当前context中查找并更新
                 var existingEmail = await _context.EmailNotifications
-                    .FirstOrDefaultAsync(en => en.NotificationId == notificationId && 
+                    .FirstOrDefaultAsync(en => en.NotificationId == notificationId &&
                                               en.RecipientEmail == recipientEmail);
-                
+
                 if (existingEmail != null)
                 {
                     existingEmail.SendStatus = EmailNotification.SendStatuses.Failed;
                     existingEmail.ErrorMessage = errorMessage;
                     existingEmail.RetryCount++;
                     existingEmail.LastAttemptTime = DateTime.UtcNow;
-                    
+
                     await _context.SaveChangesAsync();
                     _logger.LogInformation($"已更新邮件通知失败状态 - Email: {recipientEmail}");
                 }
