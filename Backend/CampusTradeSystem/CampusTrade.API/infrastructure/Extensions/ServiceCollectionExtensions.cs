@@ -114,6 +114,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<INegotiationsRepository, NegotiationsRepository>();
         services.AddScoped<IExchangeRequestsRepository, ExchangeRequestsRepository>();
         services.AddScoped<IReviewsRepository, ReviewsRepository>();
+        services.AddScoped<ICreditHistoryRepository, CreditHistoryRepository>();
         services.AddScoped<IAdminRepository, AdminRepository>();
         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
