@@ -760,6 +760,12 @@
   const initCreditChart = () => {
     console.log('开始初始化信用评分图表...')
 
+    // 销毁旧图表（如果存在）
+    if (creditChartInstance) {
+      console.log('销毁旧图表实例')
+      creditChartInstance.destroy()
+    }
+
     // 使用类型断言安全获取canvas context
     const canvas = document.getElementById('creditChart') as HTMLCanvasElement
     console.log('找到的canvas元素:', canvas)
@@ -948,15 +954,7 @@
           ]
         }
 
-        console.log('准备初始化图表，数据长度:', creditHistory.value.length)
-
-        // 销毁旧图表（如果存在）
-        if (creditChartInstance) {
-          creditChartInstance.destroy()
-        }
-
-        // 直接初始化图表
-        initCreditChart()
+        console.log('信用评分数据准备完成，数据长度:', creditHistory.value.length)
       } else {
         console.error('API响应格式错误或无数据:', response)
       }
@@ -972,13 +970,7 @@
         },
       ]
 
-      // 销毁旧图表（如果存在）
-      if (creditChartInstance) {
-        creditChartInstance.destroy()
-      }
-
-      // 初始化图表
-      initCreditChart()
+      console.log('使用默认信用评分数据')
     } finally {
       isLoadingCreditHistory.value = false
       console.log('信用评分历史获取完成')
@@ -1086,12 +1078,21 @@
       // 获取交易记录
       await fetchTransactions()
 
-      // 获取信用评分历史
+      // 获取信用评分历史（但不立即初始化图表）
       await fetchCreditHistory()
     } catch (error) {
       console.error('加载用户信息失败:', error)
     } finally {
       isLoading.value = false
+
+      // 主内容区渲染后，延迟初始化图表
+      await nextTick()
+      setTimeout(() => {
+        if (creditHistory.value.length > 0) {
+          console.log('延迟初始化信用评分图表...')
+          initCreditChart()
+        }
+      }, 100)
     }
   }
 
