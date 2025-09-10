@@ -452,6 +452,15 @@ CREATE TABLE notifications (
     last_attempt_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     sent_at TIMESTAMP,
+    is_read NUMBER(1) DEFAULT 0 CHECK (is_read IN (0, 1)),
+    read_at TIMESTAMP,
+    -- 分离式发送状态跟踪字段
+    signalr_status VARCHAR2(20) DEFAULT '待发送' CHECK (signalr_status IN ('待发送','成功','失败')),
+    email_status VARCHAR2(20) DEFAULT '待发送' CHECK (email_status IN ('待发送','成功','失败')),
+    signalr_retry_count NUMBER DEFAULT 0 CHECK (signalr_retry_count >= 0),
+    email_retry_count NUMBER DEFAULT 0 CHECK (email_retry_count >= 0),
+    signalr_last_attempt TIMESTAMP,
+    email_last_attempt TIMESTAMP,
     CONSTRAINT fk_notification_template FOREIGN KEY (template_id) REFERENCES notification_templates(template_id),
     CONSTRAINT fk_notification_recipient FOREIGN KEY (recipient_id) REFERENCES users(user_id),
     CONSTRAINT fk_notification_order FOREIGN KEY (order_id) REFERENCES abstract_orders(abstract_order_id)
@@ -562,6 +571,17 @@ CREATE INDEX idx_email_notifications_code_expires ON email_notifications(code_ex
 CREATE INDEX idx_email_notifications_type_status ON email_notifications(email_type, send_status);
 CREATE INDEX idx_email_notifications_email_type_comb ON email_notifications(recipient_email, email_type);
 
+-- 通知表已读状态索引
+CREATE INDEX idx_notifications_is_read ON notifications(is_read);
+CREATE INDEX idx_notifications_read_at ON notifications(read_at);
+CREATE INDEX idx_notifications_user_unread ON notifications(recipient_id, is_read);
+
+-- 分离式发送状态索引
+CREATE INDEX idx_notifications_signalr_status ON notifications(signalr_status);
+CREATE INDEX idx_notifications_email_status ON notifications(email_status);
+CREATE INDEX idx_notifications_signalr_retry ON notifications(signalr_status, signalr_retry_count, signalr_last_attempt);
+CREATE INDEX idx_notifications_email_retry ON notifications(email_status, email_retry_count, email_last_attempt);
+
 -- ================================================================
 -- 创建触发器
 -- ================================================================
@@ -671,6 +691,18 @@ COMMENT ON COLUMN email_notifications.last_attempt_time IS '最后尝试发送�
 COMMENT ON COLUMN email_notifications.created_at IS '创建时间';
 COMMENT ON COLUMN email_notifications.sent_at IS '发送成功时间';
 COMMENT ON COLUMN email_notifications.error_message IS '错误信息';
+
+-- 通知表已读状态字段注释
+COMMENT ON COLUMN notifications.is_read IS '是否已读：0=未读, 1=已读';
+COMMENT ON COLUMN notifications.read_at IS '已读时间';
+
+-- 分离式发送状态字段注释
+COMMENT ON COLUMN notifications.signalr_status IS 'SignalR发送状态：待发送、成功、失败';
+COMMENT ON COLUMN notifications.email_status IS '邮件发送状态：待发送、成功、失败';
+COMMENT ON COLUMN notifications.signalr_retry_count IS 'SignalR重试次数';
+COMMENT ON COLUMN notifications.email_retry_count IS '邮件重试次数';
+COMMENT ON COLUMN notifications.signalr_last_attempt IS 'SignalR最后尝试发送时间';
+COMMENT ON COLUMN notifications.email_last_attempt IS '邮件最后尝试发送时间';
 
 -- ================================================================
 -- 插入基础数据
@@ -872,6 +904,26 @@ SELECT u.username, u.full_name, u.credit_score, va.balance
 FROM users u 
 LEFT JOIN virtual_accounts va ON u.user_id = va.user_id;
 
+-- 验证通知表已读状态结构
+SELECT '========================================' AS separator FROM dual;
+SELECT 'NOTIFICATIONS TABLE WITH READ STATUS' AS title FROM dual;
+SELECT '========================================' AS separator FROM dual;
+
+SELECT 'Notifications table structure (read status fields):' AS message FROM dual;
+SELECT column_name, data_type, nullable, data_default 
+FROM user_tab_columns 
+WHERE table_name = 'NOTIFICATIONS' 
+AND column_name IN ('IS_READ', 'READ_AT')
+ORDER BY column_name;
+
+SELECT 'Notifications table structure (separated send status fields):' AS message FROM dual;
+SELECT column_name, data_type, nullable, data_default 
+FROM user_tab_columns 
+WHERE table_name = 'NOTIFICATIONS' 
+AND column_name IN ('SIGNALR_STATUS', 'EMAIL_STATUS', 'SIGNALR_RETRY_COUNT', 
+                   'EMAIL_RETRY_COUNT', 'SIGNALR_LAST_ATTEMPT', 'EMAIL_LAST_ATTEMPT')
+ORDER BY column_name;
+
 -- 验证USERS表结构
 SELECT '========================================' AS separator FROM dual;
 SELECT 'USERS TABLE STRUCTURE' AS title FROM dual;
@@ -879,7 +931,9 @@ SELECT '========================================' AS separator FROM dual;
 DESC users;
 
 SELECT '========================================' AS separator FROM dual;
-SELECT 'Database initialization complete with campus trading system categories!' AS final_message FROM dual; 
+SELECT 'Database initialization complete with campus trading system categories and message read status!' AS final_message FROM dual; 
 SELECT 'Ready for application usage!' AS status FROM dual;
 SELECT '✅ 分类体系：教材 | 数码 | 日用 | 服装 | 运动 | 其他' AS category_system FROM dual;
+SELECT '✅ 消息已读状态：已整合到 notifications 表 (is_read, read_at 字段)' AS message_read_status FROM dual;
+SELECT '✅ 分离式发送状态：已整合到 notifications 表 (signalr_status, email_status 等字段)' AS separated_send_status FROM dual;
 SELECT '========================================' AS separator FROM dual; 

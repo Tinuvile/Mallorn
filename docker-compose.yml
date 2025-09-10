@@ -12,9 +12,7 @@ services:
       - oracle_data:/opt/oracle/oradata
       - ./Database/init-oracle.sql:/container-entrypoint-initdb.d/01-init-oracle.sql
       - ./Database/add-students.sql:/container-entrypoint-initdb.d/02-add-students.sql
-      - ./Database/upgrade-notifications-table.sql:/container-entrypoint-initdb.d/03-upgrade-notifications-table.sql
-      - ./Database/insert-notification-templates.sql:/container-entrypoint-initdb.d/04-insert-notification-templates.sql
-      - ./Database/create-message-read-status.sql:/container-entrypoint-initdb.d/05-create-message-read-status.sql
+      - ./Database/insert-notification-templates.sql:/container-entrypoint-initdb.d/03-insert-notification-templates.sql
 
   campus-trade-api:
     build:
