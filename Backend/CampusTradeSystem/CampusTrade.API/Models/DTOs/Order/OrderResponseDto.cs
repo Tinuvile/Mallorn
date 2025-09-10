@@ -77,7 +77,7 @@ namespace CampusTrade.API.Models.DTOs.Order
         {
             get
             {
-                if (!ExpireTime.HasValue || Status != "待付款") return null;
+                if (!ExpireTime.HasValue || Status != Models.Entities.Order.OrderStatus.PendingPayment) return null;
                 var remaining = ExpireTime.Value - DateTime.Now;
                 return remaining.TotalMinutes > 0 ? (int)remaining.TotalMinutes : 0;
             }

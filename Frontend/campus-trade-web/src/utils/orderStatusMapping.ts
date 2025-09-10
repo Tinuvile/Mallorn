@@ -6,6 +6,7 @@
 // 后端中文状态 -> 前端英文状态
 export const backendToFrontendStatus = (backendStatus: string): string => {
   const statusMap: Record<string, string> = {
+    议价中: 'negotiating',
     待付款: 'pending',
     已付款: 'processing',
     已发货: 'shipped',
@@ -20,6 +21,7 @@ export const backendToFrontendStatus = (backendStatus: string): string => {
 // 前端英文状态 -> 后端中文状态
 export const frontendToBackendStatus = (frontendStatus: string): string => {
   const statusMap: Record<string, string> = {
+    negotiating: '议价中',
     pending: '待付款',
     processing: '已付款',
     shipped: '已发货',
@@ -38,6 +40,7 @@ export const getStatusDisplayText = (status: string, userRole?: 'buyer' | 'selle
 
   if (!userRole) {
     const statusMap: Record<string, string> = {
+      negotiating: '议价中',
       pending: '待付款',
       processing: '待发货',
       shipped: '已发货',
@@ -51,6 +54,7 @@ export const getStatusDisplayText = (status: string, userRole?: 'buyer' | 'selle
   // 根据用户角色显示不同的状态文本
   if (userRole === 'seller') {
     const sellerStatusMap: Record<string, string> = {
+      negotiating: '议价中',
       pending: '待付款',
       processing: '待发货',
       shipped: '待收货', // 卖家视角：已发货后是待收货
@@ -61,6 +65,7 @@ export const getStatusDisplayText = (status: string, userRole?: 'buyer' | 'selle
     return sellerStatusMap[frontendStatus] || status
   } else {
     const buyerStatusMap: Record<string, string> = {
+      negotiating: '议价中',
       pending: '待付款',
       processing: '待发货',
       shipped: '已发货', // 买家视角：已发货
@@ -78,6 +83,7 @@ export const getStatusColor = (status: string): string => {
   const frontendStatus = backendToFrontendStatus(status)
 
   const colorMap: Record<string, string> = {
+    negotiating: 'purple',
     pending: 'warning',
     processing: 'info',
     shipped: 'orange',
@@ -98,6 +104,10 @@ export const canExecuteAction = (
   const frontendStatus = backendToFrontendStatus(status)
 
   const actionRules: Record<string, Record<string, string[]>> = {
+    negotiating: {
+      buyer: [], // 议价中不能执行任何订单操作
+      seller: [], // 议价中不能执行任何订单操作
+    },
     pending: {
       buyer: ['pay', 'cancel'],
       seller: ['cancel'],

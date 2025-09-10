@@ -997,10 +997,13 @@
   // 使用真实的订单数据
   const orders = computed(() => orderStore.orders)
 
-  // 根据状态筛选订单
+  // 根据状态筛选订单，排除议价中的订单
   const filteredOrders = computed(() => {
-    if (activeTab.value === 'all') return orders.value
-    return orders.value.filter(order => order.status === activeTab.value)
+    // 首先过滤掉议价中的订单（使用前端状态名称）
+    const visibleOrders = orders.value.filter(order => order.status !== 'negotiating')
+
+    if (activeTab.value === 'all') return visibleOrders
+    return visibleOrders.filter(order => order.status === activeTab.value)
   })
 
   // 计算是否可以回应评价（卖家48小时内）

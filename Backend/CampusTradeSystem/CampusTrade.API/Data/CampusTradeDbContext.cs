@@ -756,7 +756,7 @@ namespace CampusTrade.API.Data
                 entity.ToTable("ORDERS", t =>
                 {
                     t.HasCheckConstraint("CK_ORDERS_STATUS",
-                        "STATUS IN ('待付款','已付款','已发货','已送达','已完成','已取消')");
+                        "STATUS IN ('议价中','待付款','已付款','已发货','已送达','已完成','已取消')");
                 });
                 entity.HasKey(e => e.OrderId);
 

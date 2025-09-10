@@ -59,7 +59,7 @@ namespace CampusTrade.API.Services.Bargain
                     return (false, "不能对自己的商品发起议价", null);
                 }
 
-                if (order.Status != "待付款")
+                if (order.Status != Models.Entities.Order.OrderStatus.PendingPayment)
                 {
                     return (false, "订单状态不允许议价", null);
                 }
@@ -81,6 +81,12 @@ namespace CampusTrade.API.Services.Bargain
                 };
 
                 await _negotiationsRepository.AddAsync(negotiation);
+
+                // 4. 将订单状态设置为"议价中"
+                order.Status = Models.Entities.Order.OrderStatus.Negotiating;
+                _ordersRepository.Update(order);
+
+                await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
                 // 发送议价请求通知给卖家
@@ -242,12 +248,23 @@ namespace CampusTrade.API.Services.Bargain
                     // 接受或拒绝：更新议价状态
                     await _negotiationsRepository.UpdateNegotiationStatusAsync(negotiation.NegotiationId, bargainResponse.Status);
 
-                    // 如果接受议价，更新订单价格
+                    // 如果接受议价，更新订单价格和状态
                     if (bargainResponse.Status == "接受")
                     {
                         if (order != null)
                         {
                             order.TotalAmount = negotiation.ProposedPrice;
+                            order.Status = Models.Entities.Order.OrderStatus.PendingPayment;
+                            _ordersRepository.Update(order);
+                        }
+                    }
+                    // 如果拒绝议价，将订单状态设置为"已取消"
+                    else if (bargainResponse.Status == "拒绝")
+                    {
+                        if (order != null)
+                        {
+                            order.Status = Models.Entities.Order.OrderStatus.Cancelled;
+                            _ordersRepository.Update(order);
                         }
                     }
                 }

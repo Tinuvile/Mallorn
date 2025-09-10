@@ -70,7 +70,8 @@ namespace CampusTrade.API.Services.Order
             var existingOrders = await _orderRepository.GetByBuyerIdAsync(userId);
             var pendingOrder = existingOrders.FirstOrDefault(o =>
                 o.ProductId == request.ProductId &&
-                (o.Status == Models.Entities.Order.OrderStatus.PendingPayment ||
+                (o.Status == Models.Entities.Order.OrderStatus.Negotiating ||
+                 o.Status == Models.Entities.Order.OrderStatus.PendingPayment ||
                  o.Status == Models.Entities.Order.OrderStatus.Paid));
 
             if (pendingOrder != null)
@@ -1062,9 +1063,14 @@ namespace CampusTrade.API.Services.Order
             // 定义状态转换规则
             var transitions = new Dictionary<string, Dictionary<string, string[]>>
             {
+                [Models.Entities.Order.OrderStatus.Negotiating] = new Dictionary<string, string[]>
+                {
+                    ["buyer"] = new[] { Models.Entities.Order.OrderStatus.PendingPayment, Models.Entities.Order.OrderStatus.Cancelled },
+                    ["seller"] = new[] { Models.Entities.Order.OrderStatus.PendingPayment, Models.Entities.Order.OrderStatus.Cancelled }
+                },
                 [Models.Entities.Order.OrderStatus.PendingPayment] = new Dictionary<string, string[]>
                 {
-                    ["buyer"] = new[] { Models.Entities.Order.OrderStatus.Paid, Models.Entities.Order.OrderStatus.Cancelled },
+                    ["buyer"] = new[] { Models.Entities.Order.OrderStatus.Paid, Models.Entities.Order.OrderStatus.Cancelled, Models.Entities.Order.OrderStatus.Negotiating },
                     ["seller"] = new[] { Models.Entities.Order.OrderStatus.Cancelled }
                 },
                 [Models.Entities.Order.OrderStatus.Paid] = new Dictionary<string, string[]>

@@ -457,6 +457,7 @@ export interface ProductBriefInfo {
 
 // 订单状态枚举
 export enum OrderStatus {
+  NEGOTIATING = 'negotiating',
   PENDING = 'pending',
   PROCESSING = 'processing',
   SHIPPED = 'shipped',
@@ -1934,12 +1935,18 @@ export const adminApi = {
   },
 
   // 获取举报审核历史
-  getReportAuditHistory: (reportId: number): Promise<ApiResponse<Array<{
-    timestamp: string
-    action: string
-    moderator: string
-    comment: string
-  }>>> => {
+  getReportAuditHistory: (
+    reportId: number
+  ): Promise<
+    ApiResponse<
+      Array<{
+        timestamp: string
+        action: string
+        moderator: string
+        comment: string
+      }>
+    >
+  > => {
     return api.get(`/api/admin/reports/${reportId}/history`)
   },
 
@@ -2002,29 +2009,31 @@ export const adminApi = {
   },
 
   // 权限管理相关API
-  
+
   // 获取所有管理员列表（仅系统管理员）
   getAllAdmins: (
     pageIndex: number = 0,
     pageSize: number = 100,
     role?: string,
     searchKeyword?: string
-  ): Promise<ApiResponse<{
-    admins: Array<{
-      adminId: number
-      username: string
-      role: string
-      assignedCategory?: number
-      email?: string
-      isActive: boolean
+  ): Promise<
+    ApiResponse<{
+      admins: Array<{
+        adminId: number
+        username: string
+        role: string
+        assignedCategory?: number
+        email?: string
+        isActive: boolean
+      }>
+      pagination: {
+        pageIndex: number
+        pageSize: number
+        totalCount: number
+        totalPages: number
+      }
     }>
-    pagination: {
-      pageIndex: number
-      pageSize: number
-      totalCount: number
-      totalPages: number
-    }
-  }>> => {
+  > => {
     const params = new URLSearchParams()
     params.append('pageIndex', pageIndex.toString())
     params.append('pageSize', pageSize.toString())
@@ -2039,15 +2048,17 @@ export const adminApi = {
     username: string
     email: string
     categoryId: number
-  }): Promise<ApiResponse<{
-    adminId: number
-    message: string
-  }>> => {
+  }): Promise<
+    ApiResponse<{
+      adminId: number
+      message: string
+    }>
+  > => {
     return api.post('/api/admin/assign', {
       username: data.username,
       email: data.email,
       role: 'category_admin',
-      assignedCategory: data.categoryId
+      assignedCategory: data.categoryId,
     })
   },
 
@@ -2055,30 +2066,40 @@ export const adminApi = {
   updateAdminCategory: (
     adminId: number,
     newCategoryId: number
-  ): Promise<ApiResponse<{
-    message: string
-  }>> => {
+  ): Promise<
+    ApiResponse<{
+      message: string
+    }>
+  > => {
     return api.put(`/api/admin/${adminId}`, { assignedCategory: newCategoryId })
   },
 
   // 撤销管理员权限
-  revokeAdminPermission: (adminId: number): Promise<ApiResponse<{
-    message: string
-  }>> => {
+  revokeAdminPermission: (
+    adminId: number
+  ): Promise<
+    ApiResponse<{
+      message: string
+    }>
+  > => {
     return api.delete(`/api/admin/${adminId}`)
   },
 
   // 获取管理员详细信息
-  getAdminDetail: (adminId: number): Promise<ApiResponse<{
+  getAdminDetail: (
     adminId: number
-    username: string
-    email: string
-    role: string
-    assignedCategory?: number
-    createdAt: string
-    lastLoginAt?: string
-    isActive: boolean
-  }>> => {
+  ): Promise<
+    ApiResponse<{
+      adminId: number
+      username: string
+      email: string
+      role: string
+      assignedCategory?: number
+      createdAt: string
+      lastLoginAt?: string
+      isActive: boolean
+    }>
+  > => {
     return api.get(`/api/admin/${adminId}`)
   },
 }

@@ -47,7 +47,7 @@ namespace CampusTrade.API.Services.Review
                     throw new UnauthorizedAccessException("只有订单买家才能评论");
 
                 // 第三步：检查订单状态是否已完成（只允许"已完成"状态的订单评论）
-                if (order.Status != "已完成")
+                if (order.Status != Models.Entities.Order.OrderStatus.Completed)
                     throw new InvalidOperationException("订单未完成，无法评论");
 
                 // 第四步：检查是否已评论过（每个订单只能评论一次）

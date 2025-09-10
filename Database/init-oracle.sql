@@ -330,7 +330,7 @@ CREATE TABLE orders (
     seller_id NUMBER NOT NULL,
     product_id NUMBER NOT NULL,
     total_amount NUMBER(10,2),
-    status VARCHAR2(20) DEFAULT '待付款' CHECK (status IN ('待付款','已付款','已发货','已送达','已完成','已取消')),
+    status VARCHAR2(20) DEFAULT '待付款' CHECK (status IN ('议价中','待付款','已付款','已发货','已送达','已完成','已取消')),
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     expire_time TIMESTAMP,
     final_price NUMBER(10,2),

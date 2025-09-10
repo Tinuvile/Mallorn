@@ -115,6 +115,11 @@ namespace CampusTrade.API.Models.Entities
         public static class OrderStatus
         {
             /// <summary>
+            /// 议价中 - 订单正在议价过程中
+            /// </summary>
+            public const string Negotiating = "议价中";
+
+            /// <summary>
             /// 待付款 - 订单已创建，等待买家付款
             /// </summary>
             public const string PendingPayment = "待付款";
