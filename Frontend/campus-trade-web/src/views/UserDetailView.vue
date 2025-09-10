@@ -758,16 +758,33 @@
 
   // 初始化信用评分折线图
   const initCreditChart = () => {
+    console.log('开始初始化信用评分图表...')
     const canvas = document.getElementById('creditChart') as HTMLCanvasElement
-    if (!canvas || creditHistory.value.length === 0) return
+    console.log('找到canvas元素:', canvas)
+    console.log('信用评分数据长度:', creditHistory.value.length)
+    console.log('信用评分数据:', creditHistory.value)
+
+    if (!canvas) {
+      console.error('找不到creditChart canvas元素')
+      return
+    }
+
+    if (creditHistory.value.length === 0) {
+      console.error('没有信用评分数据')
+      return
+    }
 
     // 销毁旧图表实例
     if (creditChartInstance) {
+      console.log('销毁旧图表实例')
       creditChartInstance.destroy()
     }
 
     const ctx = canvas.getContext('2d')
-    if (!ctx) return
+    if (!ctx) {
+      console.error('无法获取canvas context')
+      return
+    }
 
     // 准备图表数据
     const labels = creditHistory.value.map(record => {
@@ -775,6 +792,9 @@
       return `${date.getMonth() + 1}/${date.getDate()}`
     })
     const scores = creditHistory.value.map(record => record.score)
+
+    console.log('图表标签:', labels)
+    console.log('图表数据:', scores)
 
     creditChartInstance = new Chart(ctx, {
       type: 'line',
@@ -873,6 +893,8 @@
         },
       },
     })
+
+    console.log('信用评分图表初始化成功！', creditChartInstance)
   }
 
   // 获取账户详情
@@ -893,18 +915,26 @@
 
   // 获取信用评分历史
   const fetchCreditHistory = async () => {
+    console.log('开始获取信用评分历史...')
     isLoadingCreditHistory.value = true
     try {
+      console.log('调用信用评分历史API...')
       const response = await virtualAccountApi.getCreditHistory(30) // 获取最近30天的记录
+      console.log('信用评分历史API响应:', response)
+
       if (response.success && response.data) {
+        console.log('原始信用评分数据:', response.data)
         creditHistory.value = response.data.map((record: any) => ({
           date: record.date,
           score: parseFloat(record.score),
           changeType: record.changeType,
         }))
 
+        console.log('处理后的信用评分数据:', creditHistory.value)
+
         // 确保有足够的数据点进行图表展示
         if (creditHistory.value.length === 0) {
+          console.log('没有历史数据，使用默认数据')
           // 如果没有历史数据，创建一个默认数据点
           const currentScore = userStore.user?.creditScore || 60.0
           creditHistory.value = [
@@ -916,9 +946,12 @@
           ]
         }
 
+        console.log('准备初始化图表，数据长度:', creditHistory.value.length)
         // 在下一个tick初始化图表
         await nextTick()
         initCreditChart()
+      } else {
+        console.error('API响应格式错误或无数据:', response)
       }
     } catch (error) {
       console.error('获取信用评分历史失败:', error)
@@ -935,6 +968,7 @@
       initCreditChart()
     } finally {
       isLoadingCreditHistory.value = false
+      console.log('信用评分历史获取完成')
     }
   }
 
