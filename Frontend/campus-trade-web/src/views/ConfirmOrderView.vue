@@ -212,38 +212,112 @@
       </v-container>
     </v-main>
 
-    <!-- 新增：支付确认对话框 -->
-    <v-dialog v-model="paymentConfirm" max-width="500px">
+    <!-- 创建订单确认对话框 -->
+    <v-dialog v-model="orderConfirm" max-width="600px">
       <v-card>
         <v-card-title class="bg-pink-50 text-pink-800 py-3 d-flex align-center">
-          <span class="title-bar flex-grow-1 d-flex align-center">支付确认</span>
+          <span class="title-bar flex-grow-1">确认创建订单</span>
         </v-card-title>
-        <v-card-text class="py-1 px-4">
-          <div class="mb-3 text-body-1">
-            <p class="mt-2" style="font-size: 1.15rem !important; font-weight: 600">
-              当前余额:
-              <span class="font-bold" style="font-size: 1.15rem !important; font-weight: 600"
-                >¥{{ currentBalance.toFixed(2) }}</span
+        <v-card-text class="py-4 px-4">
+          <!-- 订单信息 -->
+          <div class="order-summary mb-4">
+            <h3 class="text-h6 mb-3">订单信息</h3>
+            <v-card outlined class="pa-3 mb-3">
+              <div class="d-flex align-center">
+                <v-img
+                  :src="orderItems[0]?.imageUrl || '/images/default-product.png'"
+                  :alt="orderItems[0]?.name"
+                  width="60"
+                  height="60"
+                  class="mr-3 rounded"
+                ></v-img>
+                <div class="flex-grow-1">
+                  <div class="text-subtitle-1 font-weight-medium">{{ orderItems[0]?.name }}</div>
+                  <div class="text-body-2 text-grey-600">{{ orderItems[0]?.specification }}</div>
+                  <div class="text-body-2">
+                    <span class="font-weight-medium">¥{{ orderItems[0]?.price.toFixed(2) }}</span>
+                    <span class="ml-2">x {{ orderItems[0]?.quantity }}</span>
+                  </div>
+                </div>
+              </div>
+            </v-card>
+          </div>
+
+          <!-- 收货地址 -->
+          <div class="address-summary mb-4">
+            <h3 class="text-h6 mb-2">收货地址</h3>
+            <v-card outlined class="pa-3">
+              <div>{{ address.recipient }} {{ address.phone }}</div>
+              <div class="text-grey-600">{{ address.location }}</div>
+            </v-card>
+          </div>
+
+          <!-- 费用明细 -->
+          <div class="cost-summary mb-4">
+            <h3 class="text-h6 mb-2">费用明细</h3>
+            <v-card outlined class="pa-3">
+              <div class="d-flex justify-space-between mb-1">
+                <span>商品金额</span>
+                <span>¥{{ totalAmount.toFixed(2) }}</span>
+              </div>
+              <div class="d-flex justify-space-between mb-1" v-if="discountAmount > 0">
+                <span>优惠金额</span>
+                <span class="text-green-600">-¥{{ discountAmount.toFixed(2) }}</span>
+              </div>
+              <div class="d-flex justify-space-between mb-1" v-if="shippingFee > 0">
+                <span>运费</span>
+                <span>¥{{ shippingFee.toFixed(2) }}</span>
+              </div>
+              <v-divider class="my-2"></v-divider>
+              <div class="d-flex justify-space-between font-weight-bold text-h6">
+                <span>实付款</span>
+                <span class="text-pink-600">¥{{ finalPayment.toFixed(2) }}</span>
+              </div>
+            </v-card>
+          </div>
+
+          <!-- 余额信息 -->
+          <div class="balance-info" v-if="!isBalanceLoading">
+            <h3 class="text-h6 mb-2">账户余额</h3>
+            <v-card outlined class="pa-3">
+              <div class="d-flex justify-space-between mb-1">
+                <span>当前余额</span>
+                <span>¥{{ currentBalance.toFixed(2) }}</span>
+              </div>
+              <div class="d-flex justify-space-between mb-1">
+                <span>支付后余额</span>
+                <span :class="remainingBalance >= 0 ? 'text-green-600' : 'text-red-600'">
+                  ¥{{ remainingBalance.toFixed(2) }}
+                </span>
+              </div>
+              <v-alert
+                v-if="remainingBalance < 0"
+                type="warning"
+                dense
+                class="mt-2 mb-0"
               >
-            </p>
-            <p class="mt-2" style="font-size: 1.15rem !important; font-weight: 600">
-              支付金额:
-              <span class="font-bold" style="font-size: 1.15rem !important; font-weight: 600"
-                >¥{{ finalPayment.toFixed(2) }}</span
-              >
-            </p>
-            <p class="mt-2" style="font-size: 1.15rem !important; font-weight: 600">
-              结后余额:
-              <span class="font-bold" style="font-size: 1.15rem !important; font-weight: 600"
-                >¥{{ (currentBalance - finalPayment).toFixed(2) }}</span
-              >
-            </p>
+                余额不足，请先充值
+              </v-alert>
+            </v-card>
+          </div>
+          
+          <!-- 余额加载中 -->
+          <div v-else class="text-center py-4">
+            <v-progress-circular indeterminate color="primary" size="24"></v-progress-circular>
+            <span class="ml-2">获取余额中...</span>
           </div>
         </v-card-text>
-        <v-card-actions class="py-2 px-4 justify-space-between">
-          <v-btn text @click="paymentConfirm = false" class="cancel-btn"> 取消 </v-btn>
-          <v-btn color="grey" @click="deferPayment" class="defer-btn"> 暂缓支付 </v-btn>
-          <v-btn color="pink" @click="confirmPayment" class="confirm-btn"> 确定支付 </v-btn>
+        
+        <v-card-actions class="py-3 px-4 justify-end">
+          <v-btn text @click="orderConfirm = false" class="mr-2"> 取消 </v-btn>
+          <v-btn 
+            color="pink" 
+            :disabled="isBalanceLoading || isCreatingOrder"
+            :loading="isCreatingOrder"
+            @click="confirmCreateOrder"
+          > 
+            确认创建订单
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -319,11 +393,13 @@
   import { ref, computed, watch, onMounted } from 'vue'
   import { useRoute, useRouter } from 'vue-router'
   import { useOrderStore } from '@/stores/order'
-  import type { CreateOrderRequest, OrderAddressResponse } from '@/services/api'
+  import { useVirtualAccountStore } from '@/stores/virtualaccount'
+  import type { OrderAddressResponse } from '@/services/api'
 
   const route = useRoute()
   const router = useRouter()
   const orderStore = useOrderStore()
+  const accountStore = useVirtualAccountStore()
 
   // 地址类型定义
   interface Address {
@@ -419,14 +495,39 @@
   // 对话框状态
   const editAddress = ref(false)
   const orderSubmitted = ref(false)
-  const paymentConfirm = ref(false)
+  const orderConfirm = ref(false)
   const insufficientBalance = ref(false)
-  const currentBalance = ref(5000.0)
+  
+  // 余额相关状态
+  const currentBalance = ref(0)
+  const isBalanceLoading = ref(false)
+  const isCreatingOrder = ref(false)
+
+  // 计算剩余余额
+  const remainingBalance = computed(() => currentBalance.value - finalPayment.value)
 
   // 保存地址
   const saveAddress = () => {
     address.value = { ...tempAddress.value }
     editAddress.value = false
+  }
+
+  // 加载账户余额
+  const loadBalance = async () => {
+    isBalanceLoading.value = true
+    try {
+      await accountStore.initializeAccount()
+      const result = await accountStore.fetchBalance()
+      if (result.success && result.data) {
+        currentBalance.value = result.data.balance
+      } else {
+        console.error('获取余额失败:', result.message)
+      }
+    } catch (error) {
+      console.error('加载余额异常:', error)
+    } finally {
+      isBalanceLoading.value = false
+    }
   }
 
   const submitOrder = async () => {
@@ -437,49 +538,34 @@
       return
     }
 
-    if (currentBalance.value >= finalPayment.value) {
-      paymentConfirm.value = true
-    } else {
-      insufficientBalance.value = true
-    }
+    // 加载余额并显示确认对话框
+    await loadBalance()
+    orderConfirm.value = true
   }
 
-  const confirmPayment = async () => {
-    paymentConfirm.value = false
+  const confirmCreateOrder = async () => {
+    isCreatingOrder.value = true
 
     try {
-      // 构建订单请求数据
-      const orderRequest: CreateOrderRequest = {
+      // 构建后端API需要的简化数据格式
+      const orderRequest = {
         productId: orderItems.value[0].id,
-        productName: orderItems.value[0].name,
-        productImage: orderItems.value[0].imageUrl,
-        specification: orderItems.value[0].specification,
-        price: orderItems.value[0].price,
-        quantity: orderItems.value[0].quantity,
-        address: {
-          recipient: address.value.recipient,
-          phone: address.value.phone,
-          location: address.value.location,
-        } as OrderAddressResponse,
-        totalAmount: totalAmount.value,
-        discountAmount: discountAmount.value,
-        shippingFee: shippingFee.value,
-        finalPayment: finalPayment.value,
+        finalPrice: finalPayment.value,
+        remarks: `收货地址：${address.value.recipient} ${address.value.phone} ${address.value.location}`
       }
 
       // 调用创建订单API
       const result = await orderStore.createOrder(orderRequest)
 
       if (result.success) {
-        // 支付成功，扣除余额
-        currentBalance.value -= finalPayment.value
-
+        orderConfirm.value = false
+        
         // 显示成功提示
         orderSubmitted.value = true
 
         // 3秒后跳转到订单页面
         setTimeout(() => {
-          router.push('/order')
+          router.push('/orders')
         }, 3000)
       } else {
         alert(`创建订单失败: ${result.message}`)
@@ -487,49 +573,8 @@
     } catch (error) {
       console.error('创建订单错误:', error)
       alert('创建订单失败，请重试')
-    }
-  }
-
-  const deferPayment = async () => {
-    paymentConfirm.value = false
-
-    try {
-      // 构建订单请求数据（不支付）
-      const orderRequest: CreateOrderRequest = {
-        productId: orderItems.value[0].id,
-        productName: orderItems.value[0].name,
-        productImage: orderItems.value[0].imageUrl,
-        specification: orderItems.value[0].specification,
-        price: orderItems.value[0].price,
-        quantity: orderItems.value[0].quantity,
-        address: {
-          recipient: address.value.recipient,
-          phone: address.value.phone,
-          location: address.value.location,
-        } as OrderAddressResponse,
-        totalAmount: totalAmount.value,
-        discountAmount: discountAmount.value,
-        shippingFee: shippingFee.value,
-        finalPayment: finalPayment.value,
-      }
-
-      // 调用创建订单API
-      const result = await orderStore.createOrder(orderRequest)
-
-      if (result.success) {
-        // 显示成功提示
-        orderSubmitted.value = true
-
-        // 3秒后跳转到订单页面
-        setTimeout(() => {
-          router.push('/order')
-        }, 3000)
-      } else {
-        alert(`创建订单失败: ${result.message}`)
-      }
-    } catch (error) {
-      console.error('创建订单错误:', error)
-      alert('创建订单失败，请重试')
+    } finally {
+      isCreatingOrder.value = false
     }
   }
 
@@ -751,5 +796,36 @@
     content: '🛒';
     font-size: 24px;
     color: #bdbdbd;
+  }
+
+  /* 订单确认对话框样式 */
+  .order-summary .v-card {
+    box-shadow: none !important;
+    border: 1px solid #e0e0e0;
+    min-height: auto;
+  }
+
+  .address-summary .v-card,
+  .cost-summary .v-card,
+  .balance-info .v-card {
+    box-shadow: none !important;
+    border: 1px solid #e0e0e0;
+    min-height: auto;
+  }
+
+  .text-pink-600 {
+    color: #e91e63 !important;
+  }
+
+  .text-green-600 {
+    color: #4caf50 !important;
+  }
+
+  .text-red-600 {
+    color: #f44336 !important;
+  }
+
+  .text-grey-600 {
+    color: #757575 !important;
   }
 </style>
