@@ -198,7 +198,6 @@
                       </div>
                       <div class="record-details">
                         <div class="record-time">{{ formatDate(record.createTime) }}</div>
-                        <div v-if="record.remarks" class="record-remarks">{{ record.remarks }}</div>
                       </div>
                     </div>
                   </v-list-item>
@@ -289,7 +288,7 @@
   const rechargeRecords = ref<RechargeRecord[]>([])
   const currentPage = ref(1)
   const totalPages = ref(1)
-  const pageSize = 10
+  const pageSize = 9  // 每页显示9条记录
 
   // 快速充值金额选项
   const quickAmounts = ref([10, 20, 50, 100, 200, 500])
@@ -412,14 +411,19 @@
     recordsLoading.value = true
 
     try {
+      console.log('开始加载充值记录，页码:', currentPage.value, '页大小:', pageSize)
       const result = await accountStore.getRechargeRecords(currentPage.value, pageSize)
+      console.log('充值记录API响应:', result)
 
       if (result.success && result.data) {
         rechargeRecords.value = result.data.records
         totalPages.value = result.data.totalPages
+        console.log('充值记录加载成功，记录数:', result.data.records.length, '总页数:', result.data.totalPages)
+      } else {
+        console.error('充值记录加载失败:', result.message)
       }
     } catch (error) {
-      console.error('加载充值记录失败:', error)
+      console.error('加载充值记录异常:', error)
     } finally {
       recordsLoading.value = false
     }
@@ -440,11 +444,14 @@
   // 获取状态颜色
   const getStatusColor = (status: string) => {
     switch (status) {
-      case '已完成':
+      case '成功':
+      case 'Completed':
         return 'green'
-      case '待支付':
+      case '处理中':
+      case 'Pending':
         return 'orange'
-      case '已失败':
+      case '失败':
+      case 'Failed':
         return 'red'
       default:
         return 'grey'
@@ -454,10 +461,13 @@
   // 获取状态文本
   const getStatusText = (status: string) => {
     switch (status) {
+      case '成功':
       case 'Completed':
         return '已完成'
+      case '处理中':
       case 'Pending':
         return '待支付'
+      case '失败':
       case 'Failed':
         return '已失败'
       default:

@@ -182,17 +182,23 @@ namespace CampusTrade.API.Services.Order
         public async Task<(List<RechargeResponse> Records, int TotalCount)> GetUserRechargeRecordsAsync(
             int userId, int pageIndex = 1, int pageSize = 10)
         {
+            _logger.LogInformation("获取用户充值记录，用户ID: {UserId}, 页码: {PageIndex}, 页大小: {PageSize}", 
+                userId, pageIndex, pageSize);
+
             var (records, totalCount) = await _rechargeRepository.GetByUserIdAsync(userId, pageIndex, pageSize);
 
             var responseList = records.Select(r => new RechargeResponse
             {
                 RechargeId = r.RechargeId,
                 Amount = r.Amount,
-                Method = RechargeMethod.Simulation, // 由于原实体没有PaymentMethod，暂时使用默认值
+                Method = RechargeMethod.Simulation, // 目前只支持模拟充值
                 Status = r.Status,
                 CreateTime = r.CreateTime,
-                ExpireTime = r.CreateTime.AddMinutes(RECHARGE_TIMEOUT_MINUTES) // 计算过期时间
+                ExpireTime = r.CompleteTime ?? r.CreateTime.AddMinutes(RECHARGE_TIMEOUT_MINUTES)
             }).ToList();
+
+            _logger.LogInformation("用户 {UserId} 充值记录查询完成，记录数: {Count}, 总数: {TotalCount}", 
+                userId, responseList.Count, totalCount);
 
             return (responseList, totalCount);
         }

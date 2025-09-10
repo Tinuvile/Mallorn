@@ -1189,7 +1189,6 @@ export interface RechargeRecord {
   status: string
   createTime: string
   completeTime?: string
-  remarks?: string
 }
 
 export interface UserRechargeRecordsResponse {

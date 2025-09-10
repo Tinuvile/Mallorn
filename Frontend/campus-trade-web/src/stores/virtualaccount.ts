@@ -249,9 +249,12 @@ export const useVirtualAccountStore = defineStore('virtualAccount', () => {
       isLoading.value = true
       error.value = null
 
+      console.log('调用充值记录API，页码:', pageIndex, '页大小:', pageSize)
       const response = await rechargeApi.getUserRechargeRecords(pageIndex, pageSize)
+      console.log('充值记录API原始响应:', response)
 
       if (response.success && response.data) {
+        console.log('充值记录数据:', response.data)
         return {
           success: true,
           message: response.message || '获取充值记录成功',
@@ -259,12 +262,14 @@ export const useVirtualAccountStore = defineStore('virtualAccount', () => {
         }
       }
 
+      console.warn('充值记录API失败:', response.message)
       return {
         success: false,
         message: response.message || '获取充值记录失败',
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : '获取充值记录失败，请重试'
+      console.error('获取充值记录异常:', err)
       error.value = message
       return { success: false, message }
     } finally {
