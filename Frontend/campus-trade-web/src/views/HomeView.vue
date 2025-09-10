@@ -313,9 +313,8 @@
                 :alt="product.name"
                 height="200"
                 rounded
-                cover
+                contain
                 loading="lazy"
-                style="object-position: center center"
               />
               <v-card-item>
                 <v-card-title class="text-center pt-2">
