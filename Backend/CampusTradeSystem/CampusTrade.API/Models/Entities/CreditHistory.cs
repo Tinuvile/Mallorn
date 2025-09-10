@@ -37,7 +37,7 @@ namespace CampusTrade.API.Models.Entities
         /// </summary>
         [Required]
         [Column("NEW_SCORE", TypeName = "NUMBER(3,1)")]
-        [Range(0.0, 100.0, ErrorMessage = "信用分数必须在0-100之间")]
+        [Range(0.0, 99.9, ErrorMessage = "信用分数必须在0-99.9之间")]
         public decimal NewScore { get; set; }
 
         /// <summary>

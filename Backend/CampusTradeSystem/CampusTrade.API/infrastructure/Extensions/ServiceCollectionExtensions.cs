@@ -7,6 +7,8 @@ using CampusTrade.API.Services.Background;
 using CampusTrade.API.Services.Email;
 using CampusTrade.API.Services.File;
 using CampusTrade.API.Services.Interfaces;
+using CampusTrade.API.Services.Message;
+using CampusTrade.API.Services.Notification;
 using CampusTrade.API.Services.Order;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
@@ -137,6 +139,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<Services.Notification.NotifiService>();
         services.AddScoped<Services.Notification.SignalRNotificationService>();
         services.AddScoped<Services.Notification.NotifiSenderService>();
+
+        // 注册消息已读状态服务
+        services.AddScoped<Services.Interfaces.IMessageReadStatusService, Services.Message.MessageReadStatusService>();
 
         // 注册邮件服务
         services.AddScoped<Services.Email.EmailService>();

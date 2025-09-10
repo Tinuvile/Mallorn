@@ -34,7 +34,7 @@ namespace CampusTrade.API.Models.Entities
         /// 范围：0-100，默认值60.0
         /// </summary>
         [Column("CREDIT_SCORE", TypeName = "NUMBER(3,1)")]
-        [Range(0, 100)]
+        [Range(0, 99.9)]
         public decimal CreditScore { get; set; } = 60.0m;
 
         /// <summary>

@@ -48,8 +48,9 @@ namespace CampusTrade.API.Services
                     // 获取原分数（用于日志）
                     var oldScore = user.CreditScore;
 
-                    // 限制在 0~130 范围内
-                    var newScore = Math.Clamp(user.CreditScore + delta, 0, 130);
+                    // 限制在 0~99.9 范围内（与数据库 NUMBER(3,1) 精度一致）
+                    // Oracle NUMBER(3,1) 支持的最大值是 99.9，不是 100.0
+                    var newScore = Math.Clamp(user.CreditScore + delta, 0, 99.9m);
 
                     user.CreditScore = newScore;
 
@@ -71,35 +72,77 @@ namespace CampusTrade.API.Services
                     _logger.LogInformation("用户 {UserId} 信用变更：{EventType} -> {Delta}，{OldScore} -> {NewScore}",
                         user.UserId, creditEvent.EventType, delta, oldScore, newScore);
 
-                    // 发送信用分变更通知
-                    try
+                    // 发送信用分变更通知 - 只在 autoSave=true 时同步发送，否则异步发送
+                    if (autoSave)
                     {
-                        var changeTypeDisplayName = GetCreditEventTypeDisplayName(creditEvent.EventType);
-                        var reason = GetCreditChangeReason(creditEvent.EventType, creditEvent.Description);
-                        var changeValueText = delta > 0 ? $"+{delta}" : delta.ToString();
-
-                        var notificationParams = new Dictionary<string, object>
+                        // 同步发送通知
+                        try
                         {
-                            ["changeType"] = changeTypeDisplayName,
-                            ["changeValue"] = changeValueText,
-                            ["newScore"] = newScore,
-                            ["reason"] = reason
-                        };
+                            var changeTypeDisplayName = GetCreditEventTypeDisplayName(creditEvent.EventType);
+                            var reason = GetCreditChangeReason(creditEvent.EventType, creditEvent.Description);
+                            var changeValueText = delta > 0 ? $"+{delta}" : delta.ToString();
 
-                        await _notificationService.CreateNotificationAsync(
-                            user.UserId,
-                            29, // 信用分变更模板ID
-                            notificationParams
-                        );
+                            var notificationParams = new Dictionary<string, object>
+                            {
+                                ["changeType"] = changeTypeDisplayName,
+                                ["changeValue"] = changeValueText,
+                                ["newScore"] = newScore,
+                                ["reason"] = reason
+                            };
 
-                        _logger.LogInformation("信用分变更通知已发送，用户ID: {UserId}，变更类型: {EventType}，变更值: {Delta}",
-                            user.UserId, creditEvent.EventType, delta);
+                            await _notificationService.CreateNotificationAsync(
+                                user.UserId,
+                                29, // 信用分变更模板ID
+                                notificationParams
+                            );
+
+                            _logger.LogInformation("信用分变更通知已发送，用户ID: {UserId}，变更类型: {EventType}，变更值: {Delta}",
+                                user.UserId, creditEvent.EventType, delta);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "发送信用分变更通知失败，用户ID: {UserId}，变更类型: {EventType}",
+                                user.UserId, creditEvent.EventType);
+                            // 注意：通知发送失败不应该影响信用分变更操作，所以这里只记录日志
+                        }
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        _logger.LogError(ex, "发送信用分变更通知失败，用户ID: {UserId}，变更类型: {EventType}",
-                            user.UserId, creditEvent.EventType);
-                        // 注意：通知发送失败不应该影响信用分变更操作，所以这里只记录日志
+                        // 异步发送通知，避免 DbContext 并发冲突
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                // 延迟确保主事务提交
+                                await Task.Delay(100);
+                                
+                                var changeTypeDisplayName = GetCreditEventTypeDisplayName(creditEvent.EventType);
+                                var reason = GetCreditChangeReason(creditEvent.EventType, creditEvent.Description);
+                                var changeValueText = delta > 0 ? $"+{delta}" : delta.ToString();
+
+                                var notificationParams = new Dictionary<string, object>
+                                {
+                                    ["changeType"] = changeTypeDisplayName,
+                                    ["changeValue"] = changeValueText,
+                                    ["newScore"] = newScore,
+                                    ["reason"] = reason
+                                };
+
+                                await _notificationService.CreateNotificationAsync(
+                                    user.UserId,
+                                    29, // 信用分变更模板ID
+                                    notificationParams
+                                );
+
+                                _logger.LogInformation("信用分变更通知已异步发送，用户ID: {UserId}，变更类型: {EventType}，变更值: {Delta}",
+                                    user.UserId, creditEvent.EventType, delta);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "异步发送信用分变更通知失败，用户ID: {UserId}，变更类型: {EventType}",
+                                    user.UserId, creditEvent.EventType);
+                            }
+                        });
                     }
 
                     // 成功执行，退出重试循环

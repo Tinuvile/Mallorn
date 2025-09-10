@@ -132,8 +132,20 @@ namespace CampusTrade.API.Services.Email
         /// <returns>发送结果</returns>
         private async Task<(bool Success, string ErrorMessage)> SendEmailNotificationAsync(EmailNotification emailNotification)
         {
+            // 检查当前连接是否已在事务中
+            var currentTransaction = _context.Database.CurrentTransaction;
+            var needOwnTransaction = currentTransaction == null;
+            
+            Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? transaction = null;
+            
             try
             {
+                // 只有在没有现有事务时才创建新事务
+                if (needOwnTransaction)
+                {
+                    transaction = await _context.Database.BeginTransactionAsync();
+                }
+                
                 // 保存邮件通知记录
                 _context.EmailNotifications.Add(emailNotification);
                 await _context.SaveChangesAsync();
@@ -144,9 +156,9 @@ namespace CampusTrade.API.Services.Email
                     emailNotification.Subject,
                     emailNotification.Content);
 
+                // 根据发送结果更新状态
                 if (sendResult.Success)
                 {
-                    // 发送成功，更新状态
                     emailNotification.SendStatus = EmailNotification.SendStatuses.Success;
                     emailNotification.SentAt = DateTime.UtcNow;
 
@@ -157,7 +169,6 @@ namespace CampusTrade.API.Services.Email
                 }
                 else
                 {
-                    // 发送失败，增加重试次数
                     emailNotification.RetryCount++;
                     emailNotification.SendStatus = emailNotification.RetryCount >= EmailNotification.MaxRetryCount
                         ? EmailNotification.SendStatuses.Failed
@@ -172,29 +183,76 @@ namespace CampusTrade.API.Services.Email
                                      $"Error: {sendResult.Message}");
                 }
 
+                // 保存状态更新
                 await _context.SaveChangesAsync();
+                
+                // 只有在创建了自己的事务时才提交
+                if (needOwnTransaction && transaction != null)
+                {
+                    await transaction.CommitAsync();
+                }
+                
                 return (sendResult.Success, sendResult.Message);
             }
             catch (Exception ex)
             {
+                // 只有在创建了自己的事务时才回滚
+                if (needOwnTransaction && transaction != null)
+                {
+                    await transaction.RollbackAsync();
+                }
+                
                 var errorMsg = $"邮件通知发送异常: {ex.Message}";
                 _logger.LogError(ex, $"邮件通知发送异常 - Email: {emailNotification.RecipientEmail}");
 
-                // 更新错误状态
-                try
-                {
-                    emailNotification.SendStatus = EmailNotification.SendStatuses.Failed;
-                    emailNotification.ErrorMessage = errorMsg;
-                    emailNotification.RetryCount++;
-                    emailNotification.LastAttemptTime = DateTime.UtcNow;
-                    await _context.SaveChangesAsync();
-                }
-                catch (Exception saveEx)
-                {
-                    _logger.LogError(saveEx, $"保存邮件通知错误状态失败 - Email: {emailNotification.RecipientEmail}");
-                }
+                // 在异常情况下，通过单独的方法处理错误状态保存
+                // 这样避免了在已经异常的上下文中再次使用可能有问题的DbContext
+                _ = Task.Run(async () => await TryUpdateFailedEmailStatusAsync(
+                    emailNotification.NotificationId, 
+                    emailNotification.RecipientEmail, 
+                    errorMsg));
 
                 return (false, errorMsg);
+            }
+            finally
+            {
+                // 只有在创建了自己的事务时才释放
+                if (needOwnTransaction && transaction != null)
+                {
+                    await transaction.DisposeAsync();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 异步尝试更新失败的邮件状态（独立任务，避免阻塞主流程）
+        /// </summary>
+        private async Task TryUpdateFailedEmailStatusAsync(int? notificationId, string recipientEmail, string errorMessage)
+        {
+            try
+            {
+                // 稍微延迟一下，等待可能的数据库操作完成
+                await Task.Delay(100);
+                
+                // 直接在当前context中查找并更新
+                var existingEmail = await _context.EmailNotifications
+                    .FirstOrDefaultAsync(en => en.NotificationId == notificationId && 
+                                              en.RecipientEmail == recipientEmail);
+                
+                if (existingEmail != null)
+                {
+                    existingEmail.SendStatus = EmailNotification.SendStatuses.Failed;
+                    existingEmail.ErrorMessage = errorMessage;
+                    existingEmail.RetryCount++;
+                    existingEmail.LastAttemptTime = DateTime.UtcNow;
+                    
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation($"已更新邮件通知失败状态 - Email: {recipientEmail}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"更新邮件通知失败状态时发生错误 - Email: {recipientEmail}");
             }
         }
 

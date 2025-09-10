@@ -427,6 +427,42 @@ namespace CampusTrade.API.Controllers
         }
 
         /// <summary>
+        /// 获取用户未读消息数量
+        /// </summary>
+        /// <param name="userId">用户ID</param>
+        /// <param name="category">消息分类：system, bargain, reply, swap</param>
+        /// <returns>未读消息数量</returns>
+        [HttpGet("user/{userId}/unread-count")]
+        public async Task<IActionResult> GetUnreadMessageCount(
+            int userId,
+            [FromQuery] string? category = null)
+        {
+            try
+            {
+                var count = await _notifiService.GetUnreadMessageCountAsync(userId, category);
+                return Ok(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        unreadCount = count,
+                        category = category ?? "all"
+                    },
+                    message = "获取未读消息数量成功"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取用户未读消息数量时发生异常");
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "系统异常，请稍后重试"
+                });
+            }
+        }
+
+        /// <summary>
         /// 生成系统优化建议
         /// </summary>
         private List<string> GenerateRecommendations(

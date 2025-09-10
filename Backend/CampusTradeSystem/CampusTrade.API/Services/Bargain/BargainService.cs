@@ -229,7 +229,8 @@ namespace CampusTrade.API.Services.Bargain
                             order.BuyerId,
                             16, // 卖家反报价通知模板ID
                             notificationParams,
-                            order.OrderId);
+                            order.OrderId
+                        );
                     }
                     catch (Exception ex)
                     {
