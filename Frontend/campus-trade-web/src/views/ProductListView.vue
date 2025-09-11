@@ -276,7 +276,7 @@
   const selectedCategoryId = ref(null)
   const rootCategories = ref([])
   const breadcrumbs = ref([])
-  const sortBy = ref('publishTime_desc')
+  const sortBy = ref('viewCount_desc')
 
   // 筛选条件
   const filters = reactive({
@@ -292,10 +292,10 @@
 
   // 排序选项
   const sortOptions = [
+    { title: '浏览量最高', value: 'viewCount_desc' },
     { title: '最新发布', value: 'publishTime_desc' },
     { title: '价格从低到高', value: 'price_asc' },
     { title: '价格从高到低', value: 'price_desc' },
-    { title: '浏览量最高', value: 'viewCount_desc' },
   ]
 
   // 状态选项
@@ -311,6 +311,29 @@
     try {
       const [sortField, sortOrder] = sortBy.value.split('_')
 
+      // 转换排序字段为后端期望的枚举值
+      const getSortByEnum = field => {
+        switch (field) {
+          case 'price':
+            return 'Price'
+          case 'publishTime':
+            return 'PublishTime'
+          case 'viewCount':
+            return 'ViewCount'
+          case 'title':
+            return 'Title'
+          case 'status':
+            return 'Status'
+          default:
+            return 'PublishTime'
+        }
+      }
+
+      // 转换排序方向为后端期望的枚举值
+      const getSortDirectionEnum = order => {
+        return order === 'asc' ? 'Ascending' : 'Descending'
+      }
+
       const queryParams = {
         pageIndex: currentPage.value,
         pageSize: pageSize.value,
@@ -318,8 +341,8 @@
         minPrice: filters.minPrice ? parseFloat(filters.minPrice) : undefined,
         maxPrice: filters.maxPrice ? parseFloat(filters.maxPrice) : undefined,
         status: filters.status,
-        sortBy: sortField,
-        sortOrder: sortOrder,
+        sort_by: getSortByEnum(sortField),
+        sort_direction: getSortDirectionEnum(sortOrder),
       }
 
       // console.log('商品查询参数:', queryParams)
