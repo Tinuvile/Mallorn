@@ -1,6 +1,6 @@
+using CampusTrade.API.Infrastructure.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
-using CampusTrade.API.Infrastructure.Utils;
 
 namespace CampusTrade.API.Infrastructure.Hubs
 {

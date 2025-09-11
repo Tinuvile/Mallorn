@@ -1,6 +1,6 @@
 using CampusTrade.API.Data;
-using CampusTrade.API.Infrastructure.Utils;
 using CampusTrade.API.Infrastructure.Hubs;
+using CampusTrade.API.Infrastructure.Utils;
 using CampusTrade.API.Infrastructure.Utils.Notificate;
 using CampusTrade.API.Models.Entities;
 using Microsoft.AspNetCore.SignalR;
