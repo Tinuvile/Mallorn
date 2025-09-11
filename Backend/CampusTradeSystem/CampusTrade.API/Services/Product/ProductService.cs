@@ -411,6 +411,9 @@ public class ProductService : IProductService
                     var categoryIds = new List<int> { queryDto.CategoryId.Value };
                     await GetAllSubCategoryIds(queryDto.CategoryId.Value, categoryIds);
 
+                    // _logger.LogInformation("分类查询: CategoryId={CategoryId}, 找到分类数量={Count}, SortBy={SortBy}, SortDirection={SortDirection}", 
+                    //     queryDto.CategoryId.Value, categoryIds.Count, queryDto.SortBy, queryDto.SortDirection);
+
                     // 如果有子分类，需要分别查询每个分类然后合并
                     if (categoryIds.Count > 1)
                     {
@@ -428,8 +431,8 @@ public class ProductService : IProductService
                                 queryDto.MinPrice,
                                 queryDto.MaxPrice,
                                 queryDto.UserId,
-                                queryDto.SortBy?.ToString(),
-                                queryDto.SortDirection?.ToString()
+                                null, // 排序在内存中统一处理，避免各子查询单独排序
+                                null
                             );
 
                             allProducts.AddRange(categoryProducts);

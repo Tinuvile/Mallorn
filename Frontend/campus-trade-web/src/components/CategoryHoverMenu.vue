@@ -61,7 +61,7 @@
           >
             <div class="subcategory-title" @click="onCategoryClick(subCategory)">
               {{ subCategory.name }}
-              <span class="product-count">({{ subCategory.product_count }})</span>
+              <span class="product-count">({{ subCategory.active_product_count }})</span>
             </div>
 
             <!-- 三级标签 -->
@@ -129,7 +129,7 @@
 
   // Computed
   const getTotalProductCount = (category: CategoryItem): number => {
-    let total = category.product_count || 0
+    let total = category.active_product_count || 0
     if (category.children) {
       total += category.children.reduce((sum, child) => sum + getTotalProductCount(child), 0)
     }

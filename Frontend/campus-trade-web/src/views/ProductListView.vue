@@ -69,7 +69,7 @@
                       class="mr-2 mb-2"
                       @click="selectCategory(category.category_id)"
                     >
-                      {{ category.name }} ({{ category.product_count }})
+                      {{ category.name }} ({{ category.active_product_count }})
                     </v-chip>
                   </div>
                 </div>
@@ -349,9 +349,9 @@
         queryParams.categoryId = selectedCategoryId.value
       }
 
-      console.log('商品查询参数:', queryParams)
-      console.log('当前排序设置:', sortBy.value)
-      console.log('选中的分类ID:', selectedCategoryId.value)
+      // console.log('商品查询参数:', queryParams)
+      // console.log('当前排序设置:', sortBy.value)
+      // console.log('选中的分类ID:', selectedCategoryId.value)
 
       let response
       if (searchKeyword.value.trim()) {
