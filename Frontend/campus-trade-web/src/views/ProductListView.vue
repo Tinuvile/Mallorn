@@ -337,12 +337,16 @@
       const queryParams = {
         pageIndex: currentPage.value,
         pageSize: pageSize.value,
-        categoryId: selectedCategoryId.value,
         minPrice: filters.minPrice ? parseFloat(filters.minPrice) : undefined,
         maxPrice: filters.maxPrice ? parseFloat(filters.maxPrice) : undefined,
         status: filters.status,
         sort_by: getSortByEnum(sortField),
         sort_direction: getSortDirectionEnum(sortOrder),
+      }
+
+      // 只有选择了具体分类才传递 categoryId
+      if (selectedCategoryId.value) {
+        queryParams.categoryId = selectedCategoryId.value
       }
 
       // console.log('商品查询参数:', queryParams)
@@ -351,12 +355,18 @@
       let response
       if (searchKeyword.value.trim()) {
         // 使用搜索接口
-        response = await productApi.searchProducts({
+        const searchParams = {
           keyword: searchKeyword.value.trim(),
           pageIndex: currentPage.value,
           pageSize: pageSize.value,
-          categoryId: selectedCategoryId.value,
-        })
+        }
+
+        // 只有选择了具体分类才传递 categoryId 进行分类内搜索
+        if (selectedCategoryId.value) {
+          searchParams.categoryId = selectedCategoryId.value
+        }
+
+        response = await productApi.searchProducts(searchParams)
       } else if (selectedCategoryId.value) {
         // 检查是否为一级分类（有子分类的分类）
         const selectedCategory = findCategoryById(rootCategories.value, selectedCategoryId.value)
