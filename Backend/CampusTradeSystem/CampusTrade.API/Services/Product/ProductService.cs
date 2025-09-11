@@ -1323,8 +1323,19 @@ public class ProductService : IProductService
 
             if (includeProductCount)
             {
-                productCount = await _unitOfWork.Categories.GetProductCountByCategoryAsync(category.CategoryId);
-                activeProductCount = await _unitOfWork.Categories.GetActiveProductCountByCategoryAsync(category.CategoryId);
+                // 获取该分类及其所有子分类的商品数量，与商品列表页面保持一致
+                var categoryIds = new List<int> { category.CategoryId };
+                GetAllSubCategoryIds(category, categoryIds);
+
+                // 统计所有分类（包含子分类）的商品数量
+                productCount = 0;
+                activeProductCount = 0;
+
+                foreach (var catId in categoryIds)
+                {
+                    productCount += await _unitOfWork.Categories.GetProductCountByCategoryAsync(catId);
+                    activeProductCount += await _unitOfWork.Categories.GetActiveProductCountByCategoryAsync(catId);
+                }
             }
 
             var level = GetCategoryLevel(category);

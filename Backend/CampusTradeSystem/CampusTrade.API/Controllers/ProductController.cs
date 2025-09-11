@@ -178,6 +178,12 @@ public class ProductController : ControllerBase
     {
         try
         {
+            // 记录接收到的参数，用于调试
+            _logger.LogDebug("接收到查询参数: PageIndex={PageIndex}, PageSize={PageSize}, CategoryId={CategoryId}, " +
+                           "Keyword={Keyword}, Status={Status}, SortBy={SortBy}, SortDirection={SortDirection}",
+                           queryDto.PageIndex, queryDto.PageSize, queryDto.CategoryId,
+                           queryDto.Keyword, queryDto.Status, queryDto.SortBy, queryDto.SortDirection);
+
             var userId = GetCurrentUserId();
             var result = await _productService.GetProductsAsync(queryDto, userId);
             return Ok(result);

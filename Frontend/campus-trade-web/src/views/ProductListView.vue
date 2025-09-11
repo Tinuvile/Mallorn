@@ -340,8 +340,8 @@
         minPrice: filters.minPrice ? parseFloat(filters.minPrice) : undefined,
         maxPrice: filters.maxPrice ? parseFloat(filters.maxPrice) : undefined,
         status: filters.status,
-        sort_by: getSortByEnum(sortField),
-        sort_direction: getSortDirectionEnum(sortOrder),
+        sortBy: getSortByEnum(sortField),
+        sortDirection: getSortDirectionEnum(sortOrder),
       }
 
       // 只有选择了具体分类才传递 categoryId
@@ -349,9 +349,9 @@
         queryParams.categoryId = selectedCategoryId.value
       }
 
-      // console.log('商品查询参数:', queryParams)
-      // console.log('当前排序设置:', sortBy.value)
-      // console.log('选中的分类ID:', selectedCategoryId.value)
+      console.log('商品查询参数:', queryParams)
+      console.log('当前排序设置:', sortBy.value)
+      console.log('选中的分类ID:', selectedCategoryId.value)
 
       let response
       if (searchKeyword.value.trim()) {
