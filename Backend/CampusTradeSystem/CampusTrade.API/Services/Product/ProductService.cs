@@ -398,16 +398,104 @@ public class ProductService : IProductService
     {
         try
         {
-            var (products, totalCount) = await _unitOfWork.Products.GetPagedProductsAsync(
-                queryDto.PageIndex,
-                queryDto.PageSize,
-                queryDto.CategoryId,
-                queryDto.Status,
-                queryDto.Keyword,
-                queryDto.MinPrice,
-                queryDto.MaxPrice,
-                queryDto.UserId
-            );
+            IEnumerable<Models.Entities.Product> products;
+            int totalCount;
+
+            // 如果指定了分类，检查是否需要包含子分类
+            if (queryDto.CategoryId.HasValue)
+            {
+                var category = await _unitOfWork.Categories.GetByPrimaryKeyAsync(queryDto.CategoryId.Value);
+                if (category != null)
+                {
+                    // 获取该分类及其所有子分类的ID
+                    var categoryIds = new List<int> { queryDto.CategoryId.Value };
+                    await GetAllSubCategoryIds(queryDto.CategoryId.Value, categoryIds);
+
+                    // 如果有子分类，需要分别查询每个分类然后合并
+                    if (categoryIds.Count > 1)
+                    {
+                        var allProducts = new List<Models.Entities.Product>();
+                        var allCount = 0;
+
+                        foreach (var catId in categoryIds)
+                        {
+                            var (categoryProducts, count) = await _unitOfWork.Products.GetPagedProductsAsync(
+                                1, // 获取所有数据
+                                int.MaxValue,
+                                catId,
+                                queryDto.Status,
+                                queryDto.Keyword,
+                                queryDto.MinPrice,
+                                queryDto.MaxPrice,
+                                queryDto.UserId,
+                                queryDto.SortBy?.ToString(),
+                                queryDto.SortDirection?.ToString()
+                            );
+
+                            allProducts.AddRange(categoryProducts);
+                            allCount += count;
+                        }
+
+                        // 去重、排序和分页
+                        var distinctProducts = allProducts
+                            .GroupBy(p => p.ProductId)
+                            .Select(g => g.First())
+                            .ToList();
+
+                        // 手动应用排序（因为合并了多个结果）
+                        distinctProducts = ApplyManualSorting(distinctProducts, queryDto.SortBy, queryDto.SortDirection);
+
+                        totalCount = distinctProducts.Count;
+                        var pagedProducts = distinctProducts
+                            .Skip((queryDto.PageIndex - 1) * queryDto.PageSize)
+                            .Take(queryDto.PageSize);
+
+                        products = pagedProducts;
+                    }
+                    else
+                    {
+                        // 只有一个分类，直接查询
+                        var (singleProducts, singleCount) = await _unitOfWork.Products.GetPagedProductsAsync(
+                            queryDto.PageIndex,
+                            queryDto.PageSize,
+                            queryDto.CategoryId,
+                            queryDto.Status,
+                            queryDto.Keyword,
+                            queryDto.MinPrice,
+                            queryDto.MaxPrice,
+                            queryDto.UserId,
+                            queryDto.SortBy?.ToString(),
+                            queryDto.SortDirection?.ToString()
+                        );
+                        products = singleProducts;
+                        totalCount = singleCount;
+                    }
+                }
+                else
+                {
+                    // 分类不存在
+                    products = new List<Models.Entities.Product>();
+                    totalCount = 0;
+                }
+            }
+            else
+            {
+                // 没有指定分类，查询所有商品
+                var (allProducts, allCount) = await _unitOfWork.Products.GetPagedProductsAsync(
+                    queryDto.PageIndex,
+                    queryDto.PageSize,
+                    null, // 没有分类限制
+                    queryDto.Status,
+                    queryDto.Keyword,
+                    queryDto.MinPrice,
+                    queryDto.MaxPrice,
+                    queryDto.UserId,
+                    queryDto.SortBy?.ToString(),
+                    queryDto.SortDirection?.ToString()
+                );
+                products = allProducts;
+                totalCount = allCount;
+            }
 
             var productDtos = await ConvertToProductListDtosAsync(products, currentUserId);
 
@@ -423,8 +511,8 @@ public class ProductService : IProductService
                 productDtos = productDtos.Where(p => p.ViewCount >= queryDto.MinViewCount.Value).ToList();
             }
 
-            // 应用排序
-            productDtos = ApplySorting(productDtos, queryDto.SortBy, queryDto.SortDirection).ToList();
+            // 排序已在Repository层处理，无需在Service层重复排序
+            // productDtos = ApplySorting(productDtos, queryDto.SortBy, queryDto.SortDirection).ToList();
 
             var totalPages = (int)Math.Ceiling((double)totalCount / queryDto.PageSize);
 
@@ -688,7 +776,8 @@ public class ProductService : IProductService
                     int.MaxValue, // 页大小，获取该分类下的所有商品
                     catId,
                     Models.Entities.Product.ProductStatus.OnSale,
-                    null, null, null, null
+                    null, null, null, null,
+                    null, null // 排序参数在这里设为null，因为会在内存中重新排序
                 );
 
                 allProducts.AddRange(categoryProducts);
@@ -1341,6 +1430,50 @@ public class ProductService : IProductService
             categoryIds.Add(child.CategoryId);
             GetAllSubCategoryIds(child, categoryIds);
         }
+    }
+
+    /// <summary>
+    /// 异步获取所有子分类ID（通过分类ID）
+    /// </summary>
+    private async Task GetAllSubCategoryIds(int categoryId, List<int> categoryIds)
+    {
+        var childCategories = await _unitOfWork.Categories.GetSubCategoriesAsync(categoryId);
+        foreach (var child in childCategories)
+        {
+            categoryIds.Add(child.CategoryId);
+            await GetAllSubCategoryIds(child.CategoryId, categoryIds);
+        }
+    }
+
+    /// <summary>
+    /// 手动应用排序（用于合并结果后的内存排序）
+    /// </summary>
+    private List<Models.Entities.Product> ApplyManualSorting(
+        List<Models.Entities.Product> products,
+        ProductSortBy? sortBy,
+        SortDirection? sortDirection)
+    {
+        var isDescending = sortDirection == SortDirection.Descending;
+
+        return sortBy switch
+        {
+            ProductSortBy.PublishTime => isDescending
+                ? products.OrderByDescending(p => p.PublishTime).ToList()
+                : products.OrderBy(p => p.PublishTime).ToList(),
+            ProductSortBy.Price => isDescending
+                ? products.OrderByDescending(p => p.BasePrice).ToList()
+                : products.OrderBy(p => p.BasePrice).ToList(),
+            ProductSortBy.ViewCount => isDescending
+                ? products.OrderByDescending(p => p.ViewCount).ToList()
+                : products.OrderBy(p => p.ViewCount).ToList(),
+            ProductSortBy.Title => isDescending
+                ? products.OrderByDescending(p => p.Title).ToList()
+                : products.OrderBy(p => p.Title).ToList(),
+            ProductSortBy.Status => isDescending
+                ? products.OrderByDescending(p => p.Status).ToList()
+                : products.OrderBy(p => p.Status).ToList(),
+            _ => products.OrderByDescending(p => p.PublishTime).ToList() // 默认按发布时间降序
+        };
     }
 
     /// <summary>

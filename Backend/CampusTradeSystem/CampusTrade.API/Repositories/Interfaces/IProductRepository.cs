@@ -55,7 +55,9 @@ namespace CampusTrade.API.Repositories.Interfaces
             string? keyword = null,
             decimal? minPrice = null,
             decimal? maxPrice = null,
-            int? userId = null);
+            int? userId = null,
+            string? sortBy = null,
+            string? sortDirection = null);
         /// <summary>
         /// 获取即将自动下架的商品
         /// </summary>
