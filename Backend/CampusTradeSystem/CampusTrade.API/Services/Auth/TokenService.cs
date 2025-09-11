@@ -9,6 +9,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
+using CampusTrade.API.infrastructure.Utils;
 
 namespace CampusTrade.API.Services.Auth;
 
@@ -49,7 +50,7 @@ public class TokenService : ITokenService
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.Add(_jwtOptions.AccessTokenExpiration),
+                Expires = TimeHelper.Now.Add(_jwtOptions.AccessTokenExpiration),
                 Issuer = _jwtOptions.Issuer,
                 Audience = _jwtOptions.Audience,
                 SigningCredentials = credentials
@@ -74,7 +75,7 @@ public class TokenService : ITokenService
         {
             // 生成唯一的刷新令牌
             var tokenValue = SecurityHelper.GenerateRandomToken(64);
-            var expiryDate = DateTime.UtcNow.Add(_jwtOptions.RefreshTokenExpiration);
+            var expiryDate = TimeHelper.Now.Add(_jwtOptions.RefreshTokenExpiration);
 
             var refreshToken = new RefreshToken
             {
@@ -106,7 +107,7 @@ public class TokenService : ITokenService
         {
             // 简化设备数量限制：只保留最新的活跃Token
             var activeTokens = await _unitOfWork.RefreshTokens.FindAsync(
-                rt => rt.UserId == user.UserId && rt.IsRevoked == 0 && rt.ExpiryDate > DateTime.UtcNow);
+                rt => rt.UserId == user.UserId && rt.IsRevoked == 0 && rt.ExpiryDate > TimeHelper.Now);
 
             var tokensToRevoke = activeTokens
                 .OrderByDescending(rt => rt.LastUsedAt ?? rt.CreatedAt)
@@ -134,7 +135,7 @@ public class TokenService : ITokenService
                 AccessToken = accessToken,
                 RefreshToken = refreshToken.Token,
                 ExpiresIn = (int)_jwtOptions.AccessTokenExpiration.TotalSeconds,
-                ExpiresAt = DateTime.UtcNow.Add(_jwtOptions.AccessTokenExpiration),
+                ExpiresAt = TimeHelper.Now.Add(_jwtOptions.AccessTokenExpiration),
                 RefreshExpiresAt = refreshToken.ExpiryDate,
                 UserId = user.UserId,
                 Username = user.Username ?? user.Email,
@@ -354,7 +355,7 @@ public class TokenService : ITokenService
         try
         {
             return await _unitOfWork.RefreshTokens.FindAsync(
-                rt => rt.UserId == userId && rt.IsRevoked == 0 && rt.ExpiryDate > DateTime.UtcNow);
+                rt => rt.UserId == userId && rt.IsRevoked == 0 && rt.ExpiryDate > TimeHelper.Now);
         }
         catch (Exception ex)
         {
@@ -405,7 +406,7 @@ public class TokenService : ITokenService
         try
         {
             var cacheKey = $"blacklist:{jti}";
-            var timeToLive = expiration - DateTime.UtcNow;
+            var timeToLive = expiration - TimeHelper.Now;
 
             if (timeToLive > TimeSpan.Zero)
             {

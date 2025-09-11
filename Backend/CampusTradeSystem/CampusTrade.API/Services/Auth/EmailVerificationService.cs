@@ -9,6 +9,7 @@ using CampusTrade.API.Services.Email;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using CampusTrade.API.infrastructure.Utils;
 
 namespace CampusTrade.API.Services.Auth
 {
@@ -51,7 +52,7 @@ namespace CampusTrade.API.Services.Auth
 
                 // 生成安全的6位数字验证码
                 var verificationCode = VerificationCodeGenerator.GenerateNumericCode(6);
-                var expireTime = DateTime.Now.AddMinutes(_options.CodeExpirationMinutes);
+                var expireTime = TimeHelper.AddMinutes(_options.CodeExpirationMinutes);
 
                 // 保存验证码记录
                 var verification = new EmailVerification
@@ -61,7 +62,7 @@ namespace CampusTrade.API.Services.Auth
                     VerificationCode = verificationCode,
                     ExpireTime = expireTime,
                     IsUsed = 0, // 未使用
-                    CreatedAt = DateTime.Now
+                    CreatedAt = TimeHelper.Now
                 };
                 await _unitOfWork.EmailVerifications.AddAsync(verification);
                 await _unitOfWork.SaveChangesAsync();
@@ -94,7 +95,7 @@ namespace CampusTrade.API.Services.Auth
 
                 // 生成安全的64位随机令牌
                 var token = VerificationCodeGenerator.GenerateSecureToken();
-                var expireTime = DateTime.Now.AddHours(_options.TokenExpirationHours);
+                var expireTime = TimeHelper.AddHours(_options.TokenExpirationHours);
                 var verifyUrl = _options.GetVerifyEmailUrl(token);
 
                 // 保存令牌记录
@@ -105,7 +106,7 @@ namespace CampusTrade.API.Services.Auth
                     Token = token,
                     ExpireTime = expireTime,
                     IsUsed = 0, // 未使用
-                    CreatedAt = DateTime.Now
+                    CreatedAt = TimeHelper.Now
                 };
                 await _unitOfWork.EmailVerifications.AddAsync(verification);
                 await _unitOfWork.SaveChangesAsync();

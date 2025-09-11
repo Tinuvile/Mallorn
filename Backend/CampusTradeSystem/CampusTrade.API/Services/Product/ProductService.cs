@@ -5,6 +5,7 @@ using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.File;
 using CampusTrade.API.Services.Interfaces;
 using CampusTrade.API.Services.Notification;
+using CampusTrade.API.infrastructure.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -97,9 +98,9 @@ public class ProductService : IProductService
                 Title = createDto.Title,
                 Description = createDto.Description,
                 BasePrice = createDto.BasePrice,
-                PublishTime = DateTime.Now,
+                PublishTime = TimeHelper.Now,
                 Status = Models.Entities.Product.ProductStatus.OnSale,
-                AutoRemoveTime = createDto.AutoRemoveTime ?? DateTime.Now.AddDays(DEFAULT_AUTO_REMOVE_DAYS),
+                AutoRemoveTime = createDto.AutoRemoveTime ?? TimeHelper.AddDays(DEFAULT_AUTO_REMOVE_DAYS),
                 ViewCount = 0
             };
 
@@ -655,7 +656,7 @@ public class ProductService : IProductService
             {
                 RootCategories = categoryDtos,
                 TotalCount = CountAllCategories(categories),
-                LastUpdateTime = DateTime.Now
+                LastUpdateTime = TimeHelper.Now
             };
 
             return ApiResponse<CategoryTreeDto>.CreateSuccess(result);
@@ -931,7 +932,7 @@ public class ProductService : IProductService
     {
         try
         {
-            var targetDate = DateTime.Now.AddDays(days);
+            var targetDate = TimeHelper.AddDays(days);
             var products = await _unitOfWork.Products.GetAutoRemoveProductsAsync(targetDate);
 
             // 指定了用户ID的筛选
@@ -1015,7 +1016,7 @@ public class ProductService : IProductService
             }
             else
             {
-                product.AutoRemoveTime = DateTime.Now.AddDays(DEFAULT_AUTO_REMOVE_DAYS + extendDays);
+                product.AutoRemoveTime = TimeHelper.AddDays(DEFAULT_AUTO_REMOVE_DAYS + extendDays);
             }
 
             _unitOfWork.Products.Update(product);
@@ -1053,7 +1054,7 @@ public class ProductService : IProductService
             }
 
             // 验证设置的下架时间不能早于当前时间
-            if (autoRemoveTime.HasValue && autoRemoveTime.Value <= DateTime.Now)
+            if (autoRemoveTime.HasValue && autoRemoveTime.Value <= TimeHelper.Now)
             {
                 return ApiResponse.CreateError("下架时间不能早于当前时间");
             }
@@ -1091,7 +1092,7 @@ public class ProductService : IProductService
         try
         {
             // 获取应该下架的商品（当前时间之前）
-            var productsToRemove = await _unitOfWork.Products.GetAutoRemoveProductsAsync(DateTime.Now);
+            var productsToRemove = await _unitOfWork.Products.GetAutoRemoveProductsAsync(TimeHelper.Now);
 
             // 只处理在售商品
             var activeProducts = productsToRemove.Where(p => p.Status == Models.Entities.Product.ProductStatus.OnSale).ToList();
@@ -1106,14 +1107,14 @@ public class ProductService : IProductService
                     if (product.ViewCount >= HIGH_VIEW_THRESHOLD)
                     {
                         // 检查是否已经延期过（通过发布时间和下架时间的差值判断）
-                        var daysBetween = (product.AutoRemoveTime ?? DateTime.Now).Subtract(product.PublishTime).Days;
+                        var daysBetween = (product.AutoRemoveTime ?? TimeHelper.Now).Subtract(product.PublishTime).Days;
 
                         // 如果时间差接近默认天数，说明还没有延期过
                         if (daysBetween <= DEFAULT_AUTO_REMOVE_DAYS + 2) // 允许2天的误差
                         {
                             // 延期10天
                             product.AutoRemoveTime = product.AutoRemoveTime?.AddDays(HIGH_VIEW_EXTEND_DAYS)
-                                                   ?? DateTime.Now.AddDays(HIGH_VIEW_EXTEND_DAYS);
+                                                   ?? TimeHelper.AddDays(HIGH_VIEW_EXTEND_DAYS);
                             _unitOfWork.Products.Update(product);
                             extendedCount++;
 
@@ -1231,7 +1232,7 @@ public class ProductService : IProductService
                 MainImageUrl = mainImage?.ImageUrl,
                 ThumbnailUrl = mainImage != null ? _fileService.GetThumbnailFileName(mainImage.ImageUrl) : null,
 
-                DaysUntilAutoRemove = product.AutoRemoveTime?.Subtract(DateTime.Now).Days,
+                DaysUntilAutoRemove = product.AutoRemoveTime?.Subtract(TimeHelper.Now).Days,
                 IsPopular = product.ViewCount >= HIGH_VIEW_THRESHOLD,
                 Tags = GetProductTags(product), // 获取商品标签
                 User = new ProductUserDto
@@ -1298,7 +1299,7 @@ public class ProductService : IProductService
 
 
         // 根据发布时间添加新品标签
-        if (product.PublishTime > DateTime.Now.AddDays(-3))
+        if (product.PublishTime > TimeHelper.AddDays(-3))
         {
             tags.Add("新品");
         }
@@ -1527,7 +1528,7 @@ public class ProductService : IProductService
             UserId = productEntity.UserId,
             CategoryId = productEntity.CategoryId,
 
-            DaysUntilAutoRemove = productEntity.AutoRemoveTime?.Subtract(DateTime.Now).Days,
+            DaysUntilAutoRemove = productEntity.AutoRemoveTime?.Subtract(TimeHelper.Now).Days,
             IsOwnProduct = currentUserId == productEntity.UserId,
             User = new ProductUserDto
             {

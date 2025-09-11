@@ -1,6 +1,7 @@
 using System.IO;
 using CampusTrade.API.Options;
 using Microsoft.Extensions.Options;
+using CampusTrade.API.infrastructure.Utils;
 
 namespace CampusTrade.API.Services.File
 {
@@ -217,7 +218,7 @@ namespace CampusTrade.API.Services.File
         public string GenerateUniqueFileName(string originalFileName)
         {
             var extension = Path.GetExtension(originalFileName);
-            var timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
+            var timestamp = TimeHelper.Now.ToString("yyyyMMddHHmmss");
             var guid = Guid.NewGuid().ToString("N")[..8];
             return $"{timestamp}_{guid}{extension}";
         }

@@ -5,6 +5,7 @@ using CampusTrade.API.Models.Entities;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using CampusTrade.API.infrastructure.Utils;
 
 namespace CampusTrade.API.Services.Notification
 {
@@ -41,8 +42,8 @@ namespace CampusTrade.API.Services.Notification
             {
                 NotificationId = notification.NotificationId,
                 SendStatus = SignalRNotification.SendStatuses.Pending,
-                CreatedAt = DateTime.UtcNow,
-                LastAttemptTime = DateTime.UtcNow
+                CreatedAt = TimeHelper.Now,
+                LastAttemptTime = TimeHelper.Now
             };
 
             try
@@ -62,7 +63,7 @@ namespace CampusTrade.API.Services.Notification
                 {
                     // 发送成功，更新状态
                     signalRNotification.SendStatus = SignalRNotification.SendStatuses.Success;
-                    signalRNotification.SentAt = DateTime.UtcNow;
+                    signalRNotification.SentAt = TimeHelper.Now;
 
                     _logger.LogInformation($"SignalR通知发送成功 - NotificationId: {notification.NotificationId}, " +
                                          $"RecipientId: {notification.RecipientId}");
@@ -75,7 +76,7 @@ namespace CampusTrade.API.Services.Notification
                         ? SignalRNotification.SendStatuses.Failed
                         : SignalRNotification.SendStatuses.Pending;
                     signalRNotification.ErrorMessage = sendResult.ErrorMessage;
-                    signalRNotification.LastAttemptTime = DateTime.UtcNow;
+                    signalRNotification.LastAttemptTime = TimeHelper.Now;
 
                     _logger.LogWarning($"SignalR通知发送失败 - NotificationId: {notification.NotificationId}, " +
                                      $"RetryCount: {signalRNotification.RetryCount}, Error: {sendResult.ErrorMessage}");
@@ -95,7 +96,7 @@ namespace CampusTrade.API.Services.Notification
                     signalRNotification.SendStatus = SignalRNotification.SendStatuses.Failed;
                     signalRNotification.ErrorMessage = errorMsg;
                     signalRNotification.RetryCount++;
-                    signalRNotification.LastAttemptTime = DateTime.UtcNow;
+                    signalRNotification.LastAttemptTime = TimeHelper.Now;
                     await _context.SaveChangesAsync();
                 }
                 catch (Exception saveEx)
@@ -129,7 +130,7 @@ namespace CampusTrade.API.Services.Notification
                     Id = signalRNotificationId,
                     Title = title,
                     Content = content,
-                    Time = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                    Time = TimeHelper.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                     UserId = userId
                 };
 
@@ -155,7 +156,7 @@ namespace CampusTrade.API.Services.Notification
         /// <returns>处理结果</returns>
         public async Task<(int Total, int Success, int Failed)> RetryFailedSignalRNotificationsAsync(int batchSize = 10)
         {
-            var retryTime = DateTime.UtcNow.AddMinutes(-SignalRNotification.DefaultRetryIntervalMinutes);
+            var retryTime = TimeHelper.AddMinutes(-SignalRNotification.DefaultRetryIntervalMinutes);
 
             var failedNotifications = await _context.SignalRNotifications
                 .Include(sr => sr.Notification)
@@ -187,7 +188,7 @@ namespace CampusTrade.API.Services.Notification
                     if (result.Success)
                     {
                         signalRNotification.SendStatus = SignalRNotification.SendStatuses.Success;
-                        signalRNotification.SentAt = DateTime.UtcNow;
+                        signalRNotification.SentAt = TimeHelper.Now;
                         successCount++;
                     }
                     else
@@ -200,7 +201,7 @@ namespace CampusTrade.API.Services.Notification
                         failedCount++;
                     }
 
-                    signalRNotification.LastAttemptTime = DateTime.UtcNow;
+                    signalRNotification.LastAttemptTime = TimeHelper.Now;
                     await _context.SaveChangesAsync();
 
                     // 避免过于频繁的重试
@@ -288,7 +289,7 @@ namespace CampusTrade.API.Services.Notification
         /// <returns>每小时发送趋势</returns>
         public async Task<Dictionary<int, (int Success, int Failed)>> GetHourlySignalRTrendAsync(int days = 7)
         {
-            var startTime = DateTime.UtcNow.AddDays(-days);
+            var startTime = TimeHelper.AddDays(-days);
 
             var hourlyData = await _context.SignalRNotifications
                 .Where(sr => sr.CreatedAt >= startTime)

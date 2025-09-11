@@ -3,6 +3,7 @@ using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Interfaces;
 using Microsoft.Extensions.Logging;
+using CampusTrade.API.infrastructure.Utils;
 
 namespace CampusTrade.API.Services.Order
 {
@@ -65,7 +66,7 @@ namespace CampusTrade.API.Services.Order
                     UserId = userId,
                     Amount = request.Amount,
                     Status = "处理中", // 使用数据库允许的状态值
-                    CreateTime = DateTime.UtcNow
+                    CreateTime = TimeHelper.Now
                 };
 
                 _logger.LogInformation("保存充值记录到数据库");
@@ -83,7 +84,7 @@ namespace CampusTrade.API.Services.Order
                     Method = request.Method,
                     Status = savedRecord.Status,
                     CreateTime = savedRecord.CreateTime,
-                    ExpireTime = DateTime.UtcNow.AddMinutes(RECHARGE_TIMEOUT_MINUTES)
+                    ExpireTime = TimeHelper.AddMinutes(RECHARGE_TIMEOUT_MINUTES)
                 };
 
                 // 模拟充值不需要支付URL
@@ -151,7 +152,7 @@ namespace CampusTrade.API.Services.Order
 
                 _logger.LogInformation("余额增加成功，开始更新充值记录状态");
                 // 更新充值记录状态
-                await _rechargeRepository.UpdateRechargeStatusAsync(rechargeId, "成功", DateTime.UtcNow);
+                await _rechargeRepository.UpdateRechargeStatusAsync(rechargeId, "成功", TimeHelper.Now);
 
                 _logger.LogInformation("保存更改到数据库");
                 await _unitOfWork.SaveChangesAsync();
@@ -205,7 +206,7 @@ namespace CampusTrade.API.Services.Order
 
         public async Task<int> ProcessExpiredRechargesAsync()
         {
-            var startTime = DateTime.UtcNow;
+            var startTime = TimeHelper.Now;
             _logger.LogInformation("开始处理过期充值订单，开始时间: {StartTime}", startTime);
 
             try
@@ -234,7 +235,7 @@ namespace CampusTrade.API.Services.Order
                     }
                 }
 
-                var endTime = DateTime.UtcNow;
+                var endTime = TimeHelper.Now;
                 var duration = endTime - startTime;
                 _logger.LogInformation("处理过期充值订单完成，处理数量: {Count}，耗时: {Duration}ms",
                     processedCount, duration.TotalMilliseconds);

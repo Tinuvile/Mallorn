@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using CampusTrade.API.Data;
+using CampusTrade.API.infrastructure.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -26,7 +27,7 @@ namespace CampusTrade.API.Services.ScheduledTasks
 
                 // 这里添加统计分析逻辑，例如计算每日订单量、销售额等
                 var dailyOrders = await context.Orders
-                    .Where(o => o.CreateTime.Date == System.DateTime.Now.Date)
+                    .Where(o => o.CreateTime.Date == TimeHelper.Today)
                     .CountAsync();
 
                 // 可以将统计结果保存到数据库或日志中

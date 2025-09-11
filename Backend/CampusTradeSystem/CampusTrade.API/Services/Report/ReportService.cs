@@ -2,6 +2,7 @@ using CampusTrade.API.Infrastructure.Utils.Performance;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Interfaces;
+using CampusTrade.API.infrastructure.Utils;
 using Microsoft.Extensions.Logging;
 using Serilog;
 
@@ -104,7 +105,7 @@ namespace CampusTrade.API.Services.Report
                     Description = description,
                     Status = "待处理",
                     Priority = priority,
-                    CreateTime = DateTime.Now
+                    CreateTime = TimeHelper.Now
                 };
 
                 await _reportsRepository.AddAsync(report);

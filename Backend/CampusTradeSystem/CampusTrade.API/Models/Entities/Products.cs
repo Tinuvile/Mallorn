@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using CampusTrade.API.infrastructure.Utils;
 
 namespace CampusTrade.API.Models.Entities
 {
@@ -60,7 +61,7 @@ namespace CampusTrade.API.Models.Entities
         /// 发布时间 - 对应Oracle中的publish_time字段，默认为当前时间=
         /// </summary>
         [Column("PUBLISH_TIME")]
-        public DateTime PublishTime { get; set; } = DateTime.Now;
+        public DateTime PublishTime { get; set; } = TimeHelper.Now;
 
         /// <summary>
         /// 浏览次数 - 对应Oracle中的view_count字段，默认为0（由Oracle处理）

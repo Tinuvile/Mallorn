@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Serilog;
+using CampusTrade.API.infrastructure.Utils;
 
 namespace CampusTrade.API.Services
 {
@@ -39,7 +40,7 @@ namespace CampusTrade.API.Services
 
         private void CleanOldLogs()
         {
-            var cutoffDate = DateTime.UtcNow.AddDays(-_retainDays);
+            var cutoffDate = TimeHelper.AddDays(-_retainDays);
 
             foreach (var dir in _logDirs)
             {
