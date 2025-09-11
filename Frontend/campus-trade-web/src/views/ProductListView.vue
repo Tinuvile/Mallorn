@@ -376,7 +376,7 @@
           totalCountData = response.data.total_count || response.data.totalCount || 0
         }
 
-        console.log(`查询结果: 找到${totalCountData}件商品`)
+        // console.log(`查询结果: 找到${totalCountData}件商品`)
 
         // 映射后端数据格式到前端显示格式
         products.value = (productsData || []).map(product => ({
