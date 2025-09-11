@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using CampusTrade.API.infrastructure.Utils;
 using CampusTrade.API.Options;
 using CampusTrade.API.Services.Cache;
 using CampusTrade.API.Services.Interfaces;
@@ -52,7 +53,7 @@ namespace CampusTrade.API.Services.Background
             {
                 try
                 {
-                    _logger.LogInformation("Starting cache refresh cycle at: {Time}", DateTimeOffset.Now);
+                    _logger.LogInformation("Starting cache refresh cycle at: {Time}", TimeHelper.Now);
 
                     using (var scope = _serviceProvider.CreateScope())
                     {
@@ -78,7 +79,7 @@ namespace CampusTrade.API.Services.Background
                         _logger.LogInformation("User cache hit rate: {HitRate:P}", hitRate);
                     }
 
-                    _logger.LogInformation("Cache refresh cycle completed at: {Time}", DateTimeOffset.Now);
+                    _logger.LogInformation("Cache refresh cycle completed at: {Time}", TimeHelper.Now);
                 }
                 catch (OperationCanceledException)
                 {

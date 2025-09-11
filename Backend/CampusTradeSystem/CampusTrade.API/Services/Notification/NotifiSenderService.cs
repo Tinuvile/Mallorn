@@ -7,6 +7,7 @@ using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Services.Email;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using CampusTrade.API.infrastructure.Utils;
 
 namespace CampusTrade.API.Services.Notification
 {
@@ -210,12 +211,12 @@ namespace CampusTrade.API.Services.Notification
             var notification = await _context.Notifications.FindAsync(notificationId);
             if (notification == null) return;
 
-            notification.LastAttemptTime = DateTime.UtcNow;
+            notification.LastAttemptTime = TimeHelper.Now;
 
             if (success)
             {
                 notification.SendStatus = Models.Entities.Notification.SendStatuses.Success;
-                notification.SentAt = DateTime.UtcNow;
+                notification.SentAt = TimeHelper.Now;
                 _logger.LogInformation($"通知发送成功 - NotificationId: {notificationId}");
             }
             else
@@ -283,7 +284,7 @@ namespace CampusTrade.API.Services.Notification
         /// <returns>处理结果统计</returns>
         public async Task<(int Total, int Success, int Failed)> RetryFailedNotificationsAsync(int batchSize = 5)
         {
-            var retryTime = DateTime.UtcNow.AddMinutes(-Models.Entities.Notification.DefaultRetryIntervalMinutes);
+            var retryTime = TimeHelper.AddMinutes(-Models.Entities.Notification.DefaultRetryIntervalMinutes);
 
             var failedNotifications = await _context.Notifications
                 .Include(n => n.Template)

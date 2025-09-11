@@ -4,6 +4,7 @@ using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Interfaces;
 using CampusTrade.API.Services.Notification;
 using Microsoft.Extensions.Logging;
+using CampusTrade.API.infrastructure.Utils;
 
 namespace CampusTrade.API.Services.Bargain
 {
@@ -77,7 +78,7 @@ namespace CampusTrade.API.Services.Bargain
                     OrderId = bargainRequest.OrderId,
                     ProposedPrice = bargainRequest.ProposedPrice,
                     Status = "等待回应",
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = TimeHelper.Now
                 };
 
                 await _negotiationsRepository.AddAsync(negotiation);
@@ -215,7 +216,7 @@ namespace CampusTrade.API.Services.Bargain
                         OrderId = negotiation.OrderId,
                         ProposedPrice = bargainResponse.ProposedPrice.Value,
                         Status = "等待回应",
-                        CreatedAt = DateTime.UtcNow
+                        CreatedAt = TimeHelper.Now
                     };
 
                     await _negotiationsRepository.AddAsync(counterNegotiation);

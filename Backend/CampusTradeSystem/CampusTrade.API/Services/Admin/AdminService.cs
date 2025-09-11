@@ -6,6 +6,7 @@ using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Interfaces;
 using CampusTrade.API.Services.Notification;
 using Microsoft.EntityFrameworkCore;
+using CampusTrade.API.infrastructure.Utils;
 using Microsoft.Extensions.Logging;
 using Serilog;
 
@@ -128,7 +129,7 @@ namespace CampusTrade.API.Services.Admin
                     UserId = createDto.UserId,
                     Role = createDto.Role,
                     AssignedCategory = createDto.Role == Models.Entities.Admin.Roles.CategoryAdmin ? createDto.AssignedCategory : null,
-                    CreatedAt = DateTime.Now
+                    CreatedAt = TimeHelper.Now
                 };
 
                 await _adminRepository.AddAsync(admin);
@@ -229,7 +230,7 @@ namespace CampusTrade.API.Services.Admin
                     UserId = user.UserId,
                     Role = createDto.Role,
                     AssignedCategory = createDto.AssignedCategory,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = TimeHelper.Now
                 };
 
                 await _adminRepository.AddAsync(admin);
@@ -1806,7 +1807,7 @@ namespace CampusTrade.API.Services.Admin
                 var activeModerators = await _adminRepository.GetActiveAdminCountAsync();
                 result["activeModerators"] = activeModerators;
 
-                var todayStart = DateTime.Today;
+                var todayStart = TimeHelper.Today;
                 var todayEnd = todayStart.AddDays(1);
                 var todayOperations = await _auditLogRepository.GetOperationCountByDateRangeAsync(todayStart, todayEnd);
                 result["todayOperations"] = todayOperations;
@@ -1822,7 +1823,7 @@ namespace CampusTrade.API.Services.Admin
                 }
 
                 // 获取最近30天的操作统计
-                var auditStats = await _auditLogRepository.GetAuditStatisticsAsync(DateTime.Now.AddDays(-30));
+                var auditStats = await _auditLogRepository.GetAuditStatisticsAsync(TimeHelper.AddDays(-30));
                 foreach (var stat in auditStats)
                 {
                     result[$"recent_{stat.Key}"] = stat.Value;
@@ -1859,12 +1860,12 @@ namespace CampusTrade.API.Services.Admin
         {
             try
             {
-                var threeMonthsAgo = DateTime.Now.AddMonths(-3);
+                var threeMonthsAgo = TimeHelper.AddMonths(-3);
                 var monthlyData = new List<object>();
 
                 for (int i = 2; i >= 0; i--)
                 {
-                    var monthStart = DateTime.Now.AddMonths(-i).Date;
+                    var monthStart = TimeHelper.AddMonths(-i).Date;
                     var monthEnd = monthStart.AddMonths(1);
                     var monthName = monthStart.ToString("yyyy-MM");
 

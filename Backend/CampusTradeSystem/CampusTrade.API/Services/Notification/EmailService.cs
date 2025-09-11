@@ -8,6 +8,7 @@ using CampusTrade.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using CampusTrade.API.infrastructure.Utils;
 
 namespace CampusTrade.API.Services.Email
 {
@@ -118,8 +119,8 @@ namespace CampusTrade.API.Services.Email
                 Subject = $"【校园交易系统】{notification.Template.TemplateName}",
                 Content = content, // 直接使用传入的内容，不进行额外渲染
                 SendStatus = EmailNotification.SendStatuses.Pending,
-                CreatedAt = DateTime.UtcNow,
-                LastAttemptTime = DateTime.UtcNow
+                CreatedAt = TimeHelper.Now,
+                LastAttemptTime = TimeHelper.Now
             };
 
             return await SendEmailNotificationAsync(emailNotification);
@@ -160,7 +161,7 @@ namespace CampusTrade.API.Services.Email
                 if (sendResult.Success)
                 {
                     emailNotification.SendStatus = EmailNotification.SendStatuses.Success;
-                    emailNotification.SentAt = DateTime.UtcNow;
+                    emailNotification.SentAt = TimeHelper.Now;
 
                     _logger.LogInformation($"邮件通知发送成功 - " +
                                          $"Type: {emailNotification.EmailType}, " +
@@ -174,7 +175,7 @@ namespace CampusTrade.API.Services.Email
                         ? EmailNotification.SendStatuses.Failed
                         : EmailNotification.SendStatuses.Pending;
                     emailNotification.ErrorMessage = sendResult.Message;
-                    emailNotification.LastAttemptTime = DateTime.UtcNow;
+                    emailNotification.LastAttemptTime = TimeHelper.Now;
 
                     _logger.LogWarning($"邮件通知发送失败 - " +
                                      $"Type: {emailNotification.EmailType}, " +
@@ -244,7 +245,7 @@ namespace CampusTrade.API.Services.Email
                     existingEmail.SendStatus = EmailNotification.SendStatuses.Failed;
                     existingEmail.ErrorMessage = errorMessage;
                     existingEmail.RetryCount++;
-                    existingEmail.LastAttemptTime = DateTime.UtcNow;
+                    existingEmail.LastAttemptTime = TimeHelper.Now;
 
                     await _context.SaveChangesAsync();
                     _logger.LogInformation($"已更新邮件通知失败状态 - Email: {recipientEmail}");
@@ -263,7 +264,7 @@ namespace CampusTrade.API.Services.Email
         /// <returns>处理结果</returns>
         public async Task<(int Total, int Success, int Failed)> RetryFailedEmailNotificationsAsync(int batchSize = 10)
         {
-            var retryTime = DateTime.UtcNow.AddMinutes(-EmailNotification.DefaultRetryIntervalMinutes);
+            var retryTime = TimeHelper.AddMinutes(-EmailNotification.DefaultRetryIntervalMinutes);
 
             var failedNotifications = await _context.EmailNotifications
                 .Where(en => en.SendStatus == EmailNotification.SendStatuses.Pending &&
@@ -291,7 +292,7 @@ namespace CampusTrade.API.Services.Email
                     if (result.Success)
                     {
                         emailNotification.SendStatus = EmailNotification.SendStatuses.Success;
-                        emailNotification.SentAt = DateTime.UtcNow;
+                        emailNotification.SentAt = TimeHelper.Now;
                         successCount++;
                     }
                     else
@@ -304,7 +305,7 @@ namespace CampusTrade.API.Services.Email
                         failedCount++;
                     }
 
-                    emailNotification.LastAttemptTime = DateTime.UtcNow;
+                    emailNotification.LastAttemptTime = TimeHelper.Now;
                     await _context.SaveChangesAsync();
 
                     // 避免过于频繁的重试
@@ -392,7 +393,7 @@ namespace CampusTrade.API.Services.Email
         /// <returns>每小时发送趋势</returns>
         public async Task<Dictionary<int, (int Success, int Failed)>> GetHourlyEmailTrendAsync(int days = 7)
         {
-            var startTime = DateTime.UtcNow.AddDays(-days);
+            var startTime = TimeHelper.AddDays(-days);
 
             var hourlyData = await _context.EmailNotifications
                 .Where(en => en.CreatedAt >= startTime)

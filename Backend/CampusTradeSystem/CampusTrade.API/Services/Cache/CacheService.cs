@@ -10,6 +10,7 @@ using CampusTrade.API.Services.Interfaces;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging; // Added for ILogger
 using Microsoft.Extensions.Options;
+using CampusTrade.API.infrastructure.Utils;
 
 namespace CampusTrade.API.Services.Cache
 {
@@ -155,11 +156,15 @@ namespace CampusTrade.API.Services.Cache
 
                                     if (expirationValue is DateTimeOffset offset)
                                     {
-                                        result[key] = offset.LocalDateTime;
+                                        // 将 DateTimeOffset 转换为北京时间
+                                        result[key] = TimeHelper.ConvertFromUtc(offset.UtcDateTime);
                                     }
                                     else if (expirationValue is DateTime time)
                                     {
-                                        result[key] = time;
+                                        // 如果是 DateTime，假设它是 UTC 时间并转换为北京时间
+                                        result[key] = time.Kind == DateTimeKind.Utc 
+                                            ? TimeHelper.ConvertFromUtc(time) 
+                                            : time;
                                     }
                                     else
                                     {

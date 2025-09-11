@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using CampusTrade.API.infrastructure.Utils;
 
 namespace CampusTrade.API.Services.ScheduledTasks
 {
@@ -35,7 +36,7 @@ namespace CampusTrade.API.Services.ScheduledTasks
             var taskName = GetType().Name;
             _logger.LogInformation("定时任务 {TaskName} 开始启动", taskName);
 
-            NextExecutionTime = DateTime.UtcNow.Add(Interval);
+            NextExecutionTime = TimeHelper.Now.Add(Interval);
             _timer = new Timer(ExecuteTaskWrapper, null, TimeSpan.Zero, Interval);
 
             _logger.LogInformation("定时任务 {TaskName} 启动完成，执行间隔: {Interval}", taskName, Interval);
@@ -55,7 +56,7 @@ namespace CampusTrade.API.Services.ScheduledTasks
             {
                 IsExecuting = true;
                 var taskName = GetType().Name;
-                var startTime = DateTime.UtcNow;
+                var startTime = TimeHelper.Now;
 
                 _logger.LogInformation("定时任务 {TaskName} 开始执行 (第 {ExecutionCount} 次)", taskName, ExecutionCount + 1);
 
@@ -64,18 +65,18 @@ namespace CampusTrade.API.Services.ScheduledTasks
                     await ExecuteTaskAsync();
 
                     LastExecutionTime = startTime;
-                    NextExecutionTime = DateTime.UtcNow.Add(Interval);
+                    NextExecutionTime = TimeHelper.Now.Add(Interval);
                     ExecutionCount++;
                     LastError = null;
 
-                    var duration = DateTime.UtcNow - startTime;
+                    var duration = TimeHelper.Now - startTime;
                     _logger.LogInformation("定时任务 {TaskName} 执行完成，耗时: {Duration}ms",
                         taskName, duration.TotalMilliseconds);
                 }
                 catch (Exception ex)
                 {
                     LastError = ex;
-                    NextExecutionTime = DateTime.UtcNow.Add(Interval);
+                    NextExecutionTime = TimeHelper.Now.Add(Interval);
 
                     _logger.LogError(ex, "定时任务 {TaskName} 执行出错", taskName);
 
