@@ -1259,7 +1259,7 @@ export interface ReviewResponse {
   isAnonymous: boolean
   content?: string
   createTime: string
-  sellerResponse?: string
+  sellerReply?: string  // 修正字段名匹配后端
   sellerResponseTime?: string
 }
 
@@ -1324,8 +1324,8 @@ export interface DisputeResponse {
 
 // 卖家回应评价相关接口
 export interface CreateReviewResponseRequest {
-  reviewId: number
-  responseContent: string
+  ReviewId: number
+  SellerReply: string
 }
 
 // 评价相关API
