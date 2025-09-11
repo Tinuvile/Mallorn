@@ -37,14 +37,17 @@
 
       <!-- 搜索框 -->
       <v-text-field
-        :loading="loading"
+        v-model="searchKeyword"
+        :loading="searchLoading"
         append-inner-icon="mdi-magnify"
         density="compact"
-        label="Search"
+        label="搜索商品"
         variant="solo"
         hide-details
         single-line
-        @click:append-inner="onClick"
+        @click:append-inner="onSearch"
+        @keyup.enter="onSearch"
+        placeholder="输入商品名称搜索..."
         style="margin-left: 100px"
       ></v-text-field>
       <v-btn color="primary" class="mx-2" to="/order" prepend-icon="mdi-file-document-outline">
@@ -381,6 +384,10 @@
   const isAdmin = computed(() => userStore.isAdmin) // 添加管理员状态
   const unreadMessageCount = ref(0) // 未读消息数量
 
+  // 搜索相关状态
+  const searchKeyword = ref('')
+  const searchLoading = ref(false)
+
   // 计算显示名称
   const displayName = computed(() => {
     const user = userStore.user
@@ -457,6 +464,29 @@
       path: `/goods/${id}`, // 路由路径格式：/goods/商品ID
       params: { id }, // 传递商品ID参数
     })
+  }
+
+  // 搜索功能
+  const onSearch = async () => {
+    const keyword = searchKeyword.value?.trim()
+    if (!keyword) {
+      return
+    }
+
+    searchLoading.value = true
+    try {
+      // 跳转到商品列表页面，传递搜索关键词
+      router.push({
+        name: 'products',
+        query: {
+          keyword: keyword,
+        },
+      })
+    } catch (error) {
+      console.error('搜索失败:', error)
+    } finally {
+      searchLoading.value = false
+    }
   }
 
   // 商品数据 - 从后端获取
