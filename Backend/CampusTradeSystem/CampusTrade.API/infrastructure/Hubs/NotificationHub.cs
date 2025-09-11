@@ -52,7 +52,7 @@ namespace CampusTrade.API.Infrastructure.Hubs
             _logger.LogInformation($"NotificationHub - 收到测试消息 - 用户: {userId ?? "未知"}, 消息: {message}");
 
             // 发送回客户端确认
-            await Clients.Caller.SendAsync("ReceiveTestResponse", $"服务器收到消息: {message}，时间: {DateTime.Now}");
+            await Clients.Caller.SendAsync("ReceiveTestResponse", $"服务器收到消息: {message}，时间: {TimeHelper.Now}");
         }
     }
 }

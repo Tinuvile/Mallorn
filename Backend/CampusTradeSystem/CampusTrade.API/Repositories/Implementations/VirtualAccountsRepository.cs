@@ -155,7 +155,7 @@ namespace CampusTrade.API.Repositories.Implementations
                         ["changeType"] = "扣减",
                         ["amount"] = amount.ToString("F2"),
                         ["currentBalance"] = account.Balance.ToString("F2"),
-                        ["transactionTime"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                        ["transactionTime"] = TimeHelper.Now.ToString("yyyy-MM-dd HH:mm:ss")
                     };
 
                     await _notificationService.CreateNotificationAsync(
@@ -226,7 +226,7 @@ namespace CampusTrade.API.Repositories.Implementations
             if (account == null)
             {
                 // 创建新账户
-                account = new VirtualAccount { UserId = userId, Balance = amount, CreatedAt = DateTime.UtcNow };
+                account = new VirtualAccount { UserId = userId, Balance = amount, CreatedAt = TimeHelper.UtcNow };
                 await AddAsync(account);
                 isNewAccount = true;
             }
@@ -280,7 +280,7 @@ namespace CampusTrade.API.Repositories.Implementations
                             ["changeType"] = "增加",
                             ["amount"] = amount.ToString("F2"),
                             ["currentBalance"] = account.Balance.ToString("F2"),
-                            ["transactionTime"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                            ["transactionTime"] = TimeHelper.Now.ToString("yyyy-MM-dd HH:mm:ss")
                         };
 
                         await _notificationService.CreateNotificationAsync(

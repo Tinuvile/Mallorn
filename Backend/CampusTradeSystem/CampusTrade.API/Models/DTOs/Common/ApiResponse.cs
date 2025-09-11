@@ -36,7 +36,7 @@ public class ApiResponse<T>
     /// 时间戳
     /// </summary>
     [JsonPropertyName("timestamp")]
-    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    public DateTime Timestamp { get; set; } = TimeHelper.UtcNow;
 
     /// <summary>
     /// 创建成功响应

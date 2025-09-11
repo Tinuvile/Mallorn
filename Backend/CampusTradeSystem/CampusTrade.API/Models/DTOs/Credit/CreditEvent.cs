@@ -21,7 +21,7 @@ namespace CampusTrade.API.Models.DTOs
         /// <summary>
         /// 事件发生时间（默认为当前时间）
         /// </summary>
-        public DateTime OccurredAt { get; set; } = DateTime.UtcNow;
+        public DateTime OccurredAt { get; set; } = TimeHelper.UtcNow;
 
         /// <summary>
         /// 可选的事件说明，仅用于日志记录或审计展示

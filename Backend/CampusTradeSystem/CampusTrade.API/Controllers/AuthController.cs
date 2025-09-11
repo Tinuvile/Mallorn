@@ -80,7 +80,7 @@ public class AuthController : ControllerBase
                 _logger.LogWarning("异常登录检测：用户 {Username} 登录IP变更，旧IP: {LastIp}，新IP: {NewIp}",
                     loginRequest.Username, lastLoginIp, ipAddress);
             }
-            if (lastLoginTime.HasValue && DateTime.Now - lastLoginTime.Value < TimeSpan.FromMinutes(5)
+            if (lastLoginTime.HasValue && TimeHelper.Now - lastLoginTime.Value < TimeSpan.FromMinutes(5)
                 && lastLoginIp != ipAddress)
             {
                 // 短时间内不同IP登录：高风险
@@ -92,7 +92,7 @@ public class AuthController : ControllerBase
                 // 发送邮件/SMS通知用户
                 if (riskLevel == LoginLogs.RiskLevels.High)
                 {
-                    var warningMsg = $"检测到异常登录：{DateTime.Now:yyyy-MM-dd HH:mm}，IP: {ipAddress}，设备: {deviceType}。如非本人操作，请及时修改密码。";
+                    var warningMsg = $"检测到异常登录：{TimeHelper.Now:yyyy-MM-dd HH:mm}，IP: {ipAddress}，设备: {deviceType}。如非本人操作，请及时修改密码。";
                     await _emailService.SendEmailAsync(
                         recipientEmail: user.Email,
                         subject: "校园交易平台 - 异常登录告警",
@@ -108,7 +108,7 @@ public class AuthController : ControllerBase
                 {
                     var notificationParams = new Dictionary<string, object>
                     {
-                        ["loginTime"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                        ["loginTime"] = TimeHelper.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                         ["ipAddress"] = ipAddress ?? "未知",
                         ["location"] = notificationLocation
                     };
@@ -134,7 +134,7 @@ public class AuthController : ControllerBase
             {
                 UserId = tokenResponse.UserId,
                 IpAddress = ipAddress,
-                LogTime = DateTime.Now,
+                LogTime = TimeHelper.Now,
                 DeviceType = deviceType,
                 RiskLevel = riskLevel
             };
@@ -569,7 +569,7 @@ public class AuthController : ControllerBase
             if (!string.IsNullOrEmpty(updateDto.Phone))
                 user.Phone = updateDto.Phone;
 
-            user.UpdatedAt = DateTime.UtcNow;
+            user.UpdatedAt = TimeHelper.UtcNow;
 
             await _unitOfWork.SaveChangesAsync();
 
@@ -616,7 +616,7 @@ public class AuthController : ControllerBase
 
             // 更新密码
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(changePasswordDto.NewPassword);
-            user.PasswordChangedAt = DateTime.UtcNow;
+            user.PasswordChangedAt = TimeHelper.UtcNow;
             user.SecurityStamp = Guid.NewGuid().ToString(); // 更新安全戳，使旧Token失效
 
             await _unitOfWork.SaveChangesAsync();
@@ -626,7 +626,7 @@ public class AuthController : ControllerBase
             {
                 var notificationParams = new Dictionary<string, object>
                 {
-                    ["changeTime"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                    ["changeTime"] = TimeHelper.Now.ToString("yyyy-MM-dd HH:mm:ss")
                 };
 
                 await _notificationService.CreateNotificationAsync(

@@ -22,7 +22,7 @@ namespace CampusTrade.API.Repositories.Implementations
             var query = _dbSet.Where(v => v.UserId == userId
                                         && v.Email == email
                                         && v.IsUsed == 0
-                                        && v.ExpireTime >= DateTime.Now);
+                                        && v.ExpireTime >= TimeHelper.Now);
 
             // 如果指定了验证类型，添加额外的过滤条件
             if (!string.IsNullOrEmpty(verificationType))
@@ -45,7 +45,7 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<EmailVerification?> GetRecentVerificationAsync(int userId, string email, int withinMinutes)
         {
-            var cutoffTime = DateTime.Now.AddMinutes(-withinMinutes);
+            var cutoffTime = TimeHelper.Now.AddMinutes(-withinMinutes);
 
             return await _dbSet
                 .Where(v => v.UserId == userId
@@ -64,7 +64,7 @@ namespace CampusTrade.API.Repositories.Implementations
                 .FirstOrDefaultAsync(v => v.UserId == userId
                                        && v.VerificationCode == code
                                        && v.IsUsed == 0
-                                       && v.ExpireTime >= DateTime.Now);
+                                       && v.ExpireTime >= TimeHelper.Now);
         }
 
         /// <summary>
@@ -75,7 +75,7 @@ namespace CampusTrade.API.Repositories.Implementations
             return await _dbSet
                 .FirstOrDefaultAsync(v => v.Token == token
                                        && v.IsUsed == 0
-                                       && v.ExpireTime >= DateTime.Now);
+                                       && v.ExpireTime >= TimeHelper.Now);
         }
 
         /// <summary>
@@ -135,7 +135,7 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<int> GetVerificationAttemptsCountAsync(int userId, int withinMinutes)
         {
-            var cutoffTime = DateTime.Now.AddMinutes(-withinMinutes);
+            var cutoffTime = TimeHelper.Now.AddMinutes(-withinMinutes);
 
             return await _dbSet
                 .CountAsync(v => v.UserId == userId && v.CreatedAt >= cutoffTime);
@@ -146,7 +146,7 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<int> GetExpiredRecordsCountAsync()
         {
-            var now = DateTime.Now;
+            var now = TimeHelper.Now;
             return await _dbSet
                 .CountAsync(v => v.ExpireTime < now || v.IsUsed == 1);
         }

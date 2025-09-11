@@ -105,14 +105,14 @@ namespace CampusTrade.API.Models.Entities
         /// </summary>
         [Required]
         [Column("LAST_ATTEMPT_TIME")]
-        public DateTime LastAttemptTime { get; set; } = DateTime.UtcNow;
+        public DateTime LastAttemptTime { get; set; } = TimeHelper.UtcNow;
 
         /// <summary>
         /// 创建时间
         /// </summary>
         [Required]
         [Column("CREATED_AT")]
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = TimeHelper.UtcNow;
 
         /// <summary>
         /// 发送成功时间

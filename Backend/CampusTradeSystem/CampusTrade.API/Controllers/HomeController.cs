@@ -26,7 +26,7 @@ public class HomeController : ControllerBase
             service = "CampusTrade API",
             version = "1.0.0",
             status = "运行中",
-            timestamp = DateTime.UtcNow,
+            timestamp = TimeHelper.UtcNow,
             environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"
         }, "API运行正常"));
     }
@@ -52,7 +52,7 @@ public class HomeController : ControllerBase
                     database = "healthy", // 这里可以实际检查数据库连接
                     memory = "healthy"
                 },
-                timestamp = DateTime.UtcNow
+                timestamp = TimeHelper.UtcNow
             }, "系统健康状态良好"));
         }
         catch (Exception ex)

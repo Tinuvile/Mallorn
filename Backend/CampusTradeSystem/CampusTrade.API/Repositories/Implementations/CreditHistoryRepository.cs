@@ -39,7 +39,7 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<IEnumerable<CreditHistory>> GetRecentChangesAsync(int days = 30)
         {
-            var cutoffDate = DateTime.UtcNow.AddDays(-days);
+            var cutoffDate = TimeHelper.UtcNow.AddDays(-days);
             return await _context.CreditHistories.Where(c => c.CreatedAt >= cutoffDate).OrderByDescending(c => c.CreatedAt).ToListAsync();
         }
         #endregion
@@ -66,7 +66,7 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<IEnumerable<dynamic>> GetCreditTrendsAsync(int userId, int days = 30)
         {
-            var cutoffDate = DateTime.UtcNow.AddDays(-days);
+            var cutoffDate = TimeHelper.UtcNow.AddDays(-days);
             return await _context.CreditHistories.Where(c => c.UserId == userId && c.CreatedAt >= cutoffDate).GroupBy(c => c.CreatedAt.Date).Select(g => new { Date = g.Key, Count = g.Count(), AverageScore = g.Average(c => c.NewScore) }).OrderBy(x => x.Date).ToListAsync<dynamic>();
         }
         #endregion

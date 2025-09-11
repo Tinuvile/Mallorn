@@ -68,7 +68,7 @@ namespace CampusTrade.API.Models.DTOs.Order
         /// <summary>
         /// 是否已过期
         /// </summary>
-        public bool IsExpired => ExpireTime.HasValue && ExpireTime.Value < DateTime.Now;
+        public bool IsExpired => ExpireTime.HasValue && ExpireTime.Value < TimeHelper.Now;
 
         /// <summary>
         /// 剩余支付时间（分钟）
@@ -78,7 +78,7 @@ namespace CampusTrade.API.Models.DTOs.Order
             get
             {
                 if (!ExpireTime.HasValue || Status != Models.Entities.Order.OrderStatus.PendingPayment) return null;
-                var remaining = ExpireTime.Value - DateTime.Now;
+                var remaining = ExpireTime.Value - TimeHelper.Now;
                 return remaining.TotalMinutes > 0 ? (int)remaining.TotalMinutes : 0;
             }
         }

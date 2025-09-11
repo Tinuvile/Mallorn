@@ -105,7 +105,7 @@ namespace CampusTrade.API.Controllers
                         reason = request.Reason,
                         description = request.Description,
                         status = "pending",
-                        createTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                        createTime = TimeHelper.Now.ToString("yyyy-MM-dd HH:mm:ss")
                     }, result.Message));
                 }
 

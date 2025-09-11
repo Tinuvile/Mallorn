@@ -12,7 +12,7 @@ namespace CampusTrade.API.infrastructure.Utils
         /// <summary>
         /// 获取当前北京时间
         /// </summary>
-        public static DateTime Now => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, _beijingTimeZone);
+        public static DateTime Now => TimeZoneInfo.ConvertTimeFromUtc(TimeHelper.UtcNow, _beijingTimeZone);
 
         /// <summary>
         /// 获取当前北京时间的日期部分

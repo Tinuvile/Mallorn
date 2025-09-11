@@ -89,7 +89,7 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<IEnumerable<Order>> GetExpiredOrdersAsync()
         {
-            return await _dbSet.Where(o => o.ExpireTime.HasValue && o.ExpireTime.Value < DateTime.Now && o.Status == Order.OrderStatus.PendingPayment).Include(o => o.Product).ThenInclude(p => p.ProductImages).Include(o => o.Buyer).ToListAsync();
+            return await _dbSet.Where(o => o.ExpireTime.HasValue && o.ExpireTime.Value < TimeHelper.Now && o.Status == Order.OrderStatus.PendingPayment).Include(o => o.Product).ThenInclude(p => p.ProductImages).Include(o => o.Buyer).ToListAsync();
         }
 
         /// <summary>
@@ -97,7 +97,7 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<IEnumerable<Order>> GetExpiringOrdersAsync(DateTime cutoffTime)
         {
-            var currentTime = DateTime.Now;
+            var currentTime = TimeHelper.Now;
             return await _dbSet
                 .Where(o => o.Status == Order.OrderStatus.PendingPayment &&
                            o.ExpireTime.HasValue &&

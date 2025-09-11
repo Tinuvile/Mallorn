@@ -47,7 +47,7 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<IEnumerable<Reports>> GetOverdueReportsAsync()
         {
-            var overdueTime = DateTime.Now.AddHours(-24);
+            var overdueTime = TimeHelper.Now.AddHours(-24);
             return await _dbSet.Where(r => r.Status == "待处理" && r.CreateTime < overdueTime).Include(r => r.AbstractOrder).Include(r => r.Reporter).Include(r => r.Evidences).OrderBy(r => r.CreateTime).ToListAsync();
         }
         /// <summary>
@@ -276,7 +276,7 @@ namespace CampusTrade.API.Repositories.Implementations
                 ReportId = reportId,
                 FileType = fileType,
                 FileUrl = fileUrl,
-                UploadedAt = DateTime.Now
+                UploadedAt = TimeHelper.Now
             };
             await _context.Set<ReportEvidence>().AddAsync(evidence);
         }
@@ -295,7 +295,7 @@ namespace CampusTrade.API.Repositories.Implementations
             foreach (var stat in typeStats) stats[$"类型_{stat.Key}"] = stat.Value;
             var highPriorityCount = await _dbSet.CountAsync(r => r.Priority >= 7);
             stats["高优先级"] = highPriorityCount;
-            var overdueCount = await _dbSet.CountAsync(r => r.Status == "待处理" && r.CreateTime < DateTime.Now.AddHours(-24));
+            var overdueCount = await _dbSet.CountAsync(r => r.Status == "待处理" && r.CreateTime < TimeHelper.Now.AddHours(-24));
             stats["超时未处理"] = overdueCount;
             return stats;
         }

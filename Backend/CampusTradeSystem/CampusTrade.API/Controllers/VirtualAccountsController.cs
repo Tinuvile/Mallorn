@@ -50,7 +50,7 @@ namespace CampusTrade.API.Controllers
                 {
                     userId = userId,
                     balance = balance,
-                    lastUpdateTime = account?.CreatedAt ?? DateTime.UtcNow
+                    lastUpdateTime = account?.CreatedAt ?? TimeHelper.UtcNow
                 };
 
                 _logger.LogInformation("用户 {UserId} 查询余额: {Balance}", userId, balance);
@@ -161,7 +161,7 @@ namespace CampusTrade.API.Controllers
                 var creditHistories = await _creditHistoryRepository.GetByUserIdAsync(userId);
 
                 // 过滤最近N天的记录
-                var cutoffDate = DateTime.UtcNow.AddDays(-days);
+                var cutoffDate = TimeHelper.UtcNow.AddDays(-days);
                 var recentHistories = creditHistories
                     .Where(h => h.CreatedAt >= cutoffDate)
                     .OrderBy(h => h.CreatedAt)
@@ -176,7 +176,7 @@ namespace CampusTrade.API.Controllers
                     {
                         new
                         {
-                            date = DateTime.UtcNow.ToString("yyyy-MM-dd"),
+                            date = TimeHelper.UtcNow.ToString("yyyy-MM-dd"),
                             score = 60.0m,
                             changeType = "初始分数"
                         }

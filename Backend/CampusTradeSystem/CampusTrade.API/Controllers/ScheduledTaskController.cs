@@ -37,7 +37,7 @@ namespace CampusTrade.API.Controllers
                         TaskName = service.GetType().Name,
                         Type = service.GetType().Name,
                         Status = "运行中", // 简化状态，实际项目中可以通过反射或状态管理获取
-                        LastRun = DateTime.UtcNow.AddHours(-1), // 模拟数据
+                        LastRun = TimeHelper.UtcNow.AddHours(-1), // 模拟数据
                         NextRun = GetNextRunTime(service.GetType().Name),
                         Description = GetTaskDescription(service.GetType().Name)
                     })
@@ -96,7 +96,7 @@ namespace CampusTrade.API.Controllers
                     TaskName = task.GetType().Name,
                     FullTypeName = task.GetType().FullName,
                     Status = "运行中",
-                    LastRun = DateTime.UtcNow.AddHours(-1),
+                    LastRun = TimeHelper.UtcNow.AddHours(-1),
                     NextRun = GetNextRunTime(task.GetType().Name),
                     ExecutionCount = 42, // 模拟数据
                     AverageExecutionTime = "1.2s",
@@ -138,7 +138,7 @@ namespace CampusTrade.API.Controllers
                 var healthStatus = new
                 {
                     Status = "健康",
-                    Timestamp = DateTime.UtcNow,
+                    Timestamp = TimeHelper.UtcNow,
                     ScheduledTasks = new
                     {
                         TotalCount = scheduledTasksCount,
@@ -179,13 +179,13 @@ namespace CampusTrade.API.Controllers
             // 根据任务类型返回下次执行时间（简化实现）
             return taskName switch
             {
-                "TokenCleanupTask" => DateTime.UtcNow.AddHours(1),
-                "LogCleanupTask" => DateTime.UtcNow.AddDays(1),
-                "ProductManagementTask" => DateTime.UtcNow.AddDays(1),
-                "OrderProcessingTask" => DateTime.UtcNow.AddHours(6),
-                "StatisticalAnalysisTask" => DateTime.UtcNow.AddDays(1),
-                "NotificationPushTask" => DateTime.UtcNow.AddHours(1),
-                _ => DateTime.UtcNow.AddHours(1)
+                "TokenCleanupTask" => TimeHelper.UtcNow.AddHours(1),
+                "LogCleanupTask" => TimeHelper.UtcNow.AddDays(1),
+                "ProductManagementTask" => TimeHelper.UtcNow.AddDays(1),
+                "OrderProcessingTask" => TimeHelper.UtcNow.AddHours(6),
+                "StatisticalAnalysisTask" => TimeHelper.UtcNow.AddDays(1),
+                "NotificationPushTask" => TimeHelper.UtcNow.AddHours(1),
+                _ => TimeHelper.UtcNow.AddHours(1)
             };
         }
 

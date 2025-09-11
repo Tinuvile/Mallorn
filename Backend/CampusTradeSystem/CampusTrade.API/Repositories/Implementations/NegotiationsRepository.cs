@@ -93,7 +93,7 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<IEnumerable<Negotiation>> GetRecentNegotiationsAsync(int days = 7)
         {
-            var cutoffDate = DateTime.UtcNow.AddDays(-days);
+            var cutoffDate = TimeHelper.UtcNow.AddDays(-days);
             return await _context.Negotiations
                 .Include(n => n.Order)
                 .ThenInclude(o => o.Product)

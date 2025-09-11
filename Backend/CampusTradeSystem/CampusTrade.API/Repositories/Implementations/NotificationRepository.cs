@@ -81,7 +81,7 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<IEnumerable<Notification>> GetPendingRetryNotificationsAsync()
         {
-            var now = DateTime.Now;
+            var now = TimeHelper.Now;
             return await _dbSet.Where(n => n.SendStatus == Notification.SendStatuses.Failed && n.RetryCount < Notification.MaxRetryCount && n.LastAttemptTime.AddMinutes(Notification.DefaultRetryIntervalMinutes) <= now).Include(n => n.Template).Include(n => n.Recipient).OrderBy(n => n.LastAttemptTime).ToListAsync();
         }
         /// <summary>
@@ -147,7 +147,7 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<int> CleanupExpiredFailedNotificationsAsync(int daysOld = 30)
         {
-            var cutoff = DateTime.Now.AddDays(-daysOld);
+            var cutoff = TimeHelper.Now.AddDays(-daysOld);
             var expired = await _dbSet.Where(n => n.SendStatus == Notification.SendStatuses.Failed && n.CreatedAt < cutoff).ToListAsync();
             if (expired.Any())
             {

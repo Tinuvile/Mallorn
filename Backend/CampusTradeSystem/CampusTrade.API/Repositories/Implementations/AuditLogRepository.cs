@@ -157,7 +157,7 @@ namespace CampusTrade.API.Repositories.Implementations
                 ActionType = actionType,
                 TargetId = targetId,
                 LogDetail = detail,
-                LogTime = DateTime.Now
+                LogTime = TimeHelper.Now
             };
 
             await _dbSet.AddAsync(auditLog);

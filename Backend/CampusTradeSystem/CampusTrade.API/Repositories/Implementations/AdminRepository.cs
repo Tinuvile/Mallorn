@@ -72,7 +72,7 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<IEnumerable<Admin>> GetActiveAdminsAsync()
         {
-            var recentDate = DateTime.Now.AddDays(-30);
+            var recentDate = TimeHelper.Now.AddDays(-30);
             return await _dbSet
                 .Include(a => a.User)
                 .Include(a => a.Category)
@@ -118,7 +118,7 @@ namespace CampusTrade.API.Repositories.Implementations
             stats["已分配分类的管理员"] = categoryAdminCount;
             var recentActiveCount = await _dbSet
                 .Include(a => a.AuditLogs)
-                .Where(a => a.AuditLogs.Any(al => al.LogTime >= DateTime.Now.AddDays(-30)))
+                .Where(a => a.AuditLogs.Any(al => al.LogTime >= TimeHelper.Now.AddDays(-30)))
                 .CountAsync();
             stats["最近活跃管理员"] = recentActiveCount;
             return stats;
@@ -145,7 +145,7 @@ namespace CampusTrade.API.Repositories.Implementations
                 ActionType = actionType,
                 TargetId = targetId,
                 LogDetail = detail,
-                LogTime = DateTime.Now
+                LogTime = TimeHelper.Now
             };
             await _context.Set<AuditLog>().AddAsync(auditLog);
         }
