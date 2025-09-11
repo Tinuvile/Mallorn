@@ -1,9 +1,9 @@
+using CampusTrade.API.infrastructure.Utils;
 using CampusTrade.API.Models.DTOs.Payment;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using CampusTrade.API.infrastructure.Utils;
 
 namespace CampusTrade.API.Services.Order
 {

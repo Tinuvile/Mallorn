@@ -2,9 +2,9 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using CampusTrade.API.infrastructure.Utils;
 using Microsoft.Extensions.Hosting;
 using Serilog;
-using CampusTrade.API.infrastructure.Utils;
 
 namespace CampusTrade.API.Services
 {

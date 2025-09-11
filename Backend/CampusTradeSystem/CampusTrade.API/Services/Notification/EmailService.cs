@@ -4,11 +4,11 @@ using System.Net;
 using System.Net.Mail;
 using System.Threading.Tasks;
 using CampusTrade.API.Data;
+using CampusTrade.API.infrastructure.Utils;
 using CampusTrade.API.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using CampusTrade.API.infrastructure.Utils;
 
 namespace CampusTrade.API.Services.Email
 {

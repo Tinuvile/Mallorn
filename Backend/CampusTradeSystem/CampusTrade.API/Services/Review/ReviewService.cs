@@ -1,9 +1,9 @@
 using CampusTrade.API.Data;
+using CampusTrade.API.infrastructure.Utils;
 using CampusTrade.API.Models.DTOs;
 using CampusTrade.API.Models.DTOs.Review;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Services.Notification;
-using CampusTrade.API.infrastructure.Utils;
 using Microsoft.EntityFrameworkCore;
 using ReviewEntity = CampusTrade.API.Models.Entities.Review;
 

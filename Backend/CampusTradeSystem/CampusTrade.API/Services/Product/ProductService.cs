@@ -1,3 +1,4 @@
+using CampusTrade.API.infrastructure.Utils;
 using CampusTrade.API.Models.DTOs.Common;
 using CampusTrade.API.Models.DTOs.Product;
 using CampusTrade.API.Models.Entities;
@@ -5,7 +6,6 @@ using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.File;
 using CampusTrade.API.Services.Interfaces;
 using CampusTrade.API.Services.Notification;
-using CampusTrade.API.infrastructure.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 

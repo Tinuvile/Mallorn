@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using CampusTrade.API.infrastructure.Utils;
 using CampusTrade.API.Infrastructure.Utils.Security;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Options;
@@ -9,7 +10,6 @@ using CampusTrade.API.Services.Email;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using CampusTrade.API.infrastructure.Utils;
 
 namespace CampusTrade.API.Services.Auth
 {
