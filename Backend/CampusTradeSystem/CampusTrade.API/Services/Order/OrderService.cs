@@ -5,6 +5,7 @@ using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Interfaces;
 using CampusTrade.API.Services.Notification;
+using CampusTrade.API.infrastructure.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -99,8 +100,8 @@ namespace CampusTrade.API.Services.Order
                     TotalAmount = request.FinalPrice ?? product.BasePrice,
                     FinalPrice = request.FinalPrice,
                     Status = Models.Entities.Order.OrderStatus.PendingPayment,
-                    CreateTime = DateTime.Now,
-                    ExpireTime = DateTime.Now.AddMinutes(ORDER_TIMEOUT_MINUTES)
+                    CreateTime = TimeHelper.Now,
+                    ExpireTime = TimeHelper.AddMinutes(ORDER_TIMEOUT_MINUTES)
                 };
 
                 await _orderRepository.AddAsync(order);
@@ -281,7 +282,7 @@ namespace CampusTrade.API.Services.Order
                 Status = order.Status,
                 CreateTime = order.CreateTime,
                 UserRole = order.BuyerId == userId ? "buyer" : "seller",
-                IsExpired = order.ExpireTime.HasValue && order.ExpireTime.Value < DateTime.Now
+                IsExpired = order.ExpireTime.HasValue && order.ExpireTime.Value < TimeHelper.Now
             }).ToList();
 
             return (orderResponses, totalCount);
@@ -332,7 +333,7 @@ namespace CampusTrade.API.Services.Order
                 Status = order.Status,
                 CreateTime = order.CreateTime,
                 UserRole = order.BuyerId == userId ? "buyer" : "seller",
-                IsExpired = order.ExpireTime.HasValue && order.ExpireTime.Value < DateTime.Now
+                IsExpired = order.ExpireTime.HasValue && order.ExpireTime.Value < TimeHelper.Now
             }).OrderByDescending(o => o.CreateTime).ToList();
         }
 
@@ -342,7 +343,7 @@ namespace CampusTrade.API.Services.Order
             var sellerOrders = await _orderRepository.GetBySellerIdAsync(userId);
             var allOrders = buyerOrders.Union(sellerOrders).ToList();
 
-            var currentMonth = DateTime.Now.Date.AddDays(1 - DateTime.Now.Day);
+            var currentMonth = TimeHelper.Today.AddDays(1 - TimeHelper.Now.Day);
             var monthlyOrders = allOrders.Where(o => o.CreateTime >= currentMonth).ToList();
 
             return new OrderStatisticsResponse
@@ -760,7 +761,7 @@ namespace CampusTrade.API.Services.Order
         #region 订单超时管理
         public async Task<int> ProcessExpiredOrdersAsync()
         {
-            var startTime = DateTime.Now;
+            var startTime = TimeHelper.Now;
             _logger.LogInformation("开始处理过期订单，开始时间: {StartTime}", startTime);
 
             try
@@ -852,7 +853,7 @@ namespace CampusTrade.API.Services.Order
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                var duration = DateTime.Now.Subtract(startTime);
+                var duration = TimeHelper.Now.Subtract(startTime);
                 _logger.LogInformation("处理过期订单完成，耗时: {Duration}ms, 成功处理: {ProcessedCount}, 失败: {FailedCount}",
                     duration.TotalMilliseconds, processedCount, failedCount);
 
@@ -868,7 +869,7 @@ namespace CampusTrade.API.Services.Order
 
         public async Task<List<OrderDetailResponse>> GetExpiringOrdersAsync(int beforeMinutes = 30)
         {
-            var cutoffTime = DateTime.Now.AddMinutes(beforeMinutes);
+            var cutoffTime = TimeHelper.AddMinutes(beforeMinutes);
             _logger.LogDebug("查询即将在 {CutoffTime} 之前过期的订单", cutoffTime);
 
             try
@@ -961,7 +962,7 @@ namespace CampusTrade.API.Services.Order
             }
 
             // 检查订单是否已过期
-            if (order.ExpireTime.HasValue && order.ExpireTime.Value < DateTime.UtcNow)
+            if (order.ExpireTime.HasValue && order.ExpireTime.Value < TimeHelper.Now)
             {
                 return new PaymentResult
                 {
@@ -1039,8 +1040,8 @@ namespace CampusTrade.API.Services.Order
                     Message = "支付成功",
                     Amount = paymentAmount,
                     RemainingBalance = remainingBalance,
-                    PaymentTime = DateTime.UtcNow,
-                    TransactionId = $"PAY_{orderId}_{DateTime.UtcNow:yyyyMMddHHmmss}"
+                    PaymentTime = TimeHelper.Now,
+                    TransactionId = $"PAY_{orderId}_{TimeHelper.Now:yyyyMMddHHmmss}"
                 };
             }
             catch (Exception ex)

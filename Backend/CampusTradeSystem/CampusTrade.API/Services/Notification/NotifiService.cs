@@ -7,6 +7,7 @@ using CampusTrade.API.Infrastructure.Utils.Notificate;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Services.Background;
 using CampusTrade.API.Services.Interfaces;
+using CampusTrade.API.infrastructure.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -83,8 +84,8 @@ namespace CampusTrade.API.Services.Notification
                 TemplateParams = paramJson,
                 SendStatus = Models.Entities.Notification.SendStatuses.Pending,
                 RetryCount = 0,
-                CreatedAt = DateTime.Now,
-                LastAttemptTime = DateTime.Now,
+                CreatedAt = TimeHelper.Now,
+                LastAttemptTime = TimeHelper.Now,
                 IsRead = 0, // 默认为未读
                 ReadAt = null
             };
@@ -770,7 +771,7 @@ namespace CampusTrade.API.Services.Notification
         /// </summary>
         private string FormatTime(DateTime dateTime)
         {
-            var now = DateTime.Now;
+            var now = TimeHelper.Now;
             var diff = now - dateTime;
 
             if (diff.TotalDays < 1)

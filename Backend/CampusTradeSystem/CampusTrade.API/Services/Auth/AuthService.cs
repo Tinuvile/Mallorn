@@ -1,5 +1,6 @@
 using CampusTrade.API.Infrastructure.Utils;
 using CampusTrade.API.Infrastructure.Utils.Security;
+using CampusTrade.API.infrastructure.Utils;
 using CampusTrade.API.Models.DTOs.Auth;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
@@ -86,8 +87,8 @@ namespace CampusTrade.API.Services.Auth
                     FullName = registerDto.Name,
                     Phone = registerDto.Phone,
                     CreditScore = 60.0m, // 新用户默认信用分
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
+                    CreatedAt = TimeHelper.Now,
+                    UpdatedAt = TimeHelper.Now,
                     IsActive = 1,
                     LoginCount = 0,
                     IsLocked = 0,
@@ -247,7 +248,7 @@ namespace CampusTrade.API.Services.Auth
                     // 检查是否需要锁定账户（例如失败5次后锁定1小时）
                     if (user.FailedLoginAttempts >= 4) // 已经有了4次失败，这次是第5次
                     {
-                        await _unitOfWork.Users.LockUserAsync(user.UserId, DateTime.UtcNow.AddHours(1));
+                        await _unitOfWork.Users.LockUserAsync(user.UserId, TimeHelper.AddHours(1));
                         Log.Logger.Warning("账户因多次登录失败被锁定，用户ID: {UserId}", user.UserId);
                     }
 

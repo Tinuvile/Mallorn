@@ -3,6 +3,7 @@ using CampusTrade.API.Models.DTOs;
 using CampusTrade.API.Models.DTOs.Review;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Services.Notification;
+using CampusTrade.API.infrastructure.Utils;
 using Microsoft.EntityFrameworkCore;
 using ReviewEntity = CampusTrade.API.Models.Entities.Review;
 
@@ -66,7 +67,7 @@ namespace CampusTrade.API.Services.Review
                     ServiceAttitude = dto.ServiceAttitude,
                     IsAnonymous = dto.IsAnonymous ? 1 : 0, // bool 转换为 0/1 存储
                     Content = dto.Content,
-                    CreateTime = DateTime.Now // 使用当前时间而不是依赖数据库默认值
+                    CreateTime = TimeHelper.Now // 使用当前时间而不是依赖数据库默认值
                 };
 
                 // 第六步：添加评论到数据库上下文（暂不保存）
@@ -269,7 +270,7 @@ namespace CampusTrade.API.Services.Review
 
             // 第三步：判断是否超出 48 小时回复期限
             var deadline = review.CreateTime.AddHours(48);
-            if (DateTime.Now > deadline)
+            if (TimeHelper.Now > deadline)
                 throw new InvalidOperationException("回复已超出48小时限制，无法修改");
 
             // 第四步：写入回复内容

@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using CampusTrade.API.Repositories.Interfaces;
+using CampusTrade.API.infrastructure.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -38,7 +39,7 @@ namespace CampusTrade.API.Services.ScheduledTasks
                 var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
                 // 1. 清理过期和已使用的验证码记录（保留24小时内的数据用于审计）
-                var expiredBefore = DateTime.Now.AddHours(-24);
+                var expiredBefore = TimeHelper.AddHours(-24);
                 var expiredCount = await unitOfWork.EmailVerifications.CleanupExpiredAsync(expiredBefore);
 
                 // 2. 获取系统中当前过期记录数量

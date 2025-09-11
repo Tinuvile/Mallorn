@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using CampusTrade.API.Data;
+using CampusTrade.API.infrastructure.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -26,7 +27,7 @@ namespace CampusTrade.API.Services.ScheduledTasks
             {
                 // 从当前作用域中获取DbContext
                 var context = scope.ServiceProvider.GetRequiredService<CampusTradeDbContext>();
-                var cutoffDate = DateTime.Now.AddDays(-7); // 清理7天前的日志
+                var cutoffDate = TimeHelper.AddDays(-7); // 清理7天前的日志
 
                 // 清理LoginLogs表中的日志
                 var loginLogsToDelete = await context.LoginLogs.Where(l => l.LogTime < cutoffDate).ToListAsync();

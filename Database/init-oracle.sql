@@ -7,6 +7,24 @@
 -- 设置容器到 XEPDB1
 ALTER SESSION SET CONTAINER=XEPDB1;
 
+-- ================================================================
+-- 设置数据库时区配置 (确保所有连接使用 +08:00 时区)
+-- ================================================================
+-- 设置当前会话时区
+ALTER SESSION SET TIME_ZONE = '+08:00';
+
+-- 设置数据库默认时区 (需要在PDB级别设置)
+BEGIN
+    EXECUTE IMMEDIATE 'ALTER DATABASE SET TIME_ZONE = ''+08:00''';
+    DBMS_OUTPUT.PUT_LINE('Database timezone set to +08:00 successfully');
+EXCEPTION
+    WHEN OTHERS THEN
+        -- 如果无法设置数据库级别时区，至少记录警告
+        DBMS_OUTPUT.PUT_LINE('Warning: Could not set database timezone: ' || SQLERRM);
+        DBMS_OUTPUT.PUT_LINE('Session timezone will be set to +08:00 for current operations');
+END;
+/
+
 -- 创建用户和授权
 -- 设置Oracle脚本模式，允许在PDB中创建用户
 BEGIN
@@ -85,6 +103,10 @@ SELECT 'Successfully connected as: ' || USER AS connection_status FROM dual;
 
 -- 启用DBMS_OUTPUT (用户级别)
 SET SERVEROUTPUT ON;
+
+-- 为用户会话设置时区 (确保所有后续操作使用正确时区)
+ALTER SESSION SET TIME_ZONE = '+08:00';
+SELECT 'User session timezone set to: ' || SESSIONTIMEZONE AS timezone_status FROM dual;
 
 -- ================================================================
 -- 清空数据库 - 删除所有表和序列
@@ -586,6 +608,19 @@ CREATE INDEX idx_notifications_email_retry ON notifications(email_status, email_
 -- 创建触发器
 -- ================================================================
 
+-- 用户登录时自动设置时区触发器 (确保所有连接使用 +08:00 时区)
+CREATE OR REPLACE TRIGGER campus_trade_logon_trigger
+    AFTER LOGON ON SCHEMA
+BEGIN
+    -- 为每个新连接的会话设置时区
+    EXECUTE IMMEDIATE 'ALTER SESSION SET TIME_ZONE = ''+08:00''';
+EXCEPTION
+    WHEN OTHERS THEN
+        -- 如果设置时区失败，记录到系统日志 (不阻止登录)
+        NULL;
+END;
+/
+
 -- 用户ID自增触发器 (改进版本，支持手动指定和自动生成)
 CREATE OR REPLACE TRIGGER users_id_trigger
     BEFORE INSERT ON users
@@ -848,6 +883,11 @@ SELECT '========================================' AS separator FROM dual;
 SELECT 'DATABASE CREATION SUMMARY' AS title FROM dual;
 SELECT '========================================' AS separator FROM dual;
 
+-- 验证时区设置
+SELECT 'Current Database Timezone: ' || DBTIMEZONE AS db_timezone FROM dual;
+SELECT 'Current Session Timezone: ' || SESSIONTIMEZONE AS session_timezone FROM dual;
+SELECT 'Current Timestamp with Timezone: ' || CURRENT_TIMESTAMP AS current_time FROM dual;
+
 -- 显示创建的表
 SELECT 'Tables created successfully:' AS message FROM dual;
 SELECT table_name FROM user_tables ORDER BY table_name;
@@ -936,4 +976,5 @@ SELECT 'Ready for application usage!' AS status FROM dual;
 SELECT '✅ 分类体系：教材 | 数码 | 日用 | 服装 | 运动 | 其他' AS category_system FROM dual;
 SELECT '✅ 消息已读状态：已整合到 notifications 表 (is_read, read_at 字段)' AS message_read_status FROM dual;
 SELECT '✅ 分离式发送状态：已整合到 notifications 表 (signalr_status, email_status 等字段)' AS separated_send_status FROM dual;
+SELECT '✅ 时区配置：所有连接自动使用 +08:00 时区 (数据库级别 + 登录触发器)' AS timezone_config FROM dual;
 SELECT '========================================' AS separator FROM dual; 
