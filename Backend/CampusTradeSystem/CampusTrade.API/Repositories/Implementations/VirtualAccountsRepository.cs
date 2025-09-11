@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using CampusTrade.API.Data;
+using CampusTrade.API.Infrastructure.Utils;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -226,7 +227,7 @@ namespace CampusTrade.API.Repositories.Implementations
             if (account == null)
             {
                 // 创建新账户
-                account = new VirtualAccount { UserId = userId, Balance = amount, CreatedAt = TimeHelper.UtcNow };
+                account = new VirtualAccount { UserId = userId, Balance = amount, CreatedAt = DateTime.UtcNow };
                 await AddAsync(account);
                 isNewAccount = true;
             }

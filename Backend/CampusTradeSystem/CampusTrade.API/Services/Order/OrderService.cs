@@ -1,4 +1,4 @@
-using CampusTrade.API.infrastructure.Utils;
+using CampusTrade.API.Infrastructure.Utils;
 using CampusTrade.API.Models.DTOs;
 using CampusTrade.API.Models.DTOs.Order;
 using CampusTrade.API.Models.DTOs.Payment;

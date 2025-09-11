@@ -79,7 +79,7 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<IEnumerable<RechargeRecord>> GetExpiredRechargesAsync(TimeSpan expiration)
         {
-            var cutoffTime = TimeHelper.UtcNow - expiration;
+            var cutoffTime = DateTime.UtcNow - expiration;
             return await _context.RechargeRecords
                 .Where(r => r.Status == "处理中" && r.CreateTime < cutoffTime)
                 .OrderBy(r => r.CreateTime)
@@ -158,7 +158,7 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<IEnumerable<RechargeRecord>> GetFrequentRechargesAsync(int userId, TimeSpan timeSpan, int minCount)
         {
-            var cutoffTime = TimeHelper.UtcNow - timeSpan;
+            var cutoffTime = DateTime.UtcNow - timeSpan;
             var recharges = await _context.RechargeRecords
                 .Where(r => r.UserId == userId && r.CreateTime >= cutoffTime)
                 .OrderByDescending(r => r.CreateTime)
@@ -182,7 +182,7 @@ namespace CampusTrade.API.Repositories.Implementations
             }
             else if (status == "成功" || status == "失败")
             {
-                record.CompleteTime = TimeHelper.UtcNow;
+                record.CompleteTime = DateTime.UtcNow;
             }
             Update(record);
             return true;
@@ -195,7 +195,7 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<bool> HasRecentFailedRechargesAsync(int userId, TimeSpan timeSpan, int maxFailures)
         {
-            var cutoffTime = TimeHelper.UtcNow - timeSpan;
+            var cutoffTime = DateTime.UtcNow - timeSpan;
             var failedCount = await _context.RechargeRecords
                 .CountAsync(r => r.UserId == userId && r.Status == "失败" && r.CreateTime >= cutoffTime);
             return failedCount >= maxFailures;

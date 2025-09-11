@@ -91,7 +91,7 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<IEnumerable<ExchangeRequest>> GetRecentExchangesAsync(int days = 7)
         {
-            var cutoffDate = TimeHelper.UtcNow.AddDays(-days);
+            var cutoffDate = DateTime.UtcNow.AddDays(-days);
             return await _context.ExchangeRequests.Include(e => e.OfferProduct).Include(e => e.RequestProduct).Where(e => e.CreatedAt >= cutoffDate).OrderByDescending(e => e.CreatedAt).ToListAsync();
         }
         /// <summary>

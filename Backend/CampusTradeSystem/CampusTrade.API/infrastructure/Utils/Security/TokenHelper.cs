@@ -215,7 +215,7 @@ public static class TokenHelper
     public static void RevokeRefreshToken(Models.Entities.RefreshToken token, string? reason, int? revokedBy)
     {
         token.IsRevoked = 1;
-        token.RevokedAt = TimeHelper.UtcNow;
+        token.RevokedAt = DateTime.UtcNow;
         token.RevokeReason = reason;
         token.RevokedBy = revokedBy;
     }
@@ -227,7 +227,7 @@ public static class TokenHelper
     /// <returns>是否有效</returns>
     public static bool IsRefreshTokenValid(Models.Entities.RefreshToken token)
     {
-        return token.IsRevoked == 0 && token.ExpiryDate > TimeHelper.UtcNow;
+        return token.IsRevoked == 0 && token.ExpiryDate > DateTime.UtcNow;
     }
 
     /// <summary>
@@ -236,6 +236,6 @@ public static class TokenHelper
     /// <param name="token">刷新令牌实体</param>
     public static void UpdateRefreshTokenLastUsed(Models.Entities.RefreshToken token)
     {
-        token.LastUsedAt = TimeHelper.UtcNow;
+        token.LastUsedAt = DateTime.UtcNow;
     }
 }

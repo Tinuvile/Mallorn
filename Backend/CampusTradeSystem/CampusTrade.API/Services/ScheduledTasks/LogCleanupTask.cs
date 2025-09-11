@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using CampusTrade.API.Data;
-using CampusTrade.API.infrastructure.Utils;
+using CampusTrade.API.Infrastructure.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

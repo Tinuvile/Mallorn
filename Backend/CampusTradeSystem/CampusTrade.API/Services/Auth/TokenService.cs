@@ -1,6 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using CampusTrade.API.infrastructure.Utils;
+using CampusTrade.API.Infrastructure.Utils;
 using CampusTrade.API.Infrastructure.Utils.Security;
 using CampusTrade.API.Models.DTOs.Auth;
 using CampusTrade.API.Models.Entities;

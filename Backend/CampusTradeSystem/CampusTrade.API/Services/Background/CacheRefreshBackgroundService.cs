@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using CampusTrade.API.infrastructure.Utils;
+using CampusTrade.API.Infrastructure.Utils;
 using CampusTrade.API.Options;
 using CampusTrade.API.Services.Cache;
 using CampusTrade.API.Services.Interfaces;

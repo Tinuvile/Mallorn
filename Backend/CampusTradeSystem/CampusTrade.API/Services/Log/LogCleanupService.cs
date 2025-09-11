@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using CampusTrade.API.infrastructure.Utils;
+using CampusTrade.API.Infrastructure.Utils;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 

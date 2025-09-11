@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using CampusTrade.API.infrastructure.Utils;
+using CampusTrade.API.Infrastructure.Utils;
 using CampusTrade.API.Infrastructure.Utils.Security;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Options;

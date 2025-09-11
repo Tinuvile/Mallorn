@@ -2,6 +2,7 @@ using CampusTrade.API.Data;
 using CampusTrade.API.Models.DTOs;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Repositories.Interfaces;
+using CampusTrade.API.Infrastructure.Utils;
 using Microsoft.EntityFrameworkCore;
 
 namespace CampusTrade.API.Repositories.Implementations

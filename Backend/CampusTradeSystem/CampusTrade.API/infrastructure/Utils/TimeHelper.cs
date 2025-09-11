@@ -1,6 +1,6 @@
 using System;
 
-namespace CampusTrade.API.infrastructure.Utils
+namespace CampusTrade.API.Infrastructure.Utils
 {
     /// <summary>
     /// 时间帮助类，统一使用北京时间
@@ -12,7 +12,7 @@ namespace CampusTrade.API.infrastructure.Utils
         /// <summary>
         /// 获取当前北京时间
         /// </summary>
-        public static DateTime Now => TimeZoneInfo.ConvertTimeFromUtc(TimeHelper.UtcNow, _beijingTimeZone);
+        public static DateTime Now => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, _beijingTimeZone);
 
         /// <summary>
         /// 获取当前北京时间的日期部分

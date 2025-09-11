@@ -20,7 +20,7 @@ namespace CampusTrade.API.Controllers
             return Ok(ApiResponse<object>.CreateSuccess(new
             {
                 status = "Healthy",
-                timestamp = TimeHelper.UtcNow,
+                timestamp = DateTime.UtcNow,
                 version = "1.0.0"
             }, "API服务正常运行"));
         }

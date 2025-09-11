@@ -1,4 +1,5 @@
 using CampusTrade.API.Infrastructure.Extensions;
+using CampusTrade.API.Infrastructure.Utils;
 using CampusTrade.API.Models.DTOs.Common;
 using CampusTrade.API.Models.DTOs.Report;
 using CampusTrade.API.Services.Interfaces;

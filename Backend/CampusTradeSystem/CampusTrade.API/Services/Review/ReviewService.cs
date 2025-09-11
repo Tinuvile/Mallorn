@@ -1,5 +1,5 @@
 using CampusTrade.API.Data;
-using CampusTrade.API.infrastructure.Utils;
+using CampusTrade.API.Infrastructure.Utils;
 using CampusTrade.API.Models.DTOs;
 using CampusTrade.API.Models.DTOs.Review;
 using CampusTrade.API.Models.Entities;

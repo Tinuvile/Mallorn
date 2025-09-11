@@ -1,5 +1,5 @@
 using System.IO;
-using CampusTrade.API.infrastructure.Utils;
+using CampusTrade.API.Infrastructure.Utils;
 using CampusTrade.API.Options;
 using Microsoft.Extensions.Options;
 

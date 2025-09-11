@@ -20,8 +20,8 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<User> CreateUserAsync(User user)
         {
-            user.CreatedAt = TimeHelper.UtcNow;
-            user.UpdatedAt = TimeHelper.UtcNow;
+            user.CreatedAt = DateTime.UtcNow;
+            user.UpdatedAt = DateTime.UtcNow;
             user.SecurityStamp = Guid.NewGuid().ToString();
             user.CreditScore = 60.0m; // 默认信用分数
             user.IsActive = 1;
@@ -160,7 +160,7 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<IEnumerable<User>> GetRecentRegisteredUsersAsync(int days)
         {
-            var sinceDate = TimeHelper.UtcNow.AddDays(-days);
+            var sinceDate = DateTime.UtcNow.AddDays(-days);
             return await _dbSet
                 .Where(u => u.CreatedAt >= sinceDate)
                 .OrderByDescending(u => u.CreatedAt)
@@ -196,7 +196,7 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<Dictionary<DateTime, int>> GetUserRegistrationTrendAsync(int days)
         {
-            var startDate = TimeHelper.UtcNow.AddDays(-days).Date;
+            var startDate = DateTime.UtcNow.AddDays(-days).Date;
             return await _dbSet
                 .Where(u => u.CreatedAt >= startDate)
                 .GroupBy(u => u.CreatedAt.Date)
@@ -234,7 +234,7 @@ namespace CampusTrade.API.Repositories.Implementations
             if (user != null)
             {
                 user.IsActive = isActive ? 1 : 0;
-                user.UpdatedAt = TimeHelper.UtcNow;
+                user.UpdatedAt = DateTime.UtcNow;
                 Update(user);
             }
         }
@@ -247,10 +247,10 @@ namespace CampusTrade.API.Repositories.Implementations
             var user = await GetByPrimaryKeyAsync(userId);
             if (user != null)
             {
-                user.LastLoginAt = TimeHelper.UtcNow;
+                user.LastLoginAt = DateTime.UtcNow;
                 user.LastLoginIp = ipAddress;
                 user.LoginCount++;
-                user.UpdatedAt = TimeHelper.UtcNow;
+                user.UpdatedAt = DateTime.UtcNow;
                 Update(user);
             }
         }
@@ -264,7 +264,7 @@ namespace CampusTrade.API.Repositories.Implementations
             if (user != null)
             {
                 user.SecurityStamp = newSecurityStamp;
-                user.UpdatedAt = TimeHelper.UtcNow;
+                user.UpdatedAt = DateTime.UtcNow;
                 Update(user);
             }
         }
@@ -279,7 +279,7 @@ namespace CampusTrade.API.Repositories.Implementations
             {
                 user.IsLocked = 1;
                 user.LockoutEnd = lockoutEnd;
-                user.UpdatedAt = TimeHelper.UtcNow;
+                user.UpdatedAt = DateTime.UtcNow;
                 Update(user);
             }
         }
@@ -295,7 +295,7 @@ namespace CampusTrade.API.Repositories.Implementations
                 user.IsLocked = 0;
                 user.LockoutEnd = null;
                 user.FailedLoginAttempts = 0;
-                user.UpdatedAt = TimeHelper.UtcNow;
+                user.UpdatedAt = DateTime.UtcNow;
                 Update(user);
             }
         }
@@ -309,7 +309,7 @@ namespace CampusTrade.API.Repositories.Implementations
             if (user != null)
             {
                 user.FailedLoginAttempts++;
-                user.UpdatedAt = TimeHelper.UtcNow;
+                user.UpdatedAt = DateTime.UtcNow;
                 Update(user);
             }
         }
@@ -323,7 +323,7 @@ namespace CampusTrade.API.Repositories.Implementations
             if (user != null)
             {
                 user.FailedLoginAttempts = 0;
-                user.UpdatedAt = TimeHelper.UtcNow;
+                user.UpdatedAt = DateTime.UtcNow;
                 Update(user);
             }
         }
@@ -337,8 +337,8 @@ namespace CampusTrade.API.Repositories.Implementations
             if (user != null)
             {
                 user.PasswordHash = newPasswordHash;
-                user.PasswordChangedAt = TimeHelper.UtcNow;
-                user.UpdatedAt = TimeHelper.UtcNow;
+                user.PasswordChangedAt = DateTime.UtcNow;
+                user.UpdatedAt = DateTime.UtcNow;
                 Update(user);
             }
         }
@@ -353,7 +353,7 @@ namespace CampusTrade.API.Repositories.Implementations
                 return false;
 
             user.EmailVerified = isVerified ? 1 : 0;
-            user.UpdatedAt = TimeHelper.UtcNow;
+            user.UpdatedAt = DateTime.UtcNow;
             Update(user);
             return true;
         }
@@ -367,7 +367,7 @@ namespace CampusTrade.API.Repositories.Implementations
             if (user != null)
             {
                 user.EmailVerificationToken = token;
-                user.UpdatedAt = TimeHelper.UtcNow;
+                user.UpdatedAt = DateTime.UtcNow;
                 Update(user);
             }
         }
@@ -381,7 +381,7 @@ namespace CampusTrade.API.Repositories.Implementations
             if (user != null)
             {
                 user.TwoFactorEnabled = enabled ? 1 : 0;
-                user.UpdatedAt = TimeHelper.UtcNow;
+                user.UpdatedAt = DateTime.UtcNow;
                 Update(user);
             }
         }

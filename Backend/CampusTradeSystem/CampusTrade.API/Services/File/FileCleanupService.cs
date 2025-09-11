@@ -1,5 +1,5 @@
 using System.IO;
-using CampusTrade.API.infrastructure.Utils;
+using CampusTrade.API.Infrastructure.Utils;
 using CampusTrade.API.Options;
 using CampusTrade.API.Services.File;
 using Microsoft.EntityFrameworkCore;

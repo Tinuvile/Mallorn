@@ -70,9 +70,9 @@ namespace CampusTrade.API.Controllers
                 _logger.LogDebug("已获取热门商品数据，记录数：{Count}", stats.PopularProducts?.Count ?? 0);
 
                 // 获取用户活跃度数据
-                var startDate = TimeHelper.UtcNow.AddDays(-activityDays).Date;
+                var startDate = DateTime.UtcNow.AddDays(-activityDays).Date;
                 // 优化点：通过仓储一次性获取日期范围内的活跃用户统计，避免循环查询
-                var dailyActiveUsers = await _userRepository.GetDailyActiveUsersAsync(startDate, TimeHelper.UtcNow.Date);
+                var dailyActiveUsers = await _userRepository.GetDailyActiveUsersAsync(startDate, DateTime.UtcNow.Date);
                 // 获取注册趋势
                 var registrationTrend = await _userRepository.GetUserRegistrationTrendAsync(activityDays);
 

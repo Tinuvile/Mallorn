@@ -43,7 +43,7 @@ namespace CampusTrade.API.Repositories.Implementations
         public async Task<IEnumerable<RefreshToken>> GetActiveTokensByUserAsync(int userId)
         {
             return await _context.RefreshTokens
-                .Where(rt => rt.UserId == userId && rt.IsRevoked == 0 && rt.ExpiryDate > TimeHelper.UtcNow)
+                .Where(rt => rt.UserId == userId && rt.IsRevoked == 0 && rt.ExpiryDate > DateTime.UtcNow)
                 .OrderByDescending(rt => rt.CreatedAt)
                 .ToListAsync();
         }
@@ -65,7 +65,7 @@ namespace CampusTrade.API.Repositories.Implementations
         public async Task<IEnumerable<RefreshToken>> GetSuspiciousTokensAsync()
         {
             return await _context.RefreshTokens
-                .Where(rt => rt.IsRevoked == 0 && rt.ExpiryDate > TimeHelper.UtcNow)
+                .Where(rt => rt.IsRevoked == 0 && rt.ExpiryDate > DateTime.UtcNow)
                 .GroupBy(rt => rt.UserId)
                 .Where(g => g.Count() > 5)
                 .SelectMany(g => g)
@@ -82,7 +82,7 @@ namespace CampusTrade.API.Repositories.Implementations
             var refreshToken = await GetByTokenAsync(token);
             if (refreshToken == null) return false;
             refreshToken.IsRevoked = 1;
-            refreshToken.RevokedAt = TimeHelper.UtcNow;
+            refreshToken.RevokedAt = DateTime.UtcNow;
             refreshToken.RevokeReason = reason;
             Update(refreshToken);
             return true;
@@ -97,7 +97,7 @@ namespace CampusTrade.API.Repositories.Implementations
             foreach (var token in tokens)
             {
                 token.IsRevoked = 1;
-                token.RevokedAt = TimeHelper.UtcNow;
+                token.RevokedAt = DateTime.UtcNow;
                 token.RevokeReason = reason;
                 Update(token);
             }
@@ -110,7 +110,7 @@ namespace CampusTrade.API.Repositories.Implementations
         public async Task<int> CleanupExpiredTokensAsync()
         {
             var expiredTokens = await _context.RefreshTokens
-                .Where(rt => rt.ExpiryDate < TimeHelper.UtcNow)
+                .Where(rt => rt.ExpiryDate < DateTime.UtcNow)
                 .ToListAsync();
             _context.RefreshTokens.RemoveRange(expiredTokens);
             return expiredTokens.Count;
@@ -124,7 +124,7 @@ namespace CampusTrade.API.Repositories.Implementations
         public async Task<bool> IsTokenValidAsync(string token)
         {
             var refreshToken = await GetByTokenAsync(token);
-            return refreshToken != null && refreshToken.IsRevoked == 0 && refreshToken.ExpiryDate > TimeHelper.UtcNow;
+            return refreshToken != null && refreshToken.IsRevoked == 0 && refreshToken.ExpiryDate > DateTime.UtcNow;
         }
         #endregion
     }

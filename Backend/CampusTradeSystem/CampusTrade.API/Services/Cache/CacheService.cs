@@ -5,7 +5,7 @@ using System.Linq; // Added for Where
 using System.Reflection;
 using System.Threading; // Added for Interlocked
 using System.Threading.Tasks;
-using CampusTrade.API.infrastructure.Utils;
+using CampusTrade.API.Infrastructure.Utils;
 using CampusTrade.API.Options;
 using CampusTrade.API.Services.Interfaces;
 using Microsoft.Extensions.Caching.Memory;

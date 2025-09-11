@@ -123,7 +123,7 @@ namespace CampusTrade.API.Repositories.Implementations
         /// </summary>
         public async Task<IEnumerable<Review>> GetRecentReviewsAsync(int days = 7)
         {
-            var cutoffDate = TimeHelper.UtcNow.AddDays(-days);
+            var cutoffDate = DateTime.UtcNow.AddDays(-days);
             return await _context.Reviews.Include(r => r.AbstractOrder).ThenInclude(ao => ao.Order).ThenInclude(o => o.Product).Where(r => r.CreateTime >= cutoffDate).OrderByDescending(r => r.CreateTime).ToListAsync();
         }
         /// <summary>

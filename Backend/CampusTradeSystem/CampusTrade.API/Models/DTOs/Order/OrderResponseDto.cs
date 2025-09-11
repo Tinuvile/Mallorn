@@ -1,3 +1,5 @@
+using CampusTrade.API.Infrastructure.Utils;
+
 namespace CampusTrade.API.Models.DTOs.Order
 {
     /// <summary>

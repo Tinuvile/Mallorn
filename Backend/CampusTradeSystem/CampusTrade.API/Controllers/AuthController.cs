@@ -569,7 +569,7 @@ public class AuthController : ControllerBase
             if (!string.IsNullOrEmpty(updateDto.Phone))
                 user.Phone = updateDto.Phone;
 
-            user.UpdatedAt = TimeHelper.UtcNow;
+            user.UpdatedAt = DateTime.UtcNow;
 
             await _unitOfWork.SaveChangesAsync();
 
@@ -616,7 +616,7 @@ public class AuthController : ControllerBase
 
             // 更新密码
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(changePasswordDto.NewPassword);
-            user.PasswordChangedAt = TimeHelper.UtcNow;
+            user.PasswordChangedAt = DateTime.UtcNow;
             user.SecurityStamp = Guid.NewGuid().ToString(); // 更新安全戳，使旧Token失效
 
             await _unitOfWork.SaveChangesAsync();
