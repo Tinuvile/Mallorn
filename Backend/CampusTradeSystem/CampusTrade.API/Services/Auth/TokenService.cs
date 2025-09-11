@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using CampusTrade.API.infrastructure.Utils;
 using CampusTrade.API.Infrastructure.Utils.Security;
 using CampusTrade.API.Models.DTOs.Auth;
 using CampusTrade.API.Models.Entities;
@@ -9,7 +10,6 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
-using CampusTrade.API.infrastructure.Utils;
 
 namespace CampusTrade.API.Services.Auth;
 

@@ -1,11 +1,11 @@
 using CampusTrade.API.Data;
+using CampusTrade.API.infrastructure.Utils;
 using CampusTrade.API.Infrastructure.Hubs;
 using CampusTrade.API.Infrastructure.Utils.Notificate;
 using CampusTrade.API.Models.Entities;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using CampusTrade.API.infrastructure.Utils;
 
 namespace CampusTrade.API.Services.Notification
 {

@@ -1,3 +1,4 @@
+using CampusTrade.API.infrastructure.Utils;
 using CampusTrade.API.Infrastructure.Utils.Performance;
 using CampusTrade.API.Models.DTOs;
 using CampusTrade.API.Models.DTOs.Admin;
@@ -6,7 +7,6 @@ using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.Services.Interfaces;
 using CampusTrade.API.Services.Notification;
 using Microsoft.EntityFrameworkCore;
-using CampusTrade.API.infrastructure.Utils;
 using Microsoft.Extensions.Logging;
 using Serilog;
 

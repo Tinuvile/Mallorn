@@ -5,12 +5,12 @@ using System.Linq; // Added for Where
 using System.Reflection;
 using System.Threading; // Added for Interlocked
 using System.Threading.Tasks;
+using CampusTrade.API.infrastructure.Utils;
 using CampusTrade.API.Options;
 using CampusTrade.API.Services.Interfaces;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging; // Added for ILogger
 using Microsoft.Extensions.Options;
-using CampusTrade.API.infrastructure.Utils;
 
 namespace CampusTrade.API.Services.Cache
 {
@@ -162,8 +162,8 @@ namespace CampusTrade.API.Services.Cache
                                     else if (expirationValue is DateTime time)
                                     {
                                         // 如果是 DateTime，假设它是 UTC 时间并转换为北京时间
-                                        result[key] = time.Kind == DateTimeKind.Utc 
-                                            ? TimeHelper.ConvertFromUtc(time) 
+                                        result[key] = time.Kind == DateTimeKind.Utc
+                                            ? TimeHelper.ConvertFromUtc(time)
                                             : time;
                                     }
                                     else

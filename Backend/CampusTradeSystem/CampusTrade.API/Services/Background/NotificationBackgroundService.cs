@@ -1,11 +1,11 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using CampusTrade.API.infrastructure.Utils;
 using CampusTrade.API.Services.Notification;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using CampusTrade.API.infrastructure.Utils;
 
 namespace CampusTrade.API.Services.Background
 {

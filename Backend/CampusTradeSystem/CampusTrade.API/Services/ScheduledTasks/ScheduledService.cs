@@ -1,9 +1,9 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using CampusTrade.API.infrastructure.Utils;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using CampusTrade.API.infrastructure.Utils;
 
 namespace CampusTrade.API.Services.ScheduledTasks
 {

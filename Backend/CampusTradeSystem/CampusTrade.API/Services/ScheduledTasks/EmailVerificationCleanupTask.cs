@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
-using CampusTrade.API.Repositories.Interfaces;
 using CampusTrade.API.infrastructure.Utils;
+using CampusTrade.API.Repositories.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 

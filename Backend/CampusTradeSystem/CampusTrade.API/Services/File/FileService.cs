@@ -1,7 +1,7 @@
 using System.IO;
+using CampusTrade.API.infrastructure.Utils;
 using CampusTrade.API.Options;
 using Microsoft.Extensions.Options;
-using CampusTrade.API.infrastructure.Utils;
 
 namespace CampusTrade.API.Services.File
 {

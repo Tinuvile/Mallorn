@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using CampusTrade.API.Data;
+using CampusTrade.API.infrastructure.Utils;
 using CampusTrade.API.Infrastructure.Utils.Notificate;
 using CampusTrade.API.Models.Entities;
 using CampusTrade.API.Services.Background;
 using CampusTrade.API.Services.Interfaces;
-using CampusTrade.API.infrastructure.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
