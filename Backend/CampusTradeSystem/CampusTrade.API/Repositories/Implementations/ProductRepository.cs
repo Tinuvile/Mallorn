@@ -84,9 +84,7 @@ namespace CampusTrade.API.Repositories.Implementations
             string? keyword = null,
             decimal? minPrice = null,
             decimal? maxPrice = null,
-            int? userId = null,
-            string? sortBy = null,
-            string? sortDirection = null)
+            int? userId = null)
         {
             var query = _dbSet.AsQueryable();
             if (categoryId.HasValue) query = query.Where(p => p.CategoryId == categoryId.Value);
@@ -96,43 +94,8 @@ namespace CampusTrade.API.Repositories.Implementations
             if (maxPrice.HasValue) query = query.Where(p => p.BasePrice <= maxPrice.Value);
             if (userId.HasValue) query = query.Where(p => p.UserId == userId.Value);
             var totalCount = await query.CountAsync();
-
-            // 包含关联数据
-            query = query.Include(p => p.User).Include(p => p.Category).Include(p => p.ProductImages);
-
-            // 应用排序
-            query = ApplySorting(query, sortBy, sortDirection);
-
-            var products = await query.Skip((pageIndex - 1) * pageSize).Take(pageSize).ToListAsync();
+            var products = await query.Include(p => p.User).Include(p => p.Category).Include(p => p.ProductImages).OrderByDescending(p => p.PublishTime).Skip((pageIndex - 1) * pageSize).Take(pageSize).ToListAsync();
             return (products, totalCount);
-        }
-
-        /// <summary>
-        /// 应用排序逻辑
-        /// </summary>
-        private IQueryable<Product> ApplySorting(IQueryable<Product> query, string? sortBy, string? sortDirection)
-        {
-            var isDescending = string.Equals(sortDirection, "Descending", StringComparison.OrdinalIgnoreCase);
-
-            return sortBy?.ToLower() switch
-            {
-                "publishtime" => isDescending
-                    ? query.OrderByDescending(p => p.PublishTime)
-                    : query.OrderBy(p => p.PublishTime),
-                "price" => isDescending
-                    ? query.OrderByDescending(p => p.BasePrice)
-                    : query.OrderBy(p => p.BasePrice),
-                "viewcount" => isDescending
-                    ? query.OrderByDescending(p => p.ViewCount)
-                    : query.OrderBy(p => p.ViewCount),
-                "title" => isDescending
-                    ? query.OrderByDescending(p => p.Title)
-                    : query.OrderBy(p => p.Title),
-                "status" => isDescending
-                    ? query.OrderByDescending(p => p.Status)
-                    : query.OrderBy(p => p.Status),
-                _ => query.OrderByDescending(p => p.PublishTime) // 默认按发布时间降序
-            };
         }
         /// <summary>
         /// 获取即将自动下架的商品

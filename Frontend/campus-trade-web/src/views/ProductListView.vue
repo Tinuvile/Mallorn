@@ -350,16 +350,44 @@
       }
 
       // console.log('商品查询参数:', queryParams)
-      // console.log('当前排序设置:', sortBy.value)
       // console.log('选中的分类ID:', selectedCategoryId.value)
 
       let response
       if (searchKeyword.value.trim()) {
-        // 搜索时也使用统一的查询接口，确保排序生效
-        queryParams.keyword = searchKeyword.value.trim()
-        response = await productApi.getProducts(queryParams)
+        // 使用搜索接口
+        const searchParams = {
+          keyword: searchKeyword.value.trim(),
+          pageIndex: currentPage.value,
+          pageSize: pageSize.value,
+        }
+
+        // 只有选择了具体分类才传递 categoryId 进行分类内搜索
+        if (selectedCategoryId.value) {
+          searchParams.categoryId = selectedCategoryId.value
+        }
+
+        response = await productApi.searchProducts(searchParams)
+      } else if (selectedCategoryId.value) {
+        // 检查是否为一级分类（有子分类的分类）
+        const selectedCategory = findCategoryById(rootCategories.value, selectedCategoryId.value)
+        const hasChildren =
+          selectedCategory && selectedCategory.children && selectedCategory.children.length > 0
+
+        if (hasChildren) {
+          // 一级分类：使用包含子分类的查询接口
+          console.log(`一级分类查询: categoryId=${selectedCategoryId.value}, 包含所有子分类`)
+          response = await productApi.getProductsByCategory(
+            selectedCategoryId.value,
+            currentPage.value - 1, // API使用0基索引
+            pageSize.value,
+            true // 包含子分类
+          )
+        } else {
+          // 叶子分类：使用普通查询接口
+          response = await productApi.getProducts(queryParams)
+        }
       } else {
-        // 统一使用 getProducts 接口，确保排序在所有情况下都生效
+        // 使用普通查询接口
         response = await productApi.getProducts(queryParams)
       }
 

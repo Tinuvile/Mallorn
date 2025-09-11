@@ -1170,8 +1170,7 @@ namespace CampusTrade.API.Services.Admin
                         queryDto.SearchKeyword,
                         null, // minPrice
                         null, // maxPrice
-                        queryDto.UserId,
-                        null, null // 排序参数
+                        queryDto.UserId
                     );
 
                     var productDtos = result.Products.Select(p => new Models.DTOs.Product.ProductListDto
@@ -1227,8 +1226,7 @@ namespace CampusTrade.API.Services.Admin
                             queryDto.SearchKeyword,
                             null, // minPrice
                             null, // maxPrice
-                            queryDto.UserId,
-                            null, null // 排序参数
+                            queryDto.UserId
                         );
 
                         var productDtos = result.Products.Select(p => new Models.DTOs.Product.ProductListDto
@@ -1270,8 +1268,7 @@ namespace CampusTrade.API.Services.Admin
                             queryDto.SearchKeyword,
                             null, // minPrice
                             null, // maxPrice
-                            queryDto.UserId,
-                            null, null // 排序参数
+                            queryDto.UserId
                         );
 
                         allProducts.AddRange(categoryResult.Products);
