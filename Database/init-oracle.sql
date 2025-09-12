@@ -549,7 +549,7 @@ CREATE TABLE reports (
     report_id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     order_id NUMBER NOT NULL,
     reporter_id NUMBER NOT NULL,
-    type VARCHAR2(50) CHECK (type IN ('商品问题','服务问题','欺诈','虚假描述','其他')),
+    type VARCHAR2(50) CHECK (type IN ('商品问题','服务问题','欺诈','虚假描述','争议评价','其他')),
     priority NUMBER(2,0) CHECK (priority BETWEEN 1 AND 10),
     description CLOB,
     status VARCHAR2(20) DEFAULT '待处理' CHECK (status IN ('待处理','处理中','已处理','已关闭','已驳回','需要补充信息','待审核')),
