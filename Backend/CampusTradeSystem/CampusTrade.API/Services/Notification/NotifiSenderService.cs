@@ -161,7 +161,7 @@ namespace CampusTrade.API.Services.Notification
             {
                 needSendEmail = false;
             }
-            
+
             // 检查是否为邮箱验证相关通知（只有这类通知才发送邮件）
             bool isEmailVerificationNotification = IsEmailVerificationRelatedNotification(notification.Template.TemplateName);
             if (!isEmailVerificationNotification)
@@ -486,7 +486,7 @@ namespace CampusTrade.API.Services.Notification
                 }
             };
         }
-        
+
         /// <summary>
         /// 判断是否为邮箱验证相关的通知
         /// 只有这类通知才会发送邮件，其他通知只发送SignalR
@@ -507,7 +507,7 @@ namespace CampusTrade.API.Services.Notification
                 "验证邮箱", "激活邮箱", "activate email", "email activation"
             };
 
-            return emailVerificationKeywords.Any(keyword => 
+            return emailVerificationKeywords.Any(keyword =>
                 templateName.Contains(keyword, StringComparison.OrdinalIgnoreCase));
         }
     }
