@@ -12,7 +12,7 @@ namespace CampusTrade.API.Models.DTOs.Report
         /// 订单ID
         /// </summary>
         [Required(ErrorMessage = "订单ID不能为空")]
-        [JsonPropertyName("order_id")]
+        [JsonPropertyName("orderId")]
         public int OrderId { get; set; }
 
         /// <summary>
@@ -33,7 +33,7 @@ namespace CampusTrade.API.Models.DTOs.Report
         /// <summary>
         /// 证据文件列表
         /// </summary>
-        [JsonPropertyName("evidence_files")]
+        [JsonPropertyName("evidenceFiles")]
         public List<EvidenceFileDto>? EvidenceFiles { get; set; }
     }
 
@@ -47,7 +47,7 @@ namespace CampusTrade.API.Models.DTOs.Report
         /// </summary>
         [Required(ErrorMessage = "文件类型不能为空")]
         [StringLength(20, ErrorMessage = "文件类型长度不能超过20个字符")]
-        [JsonPropertyName("file_type")]
+        [JsonPropertyName("fileType")]
         public string FileType { get; set; } = string.Empty;
 
         /// <summary>
@@ -55,7 +55,7 @@ namespace CampusTrade.API.Models.DTOs.Report
         /// </summary>
         [Required(ErrorMessage = "文件URL不能为空")]
         [StringLength(200, ErrorMessage = "文件URL长度不能超过200个字符")]
-        [JsonPropertyName("file_url")]
+        [JsonPropertyName("fileUrl")]
         public string FileUrl { get; set; } = string.Empty;
     }
 }
