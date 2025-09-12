@@ -108,6 +108,51 @@ namespace CampusTrade.API.Repositories.Implementations
         }
 
         /// <summary>
+        /// 获取多分类下的分页商品（用于分类管理员）
+        /// 使用单个SQL查询，性能更好
+        /// </summary>
+        public async Task<(IEnumerable<Product> Products, int TotalCount)> GetPagedProductsByCategoriesAsync(
+            int pageIndex,
+            int pageSize,
+            IEnumerable<int> categoryIds,
+            string? status = null,
+            string? keyword = null,
+            decimal? minPrice = null,
+            decimal? maxPrice = null,
+            int? userId = null,
+            string? sortBy = null,
+            string? sortDirection = null)
+        {
+            var categoryIdList = categoryIds.ToList();
+            if (!categoryIdList.Any())
+            {
+                return (Enumerable.Empty<Product>(), 0);
+            }
+
+            var query = _dbSet.AsQueryable();
+            
+            // 使用 Contains 进行多分类查询，这会生成高效的 IN 查询
+            query = query.Where(p => categoryIdList.Contains(p.CategoryId));
+            
+            if (!string.IsNullOrEmpty(status)) query = query.Where(p => p.Status == status);
+            if (!string.IsNullOrEmpty(keyword)) query = query.Where(p => p.Title.Contains(keyword) || p.Description!.Contains(keyword));
+            if (minPrice.HasValue) query = query.Where(p => p.BasePrice >= minPrice.Value);
+            if (maxPrice.HasValue) query = query.Where(p => p.BasePrice <= maxPrice.Value);
+            if (userId.HasValue) query = query.Where(p => p.UserId == userId.Value);
+            
+            var totalCount = await query.CountAsync();
+
+            // 包含关联数据
+            query = query.Include(p => p.User).Include(p => p.Category).Include(p => p.ProductImages);
+
+            // 应用排序
+            query = ApplySorting(query, sortBy, sortDirection);
+
+            var products = await query.Skip((pageIndex - 1) * pageSize).Take(pageSize).ToListAsync();
+            return (products, totalCount);
+        }
+
+        /// <summary>
         /// 应用排序逻辑
         /// </summary>
         private IQueryable<Product> ApplySorting(IQueryable<Product> query, string? sortBy, string? sortDirection)
