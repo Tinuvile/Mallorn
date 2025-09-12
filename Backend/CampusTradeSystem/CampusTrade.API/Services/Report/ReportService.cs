@@ -76,7 +76,7 @@ namespace CampusTrade.API.Services.Report
                 }
 
                 // 验证举报类型
-                var validTypes = new[] { "商品问题", "服务问题", "欺诈", "虚假描述", "其他" };
+                var validTypes = new[] { "商品问题", "服务问题", "欺诈", "虚假描述", "争议评价", "其他" };
                 if (!validTypes.Contains(type))
                 {
                     _serilogLogger.Warning("举报类型验证失败 - 无效类型: {ReportType}, 订单ID: {OrderId}, 用户ID: {ReporterId}",
