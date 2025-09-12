@@ -23,7 +23,7 @@ OUTPUT_FILE = "campus_trade_test_data.sql"
 # 读取配置文件获取BaseUrl
 def load_config():
     """从appsettings.json读取配置"""
-    config_path = "Backend/CampusTradeSystem/CampusTrade.API/appsettings.json"
+    config_path = "../Backend/CampusTradeSystem/CampusTrade.API/appsettings.json"
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
             config = json.load(f)
