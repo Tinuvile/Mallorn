@@ -13,6 +13,7 @@ services:
       - ./Database/init-oracle.sql:/container-entrypoint-initdb.d/01-init-oracle.sql
       - ./Database/add-students.sql:/container-entrypoint-initdb.d/02-add-students.sql
       - ./Database/insert-notification-templates.sql:/container-entrypoint-initdb.d/03-insert-notification-templates.sql
+      - ./Database/campus_trade_test_data.sql:/container-entrypoint-initdb.d/04-campus_trade_test_data.sql
 
   campus-trade-api:
     build:
