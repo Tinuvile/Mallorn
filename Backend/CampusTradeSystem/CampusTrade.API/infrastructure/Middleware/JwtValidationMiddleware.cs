@@ -75,7 +75,7 @@ public class JwtValidationMiddleware
             catch (Exception ex)
             {
                 Log.Logger.Warning(ex, "JWT中间件处理Token时发生错误");
-                // 继续处理，让JWT认证中间件处理具体的验证错误
+                // 继续处理，JWT认证中间件处理具体的验证错误
             }
         }
 

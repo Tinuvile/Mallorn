@@ -11,7 +11,7 @@ namespace CampusTrade.API.Services.ScheduledTasks
     {
         private readonly IServiceScopeFactory _scopeFactory;
 
-        // 注入 IServiceScopeFactory 而非直接注入 DbContext
+        // 注入 IServiceScopeFactory 而非直接注入 DbContext，确保DbContext的生命周期管理
         public StatisticalAnalysisTask(ILogger<StatisticalAnalysisTask> logger, IServiceScopeFactory scopeFactory) : base(logger)
         {
             _scopeFactory = scopeFactory;
@@ -25,12 +25,12 @@ namespace CampusTrade.API.Services.ScheduledTasks
             {
                 var context = scope.ServiceProvider.GetRequiredService<CampusTradeDbContext>();
 
-                // 这里添加统计分析逻辑，例如计算每日订单量、销售额等
+                // 统计分析逻辑，每日订单量
                 var dailyOrders = await context.Orders
                     .Where(o => o.CreateTime.Date == TimeHelper.Today)
                     .CountAsync();
 
-                // 可以将统计结果保存到数据库或日志中
+                // 将统计结果保存到日志中
                 _logger.LogInformation($"今日订单量: {dailyOrders}");
             }
         }

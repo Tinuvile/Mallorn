@@ -743,13 +743,13 @@ COMMENT ON COLUMN notifications.email_last_attempt IS '邮件最后尝试发送�
 -- 插入基础数据
 -- ================================================================
 
--- 插入学生信息（包含更多测试数据）
+-- 插入学生信息
 INSERT INTO students (student_id, name, department) VALUES ('ADMIN001', '系统管理员', '计算机学院');
 INSERT INTO students (student_id, name, department) VALUES ('STU001', '张三', '计算机学院');
 INSERT INTO students (student_id, name, department) VALUES ('STU002', '李四', '电子信息学院');
 INSERT INTO students (student_id, name, department) VALUES ('STU003', '王五', '机械工程学院');
 
--- 添加更多学生信息供注册测试
+-- 更多学生信息
 INSERT INTO students (student_id, name, department) VALUES ('2352495', '张竹和', '计算机科学与技术学院');
 INSERT INTO students (student_id, name, department) VALUES ('2353018', '钱宝强', '计算机科学与技术学院');
 INSERT INTO students (student_id, name, department) VALUES ('2351427', '缪语欣', '计算机科学与技术学院');
