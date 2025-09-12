@@ -1259,7 +1259,7 @@ export interface ReviewResponse {
   isAnonymous: boolean
   content?: string
   createTime: string
-  sellerReply?: string  // 修正字段名匹配后端
+  sellerReply?: string // 修正字段名匹配后端
   sellerResponseTime?: string
 }
 
@@ -1380,7 +1380,18 @@ export const reportApi = {
 
   // 创建争议评价
   createDispute: (data: CreateDisputeRequest): Promise<ApiResponse<DisputeResponse>> => {
-    return api.post('/api/report/dispute', data)
+    // 转换属性名以匹配后端DTO
+    const payload = {
+      order_id: data.orderId,
+      reason: data.reason,
+      description: data.description,
+      evidence_files: data.evidenceFiles?.map(file => ({
+        file_type: file.fileType,
+        file_url: file.fileUrl,
+      })),
+    }
+    console.log('发送到后端的争议数据:', JSON.stringify(payload, null, 2))
+    return api.post('/api/report/dispute', payload)
   },
 
   // 获取举报详情

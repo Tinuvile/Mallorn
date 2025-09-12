@@ -12,7 +12,7 @@ namespace CampusTrade.API.Models.DTOs.Report
         /// 订单ID
         /// </summary>
         [Required(ErrorMessage = "订单ID不能为空")]
-        [JsonPropertyName("orderId")]
+        [JsonPropertyName("order_id")]
         public int OrderId { get; set; }
 
         /// <summary>
@@ -34,7 +34,7 @@ namespace CampusTrade.API.Models.DTOs.Report
         /// <summary>
         /// 证据文件列表
         /// </summary>
-        [JsonPropertyName("evidenceFiles")]
+        [JsonPropertyName("evidence_files")]
         public List<EvidenceFileDto>? EvidenceFiles { get; set; }
     }
 }

@@ -67,12 +67,26 @@ namespace CampusTrade.API.Services.Report
                     return (false, "订单不存在", null);
                 }
 
-                // 验证只有买家才能举报
-                if (order.BuyerId != reporterId)
+                // 验证举报人权限
+                if (type == "争议评价")
                 {
-                    _serilogLogger.Warning("举报权限验证失败 - 订单ID: {OrderId}, 买家ID: {BuyerId}, 举报人ID: {ReporterId}, 卖家ID: {SellerId}",
-                        orderId, order.BuyerId, reporterId, order.SellerId);
-                    return (false, "只有买家才能对订单进行举报", null);
+                    // 争议评价允许买家和卖家都能提交
+                    if (order.BuyerId != reporterId && order.SellerId != reporterId)
+                    {
+                        _serilogLogger.Warning("争议评价权限验证失败 - 订单ID: {OrderId}, 买家ID: {BuyerId}, 卖家ID: {SellerId}, 提交人ID: {ReporterId}",
+                            orderId, order.BuyerId, order.SellerId, reporterId);
+                        return (false, "只有订单相关的买家或卖家才能提交争议评价", null);
+                    }
+                }
+                else
+                {
+                    // 其他举报类型只允许买家举报
+                    if (order.BuyerId != reporterId)
+                    {
+                        _serilogLogger.Warning("举报权限验证失败 - 订单ID: {OrderId}, 买家ID: {BuyerId}, 举报人ID: {ReporterId}, 卖家ID: {SellerId}",
+                            orderId, order.BuyerId, reporterId, order.SellerId);
+                        return (false, "只有买家才能对订单进行举报", null);
+                    }
                 }
 
                 // 验证举报类型
@@ -103,10 +117,13 @@ namespace CampusTrade.API.Services.Report
                     ReporterId = reporterId,
                     Type = type,
                     Description = description,
-                    Status = "待处理",
+                    Status = "处理中",
                     Priority = priority,
                     CreateTime = TimeHelper.Now
                 };
+
+                _serilogLogger.Information("准备插入举报记录 - OrderId: {OrderId}, ReporterId: {ReporterId}, Type: {Type}, Status: {Status}, Priority: {Priority}, DescriptionLength: {DescLength}",
+                    orderId, reporterId, type, report.Status, priority, description?.Length ?? 0);
 
                 await _reportsRepository.AddAsync(report);
                 await _unitOfWork.SaveChangesAsync();
@@ -429,6 +446,7 @@ namespace CampusTrade.API.Services.Report
             {
                 "欺诈" => 9,
                 "虚假描述" => 7,
+                "争议评价" => 6,
                 "商品问题" => 5,
                 "服务问题" => 4,
                 "其他" => 3,
