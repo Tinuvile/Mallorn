@@ -27,10 +27,10 @@ def load_config():
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
             config = json.load(f)
-            return config.get('FileStorage', {}).get('BaseUrl', 'http://localhost:5085')
+            return config.get('FileStorage', {}).get('BaseUrl', 'http://8.222.141.205:8080')
     except (FileNotFoundError, json.JSONDecodeError, KeyError):
         print(f"警告: 无法读取配置文件 {config_path}，使用默认BaseUrl")
-        return 'http://localhost:5085'
+        return 'http://8.222.141.205:8080'
 
 BASE_URL = load_config()
 
