@@ -14,10 +14,10 @@ from typing import List, Dict, Tuple
 import hashlib
 
 # 配置参数
-STUDENTS_COUNT = 2000         # 学生数量
-PRODUCTS_PER_USER_MIN = 80    # 每个用户最少发布商品数
-PRODUCTS_PER_USER_MAX = 150    # 每个用户最多发布商品数
-ORDERS_COUNT = 100000          # 订单数量
+STUDENTS_COUNT = 500          # 学生数量
+PRODUCTS_PER_USER_MIN = 20    # 每个用户最少发布商品数
+PRODUCTS_PER_USER_MAX = 50    # 每个用户最多发布商品数
+ORDERS_COUNT = 10000          # 订单数量
 OUTPUT_FILE = "campus_trade_test_data.sql"
 
 # 读取配置文件获取BaseUrl
