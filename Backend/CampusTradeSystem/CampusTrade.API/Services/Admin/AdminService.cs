@@ -483,9 +483,20 @@ namespace CampusTrade.API.Services.Admin
                     return (false, "举报不存在");
                 }
 
-                if (report.Status != "待处理")
+                // 允许处理的状态：待处理、处理中（可以重新处理）
+                var allowedStatuses = new[] { "待处理", "处理中" };
+                if (!allowedStatuses.Contains(report.Status))
                 {
-                    return (false, "只能处理待处理状态的举报");
+                    return (false, $"无法处理当前状态的举报：{report.Status}，只能处理待处理或处理中状态的举报");
+                }
+
+                // 如果是"待处理"状态，先设置为"处理中"以防止并发处理
+                if (report.Status == "待处理")
+                {
+                    await _reportsRepository.UpdateReportStatusAsync(report.ReportId, "处理中");
+                    await _unitOfWork.SaveChangesAsync(); // 立即保存状态变更
+
+                    _serilogLogger.Information("举报状态已更新为处理中 - 举报ID: {ReportId}, 管理员ID: {AdminId}", reportId, adminId);
                 }
 
                 // 更新举报状态

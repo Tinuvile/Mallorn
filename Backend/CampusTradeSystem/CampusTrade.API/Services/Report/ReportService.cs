@@ -117,7 +117,7 @@ namespace CampusTrade.API.Services.Report
                     ReporterId = reporterId,
                     Type = type,
                     Description = description,
-                    Status = "处理中",
+                    Status = "待处理", // 新举报应该是"待处理"状态
                     Priority = priority,
                     CreateTime = TimeHelper.Now
                 };
