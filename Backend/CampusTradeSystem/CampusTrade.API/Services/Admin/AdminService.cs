@@ -1174,7 +1174,7 @@ namespace CampusTrade.API.Services.Admin
                 // 超级管理员可以查看所有商品
                 if (admin.Role == Models.Entities.Admin.Roles.Super)
                 {
-                    var result = await _productRepository.GetPagedProductsAsync(
+                    var superAdminResult = await _productRepository.GetPagedProductsAsync(
                         queryDto.PageIndex,
                         queryDto.PageSize,
                         queryDto.CategoryId,
@@ -1186,7 +1186,7 @@ namespace CampusTrade.API.Services.Admin
                         null, null // 排序参数
                     );
 
-                    var productDtos = result.Products.Select(p => new Models.DTOs.Product.ProductListDto
+                    var productDtos = superAdminResult.Products.Select(p => new Models.DTOs.Product.ProductListDto
                     {
                         ProductId = p.ProductId,
                         Title = p.Title,
@@ -1208,7 +1208,7 @@ namespace CampusTrade.API.Services.Admin
                         }
                     });
 
-                    return (productDtos, result.TotalCount);
+                    return (productDtos, superAdminResult.TotalCount);
                 }
 
                 // 分类管理员处理逻辑
@@ -1231,7 +1231,7 @@ namespace CampusTrade.API.Services.Admin
                     // 如果指定了分类且在管理范围内，使用指定分类查询
                     if (queryDto.CategoryId.HasValue)
                     {
-                        var result = await _productRepository.GetPagedProductsAsync(
+                        var singleCategoryResult = await _productRepository.GetPagedProductsAsync(
                             queryDto.PageIndex,
                             queryDto.PageSize,
                             queryDto.CategoryId.Value,
@@ -1243,7 +1243,7 @@ namespace CampusTrade.API.Services.Admin
                             null, null // 排序参数
                         );
 
-                        var productDtos = result.Products.Select(p => new Models.DTOs.Product.ProductListDto
+                        var productDtos = singleCategoryResult.Products.Select(p => new Models.DTOs.Product.ProductListDto
                         {
                             ProductId = p.ProductId,
                             Title = p.Title,
@@ -1265,45 +1265,24 @@ namespace CampusTrade.API.Services.Admin
                             }
                         });
 
-                        return (productDtos, result.TotalCount);
+                        return (productDtos, singleCategoryResult.TotalCount);
                     }
 
                     // 如果没有指定分类，需要查询所有可管理分类下的商品
-                    // 由于GetPagedProductsAsync只支持单个分类，我们需要分别查询每个分类然后合并结果
-                    var allProducts = new List<Models.Entities.Product>();
+                    // 使用新的优化方法：单次查询所有相关分类的商品
+                    var multiCategoryResult = await _productRepository.GetPagedProductsByCategoriesAsync(
+                        queryDto.PageIndex,
+                        queryDto.PageSize,
+                        managedCategoryIds,
+                        queryDto.Status,
+                        queryDto.SearchKeyword,
+                        null, // minPrice
+                        null, // maxPrice
+                        queryDto.UserId,
+                        null, null // 排序参数
+                    );
 
-                    foreach (var categoryId in managedCategoryIds)
-                    {
-                        var categoryResult = await _productRepository.GetPagedProductsAsync(
-                            1, // 先获取所有数据
-                            int.MaxValue, // 获取该分类下的所有商品
-                            categoryId,
-                            queryDto.Status,
-                            queryDto.SearchKeyword,
-                            null, // minPrice
-                            null, // maxPrice
-                            queryDto.UserId,
-                            null, null // 排序参数
-                        );
-
-                        allProducts.AddRange(categoryResult.Products);
-                    }
-
-                    // 去重（如果有商品属于多个管理的分类）
-                    var distinctProducts = allProducts
-                        .GroupBy(p => p.ProductId)
-                        .Select(g => g.First())
-                        .OrderByDescending(p => p.PublishTime)
-                        .ToList();
-
-                    // 应用分页
-                    var totalCount = distinctProducts.Count;
-                    var pagedProducts = distinctProducts
-                        .Skip((queryDto.PageIndex - 1) * queryDto.PageSize)
-                        .Take(queryDto.PageSize)
-                        .ToList();
-
-                    var finalProductDtos = pagedProducts.Select(p => new Models.DTOs.Product.ProductListDto
+                    var finalProductDtos = multiCategoryResult.Products.Select(p => new Models.DTOs.Product.ProductListDto
                     {
                         ProductId = p.ProductId,
                         Title = p.Title,
@@ -1325,7 +1304,7 @@ namespace CampusTrade.API.Services.Admin
                         }
                     });
 
-                    return (finalProductDtos, totalCount);
+                    return (finalProductDtos, multiCategoryResult.TotalCount);
                 }
 
                 // 其他角色（如举报管理员）默认没有商品管理权限

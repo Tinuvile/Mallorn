@@ -161,6 +161,14 @@ namespace CampusTrade.API.Services.Notification
             {
                 needSendEmail = false;
             }
+            
+            // 检查是否为邮箱验证相关通知（只有这类通知才发送邮件）
+            bool isEmailVerificationNotification = IsEmailVerificationRelatedNotification(notification.Template.TemplateName);
+            if (!isEmailVerificationNotification)
+            {
+                needSendEmail = false;
+                _logger.LogDebug($"跳过邮件发送：非邮箱验证相关通知 - 模板: {notification.Template.TemplateName}");
+            }
 
             // 并行发送需要发送的渠道
             Task<(bool Success, string ErrorMessage)> signalRTask;
@@ -179,13 +187,18 @@ namespace CampusTrade.API.Services.Notification
 
             if (needSendEmail && hasEmail)
             {
-                _logger.LogInformation($"发送邮件通知 - NotificationId: {notification.NotificationId}");
+                _logger.LogInformation($"发送邮件通知（邮箱验证相关） - NotificationId: {notification.NotificationId}");
                 emailTask = _emailService.SendNotificationEmailAsync(notification, content);
             }
             else if (!hasEmail)
             {
                 _logger.LogInformation($"跳过邮件通知（用户未设置邮箱） - NotificationId: {notification.NotificationId}");
                 emailTask = Task.FromResult((true, "用户未设置邮箱，跳过邮件发送"));
+            }
+            else if (!isEmailVerificationNotification)
+            {
+                _logger.LogInformation($"跳过邮件通知（非邮箱验证相关） - NotificationId: {notification.NotificationId}, 模板: {notification.Template.TemplateName}");
+                emailTask = Task.FromResult((true, "非邮箱验证相关通知，跳过邮件发送"));
             }
             else
             {
@@ -472,6 +485,30 @@ namespace CampusTrade.API.Services.Notification
                     Total = emailStats.Total
                 }
             };
+        }
+        
+        /// <summary>
+        /// 判断是否为邮箱验证相关的通知
+        /// 只有这类通知才会发送邮件，其他通知只发送SignalR
+        /// </summary>
+        /// <param name="templateName">通知模板名称</param>
+        /// <returns>是否为邮箱验证相关通知</returns>
+        private bool IsEmailVerificationRelatedNotification(string templateName)
+        {
+            if (string.IsNullOrWhiteSpace(templateName))
+                return false;
+
+            // 检查是否包含邮箱验证相关的关键词
+            // 注意：根据数据库中的通知模板，目前没有专门的邮箱验证模板
+            // 这里预留接口，如果将来有邮箱验证相关的通知模板可以在此处添加
+            var emailVerificationKeywords = new[]
+            {
+                "邮箱验证", "邮件验证", "email verification", "verify email",
+                "验证邮箱", "激活邮箱", "activate email", "email activation"
+            };
+
+            return emailVerificationKeywords.Any(keyword => 
+                templateName.Contains(keyword, StringComparison.OrdinalIgnoreCase));
         }
     }
 }

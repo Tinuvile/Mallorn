@@ -58,6 +58,22 @@ namespace CampusTrade.API.Repositories.Interfaces
             int? userId = null,
             string? sortBy = null,
             string? sortDirection = null);
+        
+        /// <summary>
+        /// 获取多分类下的分页商品（用于分类管理员）
+        /// </summary>
+        Task<(IEnumerable<Product> Products, int TotalCount)> GetPagedProductsByCategoriesAsync(
+            int pageIndex,
+            int pageSize,
+            IEnumerable<int> categoryIds,
+            string? status = null,
+            string? keyword = null,
+            decimal? minPrice = null,
+            decimal? maxPrice = null,
+            int? userId = null,
+            string? sortBy = null,
+            string? sortDirection = null);
+            
         /// <summary>
         /// 获取即将自动下架的商品
         /// </summary>
